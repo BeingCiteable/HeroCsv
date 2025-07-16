@@ -1,14 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace FastCsv;
 
 /// <summary>
 /// Builds and executes CSV parsing operations with custom configuration
 /// </summary>
-internal class CsvReaderBuilder : ICsvReaderBuilder
+internal sealed class CsvReaderBuilder : ICsvReaderBuilder
 {
     private string? _content;
     private string? _filePath;
@@ -85,7 +82,6 @@ internal class CsvReaderBuilder : ICsvReaderBuilder
     public IEnumerable<string[]> Read()
     {
         var content = GetContent();
-        // Delegate to appropriate interface implementations
         var reader = CreateConfiguredReader(content);
         return ExtractRecords(reader);
     }
@@ -100,23 +96,60 @@ internal class CsvReaderBuilder : ICsvReaderBuilder
     public CsvReadResult ReadAdvanced()
     {
         var content = GetContent();
-        var reader = CreateConfiguredReader(content);
-        
+
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        var records = ExtractRecords(reader).ToList();
-        stopwatch.Stop();
-        
-        return new CsvReadResult
+        var records = new List<string[]>();
+        var validationErrors = _trackErrors ? new List<string>() : null;
+        var statistics = new Dictionary<string, object>();
+
+        using var reader = CreateConfiguredReader(content);
+
+        // Extract records with validation
+        while (reader.TryReadRecord(out var record))
         {
-            Records = records,
-            TotalRecords = records.Count,
-            IsValid = !_validateData || ValidateUsingInterfaces(reader),
-            ValidationErrors = _trackErrors ? GetValidationErrors(reader) : Array.Empty<string>(),
-            ProcessingTime = stopwatch.Elapsed,
-            Statistics = GetStatistics(reader)
-        };
+            var fields = record.ToArray();
+
+            if (_validateData)
+            {
+                var errors = CsvReaderBuilder.ValidateRecord(record, reader.RecordCount);
+                if (errors.Count > 0 && _trackErrors)
+                {
+                    validationErrors?.AddRange(errors);
+                }
+            }
+
+            records.Add(fields);
+        }
+
+        stopwatch.Stop();
+
+        // Collect statistics
+        CollectStatistics(statistics, records, stopwatch.Elapsed, reader);
+
+        var isValid = !_validateData || (validationErrors?.Count == 0);
+
+        // Use optimized factory methods
+        if (!isValid && validationErrors?.Count > 0)
+        {
+            return CsvReadResult.Failure(validationErrors, stopwatch.Elapsed);
+        }
+
+#if NET9_0_OR_GREATER
+        if (_enableProfiling)
+        {
+            return CsvReadResult.SuccessWithProfiling(records, stopwatch.Elapsed);
+        }
+#endif
+
+        if (statistics.Count > 0)
+        {
+            return CsvReadResult.SuccessWithStatistics(records, stopwatch.Elapsed, statistics);
+        }
+
+        return CsvReadResult.Success(records, stopwatch.Elapsed);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private string GetContent()
     {
         if (_content != null) return _content;
@@ -124,105 +157,99 @@ internal class CsvReaderBuilder : ICsvReaderBuilder
         throw new InvalidOperationException("No content or file path specified");
     }
 
-    private ICsvReader CreateConfiguredReader(string content)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private FastCsvReader CreateConfiguredReader(string content)
     {
-        return new SimpleCsvReader(content, _options);
+        return new FastCsvReader(content, _options);
     }
 
-    private IEnumerable<string[]> ExtractRecords(ICsvReader reader)
+    private static List<string[]> ExtractRecords(FastCsvReader reader)
     {
-        return new List<string[]>();
+        var records = new List<string[]>();
+
+        while (reader.TryReadRecord(out var record))
+        {
+            records.Add(record.ToArray());
+        }
+
+        return records;
     }
 
-    private IEnumerable<Dictionary<string, string>> ExtractRecordsWithHeaders(ICsvReader reader)
+    private static List<Dictionary<string, string>> ExtractRecordsWithHeaders(FastCsvReader reader)
     {
-        return new List<Dictionary<string, string>>();
+        var records = new List<Dictionary<string, string>>();
+
+        // Read header
+        if (!reader.TryReadRecord(out var headerRecord))
+        {
+            return records;
+        }
+
+        var headers = headerRecord.ToArray();
+
+        // Read data records
+        while (reader.TryReadRecord(out var dataRecord))
+        {
+            var dict = new Dictionary<string, string>(Math.Min(headers.Length, dataRecord.FieldCount));
+
+            for (int i = 0; i < Math.Min(headers.Length, dataRecord.FieldCount); i++)
+            {
+                dict[headers[i]] = dataRecord.GetField(i).ToString();
+            }
+
+            records.Add(dict);
+        }
+
+        return records;
     }
 
-    private bool ValidateUsingInterfaces(ICsvReader reader)
+    private static List<string> ValidateRecord(ICsvRecord record, int recordNumber)
     {
-        return true;
+        var errors = new List<string>();
+
+        // Basic validation - can be extended
+        if (record.FieldCount == 0)
+        {
+            errors.Add($"Record {recordNumber} is empty");
+        }
+
+        // Check for fields that are too long (basic validation)
+        for (int i = 0; i < record.FieldCount; i++)
+        {
+            var field = record.GetField(i);
+            if (field.Length > 10000) // Arbitrary limit
+            {
+                errors.Add($"Record {recordNumber}, field {i} exceeds maximum length");
+            }
+        }
+
+        return errors;
     }
 
-    private List<string> GetValidationErrors(ICsvReader reader)
+    private void CollectStatistics(Dictionary<string, object> statistics, List<string[]> records, TimeSpan processingTime, FastCsvReader reader)
     {
-        return new List<string>(0); // Pre-size for empty case
-    }
+        statistics["RecordCount"] = records.Count;
+        statistics["ProcessingTimeMs"] = processingTime.TotalMilliseconds;
+        statistics["AverageFieldsPerRecord"] = records.Count > 0 ? records.Average(r => r.Length) : 0;
+        statistics["RecordsPerSecond"] = records.Count / Math.Max(processingTime.TotalSeconds, 0.001);
+        statistics["ValidationEnabled"] = _validateData;
+        statistics["ErrorTrackingEnabled"] = _trackErrors;
 
-    private Dictionary<string, object> GetStatistics(ICsvReader reader)
-    {
-        var stats = new Dictionary<string, object>();
-        
 #if NET6_0_OR_GREATER
         if (_hardwareAcceleration)
         {
-            stats["HardwareAcceleration"] = true;
+            statistics["HardwareAcceleration"] = true;
+            statistics["IsHardwareAccelerated"] = System.Numerics.Vector.IsHardwareAccelerated;
         }
 #endif
 
 #if NET9_0_OR_GREATER
         if (_enableProfiling)
         {
-            stats["ProfilingEnabled"] = true;
+            statistics["ProfilingEnabled"] = true;
+            statistics["Vector512Supported"] = System.Runtime.Intrinsics.Vector512.IsHardwareAccelerated;
         }
 #endif
-
-        return stats;
     }
 }
 
-/// <summary>
-/// Basic CSV reader implementation for simple parsing operations
-/// </summary>
-internal class SimpleCsvReader : ICsvReader
-{
-    private readonly string _content;
-    private readonly CsvOptions _options;
-
-    public SimpleCsvReader(string content, CsvOptions options)
-    {
-        _content = content;
-        _options = options;
-    }
-
-    public CsvOptions Options => _options;
-    public int Position => 0;
-    public int LineNumber => 0;
-    public bool HasMoreRecords => false;
-    public ICsvRecord? CurrentRecord => null;
-    public bool HasMoreData => false;
-    public int RecordCount => 0;
-
-    public bool MoveNext() => false;
-    public void Reset() { }
-    public void Dispose() { }
-    public ICsvRecord ReadRecord() => throw new NotImplementedException("Basic reader implementation");
-    public bool TryReadRecord(out ICsvRecord record) { record = null!; return false; }
-    public void SkipHeader() { }
-    public void SkipRecord() { }
-    public void SkipRecords(int count) { }
-
-#if NET6_0_OR_GREATER
-    public bool IsHardwareAccelerated => false;
-    public void SetVectorizationEnabled(bool enabled) { }
-    public int GetOptimalBufferSize() => 4096;
-#endif
-
-#if NET7_0_OR_GREATER
-    public bool TryParseField<T>(int fieldIndex, out T value) where T : struct { value = default; return false; }
-    public bool TryParseInt32(int fieldIndex, out int value) { value = 0; return false; }
-    public bool TryParseDecimal(int fieldIndex, out decimal value) { value = 0; return false; }
-    public ReadOnlySpan<byte> GetFieldAsUtf8(int fieldIndex) => ReadOnlySpan<byte>.Empty;
-#endif
-
-#if NET8_0_OR_GREATER
-    public CsvOptions DetectFormat() => _options;
-    public bool TryGetFieldByName(string fieldName, out ReadOnlySpan<char> field) { field = ReadOnlySpan<char>.Empty; return false; }
-    public System.Collections.Frozen.FrozenSet<string> GetFieldNames() => System.Collections.Frozen.FrozenSet<string>.Empty;
-#endif
-
-#if NET9_0_OR_GREATER
-    public bool IsVector512Supported => false;
-    public void EnableProfiling(bool enabled) { }
-#endif
-}

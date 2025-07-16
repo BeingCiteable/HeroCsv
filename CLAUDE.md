@@ -324,6 +324,8 @@ src/FastCsv/
 ├── ICsvReaderBuilder.net6.cs # Hardware options
 ├── ICsvReaderBuilder.net9.cs # Profiling options
 ├── CsvReaderBuilder.cs    # Builder implementation
+├── CsvReadResult.net8.cs  # Frozen collections optimization
+├── CsvReadResult.net9.cs  # Advanced profiling metrics
 ├── Fields/
 │   ├── IFieldHandler.cs   # Core field handling
 │   ├── IFieldHandler.net6.cs

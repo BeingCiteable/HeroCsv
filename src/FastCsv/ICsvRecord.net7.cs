@@ -28,7 +28,7 @@ public partial interface ICsvRecord
     /// Parse field as DateTime
     /// </summary>
     bool TryParseDateTime(int index, out DateTime value);
-    
+
     /// <summary>
     /// Parse field as DateTimeOffset
     /// </summary>

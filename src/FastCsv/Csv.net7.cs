@@ -33,7 +33,7 @@ public static partial class Csv
         var content = await File.ReadAllTextAsync(filePath);
         return ReadInternal(content.AsSpan(), options);
     }
-    
+
     /// <summary>
     /// Parses field value to specific type using high-performance parsing
     /// </summary>
@@ -44,7 +44,7 @@ public static partial class Csv
     public static bool TryParseField<T>(ReadOnlySpan<char> fieldValue, out T result) where T : struct
     {
         result = default;
-        
+
         if (typeof(T) == typeof(int))
         {
             if (int.TryParse(fieldValue, out var intValue))
@@ -85,7 +85,7 @@ public static partial class Csv
                 return true;
             }
         }
-        
+
         return false;
     }
 }

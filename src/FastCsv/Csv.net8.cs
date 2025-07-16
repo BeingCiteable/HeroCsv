@@ -1,8 +1,8 @@
 #if NET8_0_OR_GREATER
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Buffers;
 
 namespace FastCsv;
 
@@ -14,7 +14,7 @@ public static partial class Csv
     private static readonly SearchValues<char> CommonDelimiters = SearchValues.Create(",;\t|");
     private static readonly SearchValues<char> QuoteChars = SearchValues.Create("\"'");
     private static readonly SearchValues<char> LineEndings = SearchValues.Create("\r\n");
-    
+
     /// <summary>
     /// Auto-detect CSV format and read
     /// </summary>
@@ -37,7 +37,7 @@ public static partial class Csv
         var options = AutoDetectFormat(content.AsSpan());
         return ReadInternal(content.AsSpan(), options);
     }
-    
+
     /// <summary>
     /// Auto-detect CSV format and read with zero-allocation span processing
     /// </summary>
@@ -53,18 +53,18 @@ public static partial class Csv
     {
         var sampleSize = Math.Min(content.Length, 2000);
         var sample = content.Slice(0, sampleSize);
-        
+
         var commaCount = 0;
         var semicolonCount = 0;
         var tabCount = 0;
         var hasQuotes = false;
-        
+
         var position = 0;
         while (position < sample.Length)
         {
             var nextDelimiter = sample.Slice(position).IndexOfAny(CommonDelimiters);
             if (nextDelimiter == -1) break;
-            
+
             var actualPos = position + nextDelimiter;
             switch (sample[actualPos])
             {
@@ -75,19 +75,19 @@ public static partial class Csv
             }
             position = actualPos + 1;
         }
-        
+
         // Check for quotes
         hasQuotes = sample.IndexOfAny(QuoteChars) != -1;
-        
+
         var delimiter = ',';
         if (semicolonCount > commaCount && semicolonCount > tabCount)
             delimiter = ';';
         else if (tabCount > commaCount && tabCount > semicolonCount)
             delimiter = '\t';
-        
+
         return new CsvOptions(delimiter, hasQuotes ? '"' : '"', true);
     }
-    
+
     /// <summary>
     /// Optimized line ending detection using SearchValues
     /// </summary>
@@ -98,19 +98,19 @@ public static partial class Csv
     {
         var searchSpan = content.Slice(start);
         var lineEndIndex = searchSpan.IndexOfAny(LineEndings);
-        
+
         if (lineEndIndex == -1)
             return content.Length;
-            
+
         var actualPos = start + lineEndIndex;
-        
+
         // Handle \r\n sequence
         if (content[actualPos] == '\r' && actualPos + 1 < content.Length && content[actualPos + 1] == '\n')
             return actualPos;
-            
+
         return actualPos;
     }
-    
+
     /// <summary>
     /// High-performance field parsing with SearchValues optimization
     /// </summary>
@@ -120,14 +120,14 @@ public static partial class Csv
     private static string[] ParseLineOptimized(ReadOnlySpan<char> line, CsvOptions options)
     {
         if (line.IsEmpty) return Array.Empty<string>();
-        
+
         var delimiterSearch = SearchValues.Create(stackalloc char[] { options.Delimiter });
         var quoteSearch = SearchValues.Create(stackalloc char[] { options.Quote });
-        
+
         var fields = new List<string>();
         var fieldStart = 0;
         var inQuotes = false;
-        
+
         var position = 0;
         while (position < line.Length)
         {
@@ -137,7 +137,7 @@ public static partial class Csv
                 nextSpecial = line.Slice(position).IndexOfAny(quoteSearch);
                 if (nextSpecial == -1) break;
                 nextSpecial += position;
-                
+
                 if (line[nextSpecial] == options.Quote)
                 {
                     inQuotes = false;
@@ -148,13 +148,13 @@ public static partial class Csv
             {
                 var delimiterPos = line.Slice(position).IndexOfAny(delimiterSearch);
                 var quotePos = line.Slice(position).IndexOfAny(quoteSearch);
-                
+
                 if (delimiterPos == -1 && quotePos == -1)
                 {
                     // No more special characters
                     break;
                 }
-                
+
                 if (quotePos != -1 && (delimiterPos == -1 || quotePos < delimiterPos))
                 {
                     // Quote comes first
@@ -177,14 +177,14 @@ public static partial class Csv
                 }
             }
         }
-        
+
         // Add final field
         if (fieldStart <= line.Length)
         {
             var fieldSpan = line.Slice(fieldStart);
             fields.Add(fieldSpan.ToString());
         }
-        
+
         return fields.ToArray();
     }
 }

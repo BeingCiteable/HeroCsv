@@ -20,32 +20,32 @@ public static partial class Csv
     public static int CountFields(ReadOnlySpan<char> line, char delimiter)
     {
         if (line.IsEmpty) return 0;
-        
+
         var count = 1; // At least one field
         var inQuotes = false;
-        
+
         if (Vector.IsHardwareAccelerated && line.Length >= Vector<ushort>.Count)
         {
             return CountFieldsVectorized(line, delimiter);
         }
-        
+
         for (int i = 0; i < line.Length; i++)
         {
             var ch = line[i];
             if (ch == '"') inQuotes = !inQuotes;
             else if (ch == delimiter && !inQuotes) count++;
         }
-        
+
         return count;
     }
-    
+
     private static int CountFieldsVectorized(ReadOnlySpan<char> line, char delimiter)
     {
         var count = 1;
         var delimiterVector = new Vector<ushort>(delimiter);
         var position = 0;
         var inQuotes = false;
-        
+
         while (position <= line.Length - Vector<ushort>.Count)
         {
             var chunk = line.Slice(position, Vector<ushort>.Count);
@@ -57,7 +57,7 @@ public static partial class Csv
             }
             var vector = new Vector<ushort>(ushortArray);
             var matches = Vector.Equals(vector, delimiterVector);
-            
+
             if (Vector.EqualsAny(matches, Vector<ushort>.Zero))
             {
                 // Fall back to scalar processing for this chunk
@@ -68,10 +68,10 @@ public static partial class Csv
                     else if (ch == delimiter && !inQuotes) count++;
                 }
             }
-            
+
             position += Vector<ushort>.Count;
         }
-        
+
         // Process remaining characters
         for (int i = position; i < line.Length; i++)
         {
@@ -79,16 +79,16 @@ public static partial class Csv
             if (ch == '"') inQuotes = !inQuotes;
             else if (ch == delimiter && !inQuotes) count++;
         }
-        
+
         return count;
     }
-    
+
     /// <summary>
     /// Checks if hardware acceleration is available on current system
     /// </summary>
     /// <returns>True if SIMD operations are supported</returns>
     public static bool IsHardwareAccelerated => Vector.IsHardwareAccelerated;
-    
+
     /// <summary>
     /// Gets optimal buffer size for current hardware configuration
     /// </summary>

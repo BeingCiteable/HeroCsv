@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace FastCsv;
 
 /// <summary>
@@ -120,15 +114,15 @@ public static partial class Csv
     {
         var records = ReadInternal(csvContent.AsSpan(), options);
         using var enumerator = records.GetEnumerator();
-        
+
         if (!enumerator.MoveNext()) yield break;
-        
+
         var headers = enumerator.Current;
         while (enumerator.MoveNext())
         {
             var record = enumerator.Current;
             var dict = new Dictionary<string, string>(Math.Min(headers.Length, record.Length));
-            
+
             for (int i = 0; i < Math.Min(headers.Length, record.Length); i++)
             {
                 dict[headers[i]] = record[i];
@@ -141,10 +135,7 @@ public static partial class Csv
     /// Creates a configuration builder for customizing CSV parsing behavior
     /// </summary>
     /// <returns>Builder for setting validation, error handling, and performance options</returns>
-    public static ICsvReaderBuilder Configure()
-    {
-        return new CsvReaderBuilder();
-    }
+    public static ICsvReaderBuilder Configure() => new CsvReaderBuilder();
 
     /// <summary>
     /// Creates a configuration builder pre-loaded with CSV content
@@ -154,6 +145,27 @@ public static partial class Csv
     public static ICsvReaderBuilder Configure(string csvContent)
     {
         return new CsvReaderBuilder().WithContent(csvContent);
+    }
+
+    /// <summary>
+    /// Creates a CSV reader with the specified content and options
+    /// </summary>
+    /// <param name="content">CSV content to read</param>
+    /// <param name="options">Parsing options</param>
+    /// <returns>Configured CSV reader</returns>
+    public static ICsvReader CreateReader(string content, CsvOptions options)
+    {
+        return new FastCsvReader(content, options);
+    }
+
+    /// <summary>
+    /// Creates a CSV reader with the specified content and default options
+    /// </summary>
+    /// <param name="content">CSV content to read</param>
+    /// <returns>Configured CSV reader</returns>
+    public static ICsvReader CreateReader(string content)
+    {
+        return new FastCsvReader(content, CsvOptions.Default);
     }
 
     /// <summary>
@@ -169,13 +181,13 @@ public static partial class Csv
     private static IEnumerable<string[]> ReadInternalFromString(string csvContent, CsvOptions options)
     {
         var position = 0;
-        
+
         while (position < csvContent.Length)
         {
             // Find end of current line
             var lineEnd = FindLineEnd(csvContent, position);
             var lineSpan = csvContent.AsSpan(position, lineEnd - position);
-            
+
             if (lineSpan.Length > 0)
             {
                 var fields = ParseLine(lineSpan, options);
@@ -184,7 +196,7 @@ public static partial class Csv
                     yield return fields;
                 }
             }
-            
+
             // Skip line ending characters
             position = lineEnd;
             if (position < csvContent.Length && csvContent[position] == '\r')
@@ -207,16 +219,16 @@ public static partial class Csv
     private static string[] ParseLine(ReadOnlySpan<char> line, CsvOptions options)
     {
         if (line.IsEmpty) return Array.Empty<string>();
-        
+
         // Pre-allocate for common case
         var fields = new List<string>(8);
         var fieldStart = 0;
         var inQuotes = false;
-        
+
         for (int i = 0; i < line.Length; i++)
         {
             var ch = line[i];
-            
+
             if (ch == options.Quote && !inQuotes)
             {
                 inQuotes = true;
@@ -233,29 +245,141 @@ public static partial class Csv
                 fieldStart = i + 1;
             }
         }
-        
+
         // Add final field
         if (fieldStart <= line.Length)
         {
             var fieldSpan = line.Slice(fieldStart);
             fields.Add(fieldSpan.ToString());
         }
-        
-        return fields.ToArray();
+
+        return [.. fields];
     }
 }
 
-
 /// <summary>
-/// Advanced result from CSV reading operations
+/// Advanced result from CSV reading operations with performance optimizations
 /// </summary>
-public class CsvReadResult
+public sealed partial class CsvReadResult
 {
-    public IReadOnlyList<string[]> Records { get; set; } = new List<string[]>();
+    private IReadOnlyList<string[]>? _records;
+    private IReadOnlyList<string>? _validationErrors;
+    private IReadOnlyDictionary<string, object>? _statistics;
+
+    /// <summary>
+    /// Parsed CSV records as arrays of field values
+    /// </summary>
+    public IReadOnlyList<string[]> Records
+    {
+        get => _records ?? [];
+        set => _records = value;
+    }
+
+    /// <summary>
+    /// Total number of records processed
+    /// </summary>
     public int TotalRecords { get; set; }
-    public bool IsValid { get; set; }
-    public IReadOnlyList<string> ValidationErrors { get; set; } = new List<string>();
+
+    /// <summary>
+    /// Indicates whether CSV validation passed without errors
+    /// </summary>
+    public bool IsValid { get; set; } = true;
+
+    /// <summary>
+    /// List of validation errors encountered during processing
+    /// </summary>
+    public IReadOnlyList<string> ValidationErrors
+    {
+        get => _validationErrors ?? [];
+        set => _validationErrors = value;
+    }
+
+    /// <summary>
+    /// Time taken to process the CSV data
+    /// </summary>
     public TimeSpan ProcessingTime { get; set; }
-    public Dictionary<string, object> Statistics { get; set; } = new Dictionary<string, object>();
+
+    /// <summary>
+    /// Performance statistics and metrics from the parsing operation
+    /// </summary>
+    public IReadOnlyDictionary<string, object> Statistics
+    {
+        get => _statistics ?? EmptyStatistics;
+        set => _statistics = value;
+    }
+
+    /// <summary>
+    /// Indicates if any validation errors were encountered
+    /// </summary>
+    public bool HasValidationErrors => _validationErrors?.Count > 0;
+
+    /// <summary>
+    /// Count of validation errors (0 if none)
+    /// </summary>
+    public int ValidationErrorCount => _validationErrors?.Count ?? 0;
+
+    /// <summary>
+    /// Indicates if performance statistics are available
+    /// </summary>
+    public bool HasStatistics => _statistics?.Count > 0;
+
+    // Cached empty statistics dictionary to avoid allocations
+    private static readonly IReadOnlyDictionary<string, object> EmptyStatistics =
+        new Dictionary<string, object>();
+
+    /// <summary>
+    /// Creates a successful result with records and processing time
+    /// </summary>
+    /// <param name="records">Parsed CSV records</param>
+    /// <param name="processingTime">Time taken to process</param>
+    /// <returns>Successful CSV read result</returns>
+    public static CsvReadResult Success(IReadOnlyList<string[]> records, TimeSpan processingTime)
+    {
+        return new CsvReadResult
+        {
+            Records = records,
+            TotalRecords = records.Count,
+            IsValid = true,
+            ProcessingTime = processingTime
+        };
+    }
+
+    /// <summary>
+    /// Creates a failed result with validation errors
+    /// </summary>
+    /// <param name="validationErrors">List of validation errors</param>
+    /// <param name="processingTime">Time taken to process</param>
+    /// <returns>Failed CSV read result</returns>
+    public static CsvReadResult Failure(IReadOnlyList<string> validationErrors, TimeSpan processingTime)
+    {
+        return new CsvReadResult
+        {
+            IsValid = false,
+            ValidationErrors = validationErrors,
+            ProcessingTime = processingTime
+        };
+    }
+
+    /// <summary>
+    /// Creates a successful result with statistics
+    /// </summary>
+    /// <param name="records">Parsed CSV records</param>
+    /// <param name="processingTime">Time taken to process</param>
+    /// <param name="statistics">Performance statistics</param>
+    /// <returns>Successful CSV read result with statistics</returns>
+    public static CsvReadResult SuccessWithStatistics(
+        IReadOnlyList<string[]> records,
+        TimeSpan processingTime,
+        IReadOnlyDictionary<string, object> statistics)
+    {
+        return new CsvReadResult
+        {
+            Records = records,
+            TotalRecords = records.Count,
+            IsValid = true,
+            ProcessingTime = processingTime,
+            Statistics = statistics
+        };
+    }
 }
 
