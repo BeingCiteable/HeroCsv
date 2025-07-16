@@ -1,15 +1,18 @@
 # FastCsv
 
-A high-performance, zero-allocation CSV parsing and writing library for .NET with multi-framework support and SIMD optimizations.
+A high-performance, zero-allocation CSV parsing library for .NET with modular interface-based architecture and progressive framework enhancements.
 
 ## Features
 
+- **Interface-based architecture** with single responsibility principle
+- **Partial interface pattern** for framework-specific optimizations
+- **Feature-based organization** (Fields, Validation, Errors, Configuration)
+- **Framework-agnostic design** with progressive enhancement
 - **Zero-allocation parsing** using ref structs and spans
-- **High performance** with SIMD optimizations for .NET 6+
+- **High performance** with hardware acceleration for .NET 6+
 - **Multi-framework support** (.NET Standard 2.0, .NET 6, .NET 7, .NET 8, .NET 9)
-- **Advanced features** like auto-detection, vectorized operations, and memory pooling
-- **Easy to use** with intuitive API design
-- **Comprehensive** - handles quoted fields, escaped quotes, and custom delimiters
+- **DateTimeOffset support** for timezone-aware timestamps
+- **Comprehensive validation** and error handling
 
 ## Installation
 
@@ -109,13 +112,16 @@ var records = await CsvUtility.ReadFileAsync("large_data.csv");
 
 ## Performance
 
-FastCsv is designed for maximum performance:
+FastCsv is designed for maximum performance with progressive enhancement:
 
+- **Framework-agnostic core** with consistent performance across all platforms
+- **Hardware acceleration** on .NET 6+ for vectorized operations
+- **Optimized character detection** on .NET 8+ with SearchValues
+- **Advanced hardware acceleration** on .NET 9+ with Vector512
 - **Zero-allocation parsing** using ref structs and ReadOnlySpan<char>
-- **SIMD optimizations** for vectorized operations on .NET 6+
-- **SearchValues** for ultra-fast character scanning on .NET 8+
 - **Memory pooling** to reduce garbage collection pressure
 - **Aggressive inlining** for optimal JIT compilation
+- **DateTimeOffset parsing** for timezone-aware date handling
 
 ### Benchmarks
 
@@ -129,14 +135,33 @@ Performance varies by .NET version due to progressive optimizations:
 
 ## Architecture
 
-The library consists of several key components:
+The library follows a modular interface-based architecture:
 
-- **CsvReader**: Zero-allocation CSV reader using ref struct
-- **CsvWriter**: High-performance CSV writer with IBufferWriter<char>
-- **CsvRecord**: Represents a single CSV record with field enumeration
-- **CsvRecordWrapper**: Wrapper for use with IEnumerable in utility methods
-- **PooledCsvWriter**: Memory-pooled buffer writer for CSV operations
-- **CsvUtility**: Static utility methods for common operations
+### Core Interfaces
+- **ICsvReader**: Zero-allocation CSV reader with progressive enhancements
+- **ICsvRecord**: Single CSV record with field access capabilities
+- **IFieldHandler**: Field parsing and processing operations
+- **ICsvValidator**: CSV data structure and content validation
+- **IErrorHandler**: Error management and reporting
+- **ICsvErrorReporter**: Specialized error reporting and statistics
+- **IConfigurationHandler**: CSV configuration and format detection
+- **IPositionHandler**: Position tracking and navigation
+- **IValidationHandler**: Structure and field validation
+
+### Organization
+- **Fields/**: Field handling and processing
+- **Errors/**: Error handling and reporting
+- **Validation/**: Data validation
+- **Configuration/**: Configuration management
+- **Navigation/**: Position tracking
+
+### Partial Interface Pattern
+Each interface uses framework-specific partial files:
+- **Core interface**: Framework-agnostic base functionality
+- **net6.cs**: Hardware acceleration features
+- **net7.cs**: Fast parsing and type conversion
+- **net8.cs**: Optimized collections and character detection
+- **net9.cs**: Advanced hardware acceleration
 
 ## Framework Support
 
@@ -154,6 +179,14 @@ MIT License - see LICENSE file for details.
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
 
+## Design Principles
+
+- **Single Responsibility Principle**: Each interface handles one core responsibility
+- **Framework-Agnostic Design**: Core functionality independent of .NET version
+- **Progressive Enhancement**: Framework-specific optimizations through partial interfaces
+- **Feature-Based Organization**: Interfaces grouped by functionality
+- **Timezone Awareness**: DateTimeOffset preferred over DateTime
+
 ## Acknowledgments
 
-This library is inspired by the need for high-performance CSV processing in .NET applications while maintaining zero-allocation principles and leveraging the latest .NET performance improvements.
+This library demonstrates modern .NET interface design with the partial interface pattern, progressive enhancement, and single responsibility principle while maintaining high performance and zero-allocation parsing.

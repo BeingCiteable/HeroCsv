@@ -59,5 +59,5 @@ public readonly struct CsvError(
     public string Message { get; } = message;
     public int Position { get; } = position;
     public int LineNumber { get; } = lineNumber;
-    public DateTime Timestamp { get; } = DateTime.UtcNow;
+    public DateTimeOffset Timestamp { get; } = DateTimeOffset.UtcNow;
 }

@@ -51,7 +51,7 @@ public readonly struct CsvReportedError(string message, int position, int lineNu
     public int Position { get; } = position;
     public int LineNumber { get; } = lineNumber;
     public ErrorSeverity Severity { get; } = severity;
-    public DateTime Timestamp { get; } = DateTime.UtcNow;
+    public DateTimeOffset Timestamp { get; } = DateTimeOffset.UtcNow;
 }
 
 /// <summary>

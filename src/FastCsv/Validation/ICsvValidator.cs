@@ -64,39 +64,3 @@ public enum ValidationSeverity
     Error = 3,
     Critical = 4
 }
-
-#if NET6_0_OR_GREATER
-/// <summary>
-/// Validation result for batch operations
-/// </summary>
-public readonly struct ValidationResult(
-    bool isValid,
-    IReadOnlyList<ValidationIssue> issues,
-    int validRecords,
-    int invalidRecords,
-    TimeSpan duration)
-{
-    public bool IsValid { get; } = isValid;
-    public IReadOnlyList<ValidationIssue> Issues { get; } = issues;
-    public int ValidRecords { get; } = validRecords;
-    public int InvalidRecords { get; } = invalidRecords;
-    public TimeSpan Duration { get; } = duration;
-}
-#endif
-
-#if NET8_0_OR_GREATER
-/// <summary>
-/// Validation rule for field validation
-/// </summary>
-public readonly struct ValidationRule(
-    string name,
-    ValidationSeverity severity,
-    Func<string, bool> validator,
-    string errorMessage)
-{
-    public string Name { get; } = name;
-    public ValidationSeverity Severity { get; } = severity;
-    public Func<string, bool> Validator { get; } = validator;
-    public string ErrorMessage { get; } = errorMessage;
-}
-#endif

@@ -25,4 +25,19 @@ public partial interface ICsvValidator
     /// </summary>
     FrozenDictionary<string, ValidationRule> GetValidationRules();
 }
+
+/// <summary>
+/// Validation rule for field validation
+/// </summary>
+public readonly struct ValidationRule(
+    string name,
+    ValidationSeverity severity,
+    Func<string, bool> validator,
+    string errorMessage)
+{
+    public string Name { get; } = name;
+    public ValidationSeverity Severity { get; } = severity;
+    public Func<string, bool> Validator { get; } = validator;
+    public string ErrorMessage { get; } = errorMessage;
+}
 #endif

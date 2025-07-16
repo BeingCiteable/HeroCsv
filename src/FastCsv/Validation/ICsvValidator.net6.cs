@@ -25,4 +25,21 @@ public partial interface ICsvValidator
     /// </summary>
     ValidationResult ValidateRecordsBatch(IReadOnlyList<string> records, CsvOptions options);
 }
+
+/// <summary>
+/// Validation result for batch operations
+/// </summary>
+public readonly struct ValidationResult(
+    bool isValid,
+    IReadOnlyList<ValidationIssue> issues,
+    int validRecords,
+    int invalidRecords,
+    TimeSpan duration)
+{
+    public bool IsValid { get; } = isValid;
+    public IReadOnlyList<ValidationIssue> Issues { get; } = issues;
+    public int ValidRecords { get; } = validRecords;
+    public int InvalidRecords { get; } = invalidRecords;
+    public TimeSpan Duration { get; } = duration;
+}
 #endif
