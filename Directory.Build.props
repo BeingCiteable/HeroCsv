@@ -13,4 +13,42 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <IsNetStandard Condition="'$(TargetFramework)' == 'netstandard2.0'">
+      true
+    </IsNetStandard>
+    <IsNet6OrGreater
+      Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0' OR '$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">
+      true
+    </IsNet6OrGreater>
+    <IsNet7OrGreater
+      Condition="'$(TargetFramework)' == 'net7.0' OR '$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">
+      true
+    </IsNet7OrGreater>
+    <IsNet8OrGreater
+      Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">
+      true
+    </IsNet8OrGreater>
+    <IsNet9OrGreater Condition="'$(TargetFramework)' == 'net9.0'">
+      true
+    </IsNet9OrGreater>
+  </PropertyGroup>
+
+  <!-- Conditional file inclusion based on target framework -->
+  <ItemGroup Condition="'$(IsNet6OrGreater)' == 'true'">
+    <Compile Include="**/*.net6.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsNet7OrGreater)' == 'true'">
+    <Compile Include="**/*.net7.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsNet8OrGreater)' == 'true'">
+    <Compile Include="**/*.net8.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsNet9OrGreater)' == 'true'">
+    <Compile Include="**/*.net9.cs" />
+  </ItemGroup>
 </Project>

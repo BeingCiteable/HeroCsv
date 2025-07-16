@@ -1,61 +1,45 @@
-#if NETSTANDARD2_0
-#endif
-
-#if NET6_0_OR_GREATER
-using System.Numerics;
-#endif
-
-#if NET7_0_OR_GREATER
-using System.Buffers.Text;
-#endif
-
-#if NET8_0_OR_GREATER
-using System.Buffers.Binary;
-using System.Collections.Frozen;
-using System.Runtime.Intrinsics;
-using System.Text.Unicode;
-using System.Buffers;
-#endif
-
-
 namespace FastCsv;
 
 /// <summary>
 /// Configuration for CSV parsing and writing operations
 /// </summary>
-public readonly struct CsvOptions
+/// <remarks>
+/// Creates a new CsvOptions instance with the specified settings
+/// </remarks>
+public readonly struct CsvOptions(
+    char delimiter = ',',
+    char quote = '"',
+    bool hasHeader = true,
+    bool trimWhitespace = false,
+    string? newLine = null)
 {
-    public readonly char Delimiter;
-    public readonly char Quote;
-    public readonly bool HasHeader;
-    public readonly bool TrimWhitespace;
-    public readonly string NewLine;
+    /// <summary>
+    /// The delimiter character (e.g., comma, semicolon, tab)
+    /// </summary>
+    public readonly char Delimiter = delimiter;
+    
+    /// <summary>
+    /// The quote character for escaping fields
+    /// </summary>
+    public readonly char Quote = quote;
+    
+    /// <summary>
+    /// Whether the CSV has a header row
+    /// </summary>
+    public readonly bool HasHeader = hasHeader;
+    
+    /// <summary>
+    /// Whether to trim whitespace from fields
+    /// </summary>
+    public readonly bool TrimWhitespace = trimWhitespace;
+    
+    /// <summary>
+    /// The newline string to use when writing
+    /// </summary>
+    public readonly string NewLine = newLine ?? Environment.NewLine;
 
-#if NET8_0_OR_GREATER
-    // Precomputed SearchValues for ultra-fast character searching
-    public readonly SearchValues<char> SpecialChars;
-    public readonly SearchValues<char> NewLineChars;
-#endif
-
-    public CsvOptions(
-        char delimiter = ',',
-        char quote = '"',
-        bool hasHeader = true,
-        bool trimWhitespace = false,
-        string newLine = "\r\n")
-    {
-        Delimiter = delimiter;
-        Quote = quote;
-        HasHeader = hasHeader;
-        TrimWhitespace = trimWhitespace;
-        NewLine = newLine ?? Environment.NewLine;
-
-#if NET8_0_OR_GREATER
-        // Pre-create SearchValues for maximum performance
-        SpecialChars = SearchValues.Create([delimiter, quote, '\r', '\n']);
-        NewLineChars = SearchValues.Create(['\r', '\n']);
-#endif
-    }
-
-    public static CsvOptions Default => new(',', '"', true, false, "\r\n");
+    /// <summary>
+    /// Default CSV options (comma-separated, quoted, with header)
+    /// </summary>
+    public static CsvOptions Default => new();
 }
