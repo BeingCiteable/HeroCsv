@@ -40,22 +40,18 @@ public partial interface ICsvValidator
 /// <summary>
 /// Represents a validation issue
 /// </summary>
-public readonly struct ValidationIssue
+public readonly struct ValidationIssue(
+    ValidationSeverity severity,
+    string message,
+    int position,
+    int lineNumber,
+    int fieldIndex = -1)
 {
-    public ValidationSeverity Severity { get; }
-    public string Message { get; }
-    public int Position { get; }
-    public int LineNumber { get; }
-    public int FieldIndex { get; }
-
-    public ValidationIssue(ValidationSeverity severity, string message, int position, int lineNumber, int fieldIndex = -1)
-    {
-        Severity = severity;
-        Message = message;
-        Position = position;
-        LineNumber = lineNumber;
-        FieldIndex = fieldIndex;
-    }
+    public ValidationSeverity Severity { get; } = severity;
+    public string Message { get; } = message;
+    public int Position { get; } = position;
+    public int LineNumber { get; } = lineNumber;
+    public int FieldIndex { get; } = fieldIndex;
 }
 
 /// <summary>
@@ -63,52 +59,44 @@ public readonly struct ValidationIssue
 /// </summary>
 public enum ValidationSeverity
 {
-    Info,
-    Warning,
-    Error,
-    Critical
+    Info = 1,
+    Warning = 2,
+    Error = 3,
+    Critical = 4
 }
 
 #if NET6_0_OR_GREATER
 /// <summary>
 /// Validation result for batch operations
 /// </summary>
-public readonly struct ValidationResult
+public readonly struct ValidationResult(
+    bool isValid,
+    IReadOnlyList<ValidationIssue> issues,
+    int validRecords,
+    int invalidRecords,
+    TimeSpan duration)
 {
-    public bool IsValid { get; }
-    public IReadOnlyList<ValidationIssue> Issues { get; }
-    public int ValidRecords { get; }
-    public int InvalidRecords { get; }
-    public TimeSpan Duration { get; }
-
-    public ValidationResult(bool isValid, IReadOnlyList<ValidationIssue> issues, int validRecords, int invalidRecords, TimeSpan duration)
-    {
-        IsValid = isValid;
-        Issues = issues;
-        ValidRecords = validRecords;
-        InvalidRecords = invalidRecords;
-        Duration = duration;
-    }
+    public bool IsValid { get; } = isValid;
+    public IReadOnlyList<ValidationIssue> Issues { get; } = issues;
+    public int ValidRecords { get; } = validRecords;
+    public int InvalidRecords { get; } = invalidRecords;
+    public TimeSpan Duration { get; } = duration;
 }
+#endif
 
 #if NET8_0_OR_GREATER
 /// <summary>
 /// Validation rule for field validation
 /// </summary>
-public readonly struct ValidationRule
+public readonly struct ValidationRule(
+    string name,
+    ValidationSeverity severity,
+    Func<string, bool> validator,
+    string errorMessage)
 {
-    public string Name { get; }
-    public ValidationSeverity Severity { get; }
-    public Func<string, bool> Validator { get; }
-    public string ErrorMessage { get; }
-
-    public ValidationRule(string name, ValidationSeverity severity, Func<string, bool> validator, string errorMessage)
-    {
-        Name = name;
-        Severity = severity;
-        Validator = validator;
-        ErrorMessage = errorMessage;
-    }
+    public string Name { get; } = name;
+    public ValidationSeverity Severity { get; } = severity;
+    public Func<string, bool> Validator { get; } = validator;
+    public string ErrorMessage { get; } = errorMessage;
 }
-#endif
 #endif

@@ -19,7 +19,7 @@ public partial interface ICsvReader
     /// <summary>
     /// Total number of records processed so far
     /// </summary>
-    long RecordCount { get; }
+    int RecordCount { get; }
 
     /// <summary>
     /// Current position in the input data

@@ -37,32 +37,27 @@ public partial interface IErrorHandler
 /// </summary>
 public enum CsvErrorType
 {
-    UnbalancedQuotes,
-    MalformedRecord,
-    UnexpectedEndOfData,
-    InvalidFieldIndex,
-    InvalidConfiguration,
-    ParsingError,
-    ValidationError
+    UnbalancedQuotes = 1,
+    MalformedRecord = 2,
+    UnexpectedEndOfData = 3,
+    InvalidFieldIndex = 4,
+    InvalidConfiguration = 5,
+    ParsingError = 6,
+    ValidationError = 7
 }
 
 /// <summary>
 /// Represents a CSV processing error
 /// </summary>
-public readonly struct CsvError
+public readonly struct CsvError(
+    CsvErrorType type,
+    string message,
+    int position,
+    int lineNumber)
 {
-    public CsvErrorType Type { get; }
-    public string Message { get; }
-    public int Position { get; }
-    public int LineNumber { get; }
-    public DateTime Timestamp { get; }
-
-    public CsvError(CsvErrorType type, string message, int position, int lineNumber)
-    {
-        Type = type;
-        Message = message;
-        Position = position;
-        LineNumber = lineNumber;
-        Timestamp = DateTime.UtcNow;
-    }
+    public CsvErrorType Type { get; } = type;
+    public string Message { get; } = message;
+    public int Position { get; } = position;
+    public int LineNumber { get; } = lineNumber;
+    public DateTime Timestamp { get; } = DateTime.UtcNow;
 }

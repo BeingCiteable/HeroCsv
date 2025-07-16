@@ -45,22 +45,13 @@ public partial interface ICsvErrorReporter
 /// <summary>
 /// Represents a reported CSV error or warning
 /// </summary>
-public readonly struct CsvReportedError
+public readonly struct CsvReportedError(string message, int position, int lineNumber, ErrorSeverity severity)
 {
-    public string Message { get; }
-    public int Position { get; }
-    public int LineNumber { get; }
-    public ErrorSeverity Severity { get; }
-    public DateTime Timestamp { get; }
-
-    public CsvReportedError(string message, int position, int lineNumber, ErrorSeverity severity)
-    {
-        Message = message;
-        Position = position;
-        LineNumber = lineNumber;
-        Severity = severity;
-        Timestamp = DateTime.UtcNow;
-    }
+    public string Message { get; } = message;
+    public int Position { get; } = position;
+    public int LineNumber { get; } = lineNumber;
+    public ErrorSeverity Severity { get; } = severity;
+    public DateTime Timestamp { get; } = DateTime.UtcNow;
 }
 
 /// <summary>
