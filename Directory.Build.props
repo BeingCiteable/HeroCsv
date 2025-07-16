@@ -6,8 +6,8 @@
     <Version>1.0.0</Version>
     <FileVersion>1.0.0.0</FileVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <RepositoryUrl>https://github.com/yourusername/FastCsv</RepositoryUrl>
-    <RepositoryBranch>main</RepositoryBranch>
+    <RepositoryUrl>https://github.com/BeingCiteable/FastCsv</RepositoryUrl>
+    <RepositoryBranch>master</RepositoryBranch>
     <RepositoryCommit>HEAD</RepositoryCommit>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>

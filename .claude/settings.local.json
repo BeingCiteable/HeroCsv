@@ -14,7 +14,11 @@
       "Bash(rm:*)",
       "Bash(copy:*)",
       "Bash(cp:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(mv:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(dotnet search:*)",
+      "Bash(del \"C:\\projects\\csv\\tests\\net6.0\\FastCsv.Tests\\BasicTests.cs\")"
     ],
     "deny": []
   }
