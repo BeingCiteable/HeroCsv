@@ -1,18 +1,19 @@
 # FastCsv
 
-A high-performance, zero-allocation CSV parsing library for .NET with modular interface-based architecture and progressive framework enhancements.
+An **ultra-fast and low memory usage** CSV parsing library for .NET focused on **reading operations only**. Built with zero-allocation parsing using ReadOnlySpan<char> and progressive framework-specific optimizations.
 
 ## Features
 
-- **Interface-based architecture** with single responsibility principle
-- **Partial interface pattern** for framework-specific optimizations
-- **Feature-based organization** (Fields, Validation, Errors, Configuration)
-- **Framework-agnostic design** with progressive enhancement
-- **Zero-allocation parsing** using ref structs and spans
-- **High performance** with hardware acceleration for .NET 6+
+- **Ultra-fast performance** with zero-allocation parsing using ReadOnlySpan<char>
+- **Extremely simple API** for basic use cases with advanced configuration options
+- **Partial class pattern** for framework-specific optimizations
+- **Progressive enhancement** across .NET versions (6+ → 7+ → 8+ → 9+)
+- **Hardware acceleration** with Vector and Vector512 operations
+- **SearchValues optimization** for ultra-fast character detection (.NET 8+)
 - **Multi-framework support** (.NET Standard 2.0, .NET 6, .NET 7, .NET 8, .NET 9)
 - **DateTimeOffset support** for timezone-aware timestamps
-- **Comprehensive validation** and error handling
+- **Feature-based organization** (Fields, Validation, Errors, Configuration)
+- **Reading-focused design** - no writing operations for maximum performance
 
 ## Installation
 
@@ -22,41 +23,41 @@ dotnet add package FastCsv
 
 ## Quick Start
 
-### Reading CSV
+### Basic CSV Reading (Simple API)
 
 ```csharp
 using FastCsv;
 
-// Basic reading
-var csvData = "Name,Age,City\r\nJohn,25,\"New York\"\r\nJane,30,London";
-var reader = new CsvReader(csvData);
+// Most basic usage
+var csvData = """
+Name,Age,City
+John,25,New York
+Jane,30,London
+Bob,35,Paris
+""";
 
-reader.SkipHeader(); // Skip header if present
-
-foreach (var record in reader)
+// Read all records
+foreach (var record in Csv.Read(csvData))
 {
-    foreach (var field in record)
-    {
-        Console.Write($"'{field}' ");
-    }
-    Console.WriteLine();
+    Console.WriteLine(string.Join(" | ", record));
 }
-```
+// Output:
+// Name | Age | City
+// John | 25 | New York
+// Jane | 30 | London
+// Bob | 35 | Paris
 
-### Writing CSV
+// Read with custom delimiter
+foreach (var record in Csv.Read("Name;Age;City\nJohn;25;New York", ';'))
+{
+    Console.WriteLine(string.Join(" | ", record));
+}
 
-```csharp
-using FastCsv;
-
-// Basic writing
-using var pooledWriter = new PooledCsvWriter();
-var writer = new CsvWriter(pooledWriter);
-
-writer.WriteHeader("Name", "Age", "City");
-writer.WriteRecord("John", "25", "New York");
-writer.WriteRecord("Jane", "30", "London");
-
-Console.WriteLine(pooledWriter.ToString());
+// Read with headers as dictionary
+foreach (var record in Csv.ReadWithHeaders(csvData))
+{
+    Console.WriteLine($"Name: {record["Name"]}, Age: {record["Age"]}, City: {record["City"]}");
+}
 ```
 
 ### File Operations
@@ -65,63 +66,195 @@ Console.WriteLine(pooledWriter.ToString());
 using FastCsv;
 
 // Read from file
-var records = CsvUtility.ReadFile("data.csv");
-foreach (var record in records)
+foreach (var record in Csv.ReadFile("data.csv"))
 {
-    Console.WriteLine($"Record from line {record.LineNumber}: {string.Join(", ", record.ToStringArray())}");
+    Console.WriteLine($"Record: {string.Join(", ", record)}");
 }
 
-// Write to file
-var data = new[]
+// Async file reading (.NET 7+)
+foreach (var record in await Csv.ReadFileAsync("data.csv"))
 {
-    new[] { "John", "25", "New York" },
-    new[] { "Jane", "30", "London" }
-};
-CsvUtility.WriteFile("output.csv", data, new[] { "Name", "Age", "City" });
+    Console.WriteLine($"Record: {string.Join(", ", record)}");
+}
+
+// Auto-detect format (.NET 8+)
+foreach (var record in Csv.ReadFileAutoDetect("unknown_format.csv"))
+{
+    Console.WriteLine($"Record: {string.Join(", ", record)}");
+}
 ```
 
-## Advanced Features
-
-### Auto-detection (.NET 8+)
+### Advanced Configuration
 
 ```csharp
-// Automatically detect CSV format
-var records = CsvUtility.ReadFileAutoDetect("unknown_format.csv");
+using FastCsv;
+
+// Fluent builder pattern for complex scenarios
+var result = Csv.Configure()
+    .WithFile("data.csv")
+    .WithDelimiter(';')
+    .WithHeaders(true)
+    .WithValidation(true)
+    .WithErrorTracking(true)
+    .WithHardwareAcceleration(true)  // .NET 6+
+    .WithProfiling(true)            // .NET 9+
+    .ReadAdvanced();
+
+Console.WriteLine($"Processed {result.TotalRecords} records in {result.ProcessingTime}");
+Console.WriteLine($"Valid: {result.IsValid}");
+
+if (result.ValidationErrors.Any())
+{
+    Console.WriteLine("Validation errors:");
+    foreach (var error in result.ValidationErrors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
 ```
 
-### Custom Options
+## Performance Features
+
+### Zero-Allocation Parsing
 
 ```csharp
-var options = new CsvOptions(
-    delimiter: ';',
-    quote: '"',
-    hasHeader: true,
-    trimWhitespace: true,
-    newLine: "\r\n"
-);
-
-var reader = new CsvReader(csvData, options);
+// ReadOnlySpan<char> overloads for maximum performance
+ReadOnlySpan<char> csvSpan = csvData.AsSpan();
+foreach (var record in Csv.Read(csvSpan))
+{
+    // Zero-allocation parsing
+    Console.WriteLine($"Record: {string.Join(", ", record)}");
+}
 ```
 
-### Async Operations (.NET 8+)
+### Hardware Acceleration (.NET 6+)
 
 ```csharp
-// Asynchronous reading with UTF-8 optimization
-var records = await CsvUtility.ReadFileAsync("large_data.csv");
+// Vector operations for large datasets
+var fieldCount = Csv.CountFields(csvLine.AsSpan(), ',');
+var isAccelerated = Csv.IsHardwareAccelerated;
+var optimalSize = Csv.GetOptimalBufferSize();
 ```
 
-## Performance
+### Advanced Vector Operations (.NET 9+)
 
-FastCsv is designed for maximum performance with progressive enhancement:
+```csharp
+// Vector512 operations for maximum performance
+var fieldCount = Csv.CountFieldsVector512(csvLine.AsSpan(), ',');
+var isSupported = Csv.IsVector512Supported;
+var optimalSize = Csv.GetOptimalVector512BufferSize();
 
+// Performance profiling
+var (records, metrics) = Csv.ReadWithProfiling(csvData.AsSpan(), options, enableProfiling: true);
+Console.WriteLine($"Processing time: {metrics["ProcessingTime"]}");
+Console.WriteLine($"Vector512 supported: {metrics["Vector512Supported"]}");
+```
+
+## Real-World Examples
+
+### Processing Employee Data
+
+```csharp
+var employeeData = """
+FirstName,LastName,Department,Salary,HireDate
+John,Doe,Engineering,75000,2020-01-15
+Jane,Smith,Marketing,65000,2019-06-20
+Bob,Johnson,Sales,55000,2021-03-10
+""";
+
+var employees = Csv.ReadWithHeaders(employeeData);
+var engineeringEmployees = employees
+    .Where(emp => emp["Department"] == "Engineering")
+    .Select(emp => new 
+    {
+        Name = $"{emp["FirstName"]} {emp["LastName"]}",
+        Salary = decimal.Parse(emp["Salary"]),
+        HireDate = DateTime.Parse(emp["HireDate"])
+    });
+
+foreach (var emp in engineeringEmployees)
+{
+    Console.WriteLine($"{emp.Name}: ${emp.Salary:N0} (hired {emp.HireDate:MMM yyyy})");
+}
+```
+
+### Error Handling and Validation
+
+```csharp
+var result = Csv.Configure()
+    .WithFile("potentially-malformed.csv")
+    .WithValidation(true)
+    .WithErrorTracking(true)
+    .ReadAdvanced();
+
+if (!result.IsValid)
+{
+    Console.WriteLine($"Found {result.ValidationErrors.Count} validation errors:");
+    foreach (var error in result.ValidationErrors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
+else
+{
+    Console.WriteLine($"Successfully processed {result.TotalRecords} records");
+    // Process the valid records
+    foreach (var record in result.Records)
+    {
+        // Process each record
+    }
+}
+```
+
+### Processing Large Files in Batches
+
+```csharp
+// For very large files, process records in batches to avoid memory issues
+var largeFileRecords = Csv.Configure()
+    .WithFile("very-large-file.csv")
+    .WithHeaders(true)
+    .Read();
+
+var batchSize = 1000;
+var batch = new List<string[]>();
+
+foreach (var record in largeFileRecords)
+{
+    batch.Add(record);
+    
+    if (batch.Count >= batchSize)
+    {
+        ProcessBatch(batch);
+        batch.Clear();
+    }
+}
+
+// Process remaining records
+if (batch.Any())
+{
+    ProcessBatch(batch);
+}
+
+static void ProcessBatch(List<string[]> batch)
+{
+    Console.WriteLine($"Processing batch of {batch.Count} records");
+    // Process the batch
+}
+```
+
+## Performance Philosophy
+
+FastCsv is designed as an **ultra-fast and low memory usage** library with progressive enhancement:
+
+- **Zero-allocation parsing** using ReadOnlySpan<char> for maximum performance
 - **Framework-agnostic core** with consistent performance across all platforms
+- **Progressive enhancement** with framework-specific optimizations
 - **Hardware acceleration** on .NET 6+ for vectorized operations
-- **Optimized character detection** on .NET 8+ with SearchValues
-- **Advanced hardware acceleration** on .NET 9+ with Vector512
-- **Zero-allocation parsing** using ref structs and ReadOnlySpan<char>
-- **Memory pooling** to reduce garbage collection pressure
+- **SearchValues optimization** on .NET 8+ for ultra-fast character detection
+- **Vector512 operations** on .NET 9+ for maximum hardware utilization
+- **Pre-allocated collections** to minimize memory allocations
 - **Aggressive inlining** for optimal JIT compilation
-- **DateTimeOffset parsing** for timezone-aware date handling
+- **ReadOnly designs** to avoid unnecessary copying
 
 ### Benchmarks
 
@@ -181,12 +314,35 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## Design Principles
 
-- **Single Responsibility Principle**: Each interface handles one core responsibility
-- **Framework-Agnostic Design**: Core functionality independent of .NET version
-- **Progressive Enhancement**: Framework-specific optimizations through partial interfaces
-- **Feature-Based Organization**: Interfaces grouped by functionality
-- **Timezone Awareness**: DateTimeOffset preferred over DateTime
+### 1. Ultra-Fast and Low Memory Usage
+- **Primary goal**: Maximum performance with minimal memory allocations
+- **ReadOnlySpan<char>** for zero-allocation parsing
+- **Pre-allocated collections** to reduce GC pressure
+- **Hardware acceleration** through Vector operations
+
+### 2. Simple API with Advanced Options
+- **Static Csv class** for extremely simple use cases
+- **Fluent builder pattern** for advanced configuration
+- **ReadOnlySpan<char> overloads** for maximum performance
+- **String overloads** for ease of use
+
+### 3. Partial Class Pattern
+- **All interfaces and classes** follow the partial pattern
+- **Framework-specific files** contain optimizations (net6.cs, net7.cs, net8.cs, net9.cs)
+- **Progressive enhancement** across .NET versions
+- **Conditional compilation** for version-specific features
+
+### 4. Framework-Agnostic Design
+- **Core functionality** independent of .NET version
+- **Meaningful comments** focus on functionality, not implementation
+- **Single Responsibility Principle** - each interface handles one core responsibility
+- **DateTimeOffset** preferred over DateTime for timezone awareness
+
+### 5. Reading-Focused Design
+- **No writing operations** for maximum performance optimization
+- **Feature-based organization** (Fields, Validation, Errors, Configuration)
+- **Interface-based architecture** with partial implementations
 
 ## Acknowledgments
 
-This library demonstrates modern .NET interface design with the partial interface pattern, progressive enhancement, and single responsibility principle while maintaining high performance and zero-allocation parsing.
+This library demonstrates modern .NET design with the partial class pattern, progressive enhancement, and ultra-fast zero-allocation parsing while maintaining an extremely simple API for basic use cases.

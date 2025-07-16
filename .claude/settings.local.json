@@ -18,7 +18,9 @@
       "Bash(mv:*)",
       "Bash(dotnet clean:*)",
       "Bash(dotnet search:*)",
-      "Bash(del \"C:\\projects\\csv\\tests\\net6.0\\FastCsv.Tests\\BasicTests.cs\")"
+      "Bash(del \"C:\\projects\\csv\\tests\\net6.0\\FastCsv.Tests\\BasicTests.cs\")",
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
