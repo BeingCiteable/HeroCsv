@@ -5,7 +5,7 @@ using System.Numerics;
 namespace FastCsv.Fields;
 
 /// <summary>
-/// .NET 6+ vectorized enhancements for IFieldHandler
+/// Hardware acceleration enhancements for IFieldHandler
 /// </summary>
 public partial interface IFieldHandler
 {
@@ -13,7 +13,7 @@ public partial interface IFieldHandler
     /// Whether hardware acceleration is available for field processing
     /// </summary>
     bool IsVectorizedProcessingAvailable { get; }
-    
+
     /// <summary>
     /// Enable or disable hardware-accelerated field processing
     /// </summary>

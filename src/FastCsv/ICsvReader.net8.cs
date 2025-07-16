@@ -6,7 +6,7 @@ using System.Collections.Frozen;
 namespace FastCsv;
 
 /// <summary>
-/// .NET 8+ SearchValues and Frozen Collections enhancements for ICsvReader
+/// Optimized collections and format detection enhancements for ICsvReader
 /// </summary>
 public partial interface ICsvReader
 {
@@ -14,12 +14,12 @@ public partial interface ICsvReader
     /// Auto-detect the CSV format from sample data
     /// </summary>
     CsvOptions DetectFormat();
-    
+
     /// <summary>
     /// Find fields by name using header information
     /// </summary>
     bool TryGetFieldByName(string fieldName, out ReadOnlySpan<char> field);
-    
+
     /// <summary>
     /// Get all field names from header
     /// </summary>

@@ -5,7 +5,7 @@ using System.Numerics;
 namespace FastCsv;
 
 /// <summary>
-/// .NET 6+ performance enhancements for ICsvReader
+/// Hardware acceleration enhancements for ICsvReader
 /// </summary>
 public partial interface ICsvReader
 {
@@ -13,12 +13,12 @@ public partial interface ICsvReader
     /// Whether hardware acceleration is available and being used
     /// </summary>
     bool IsHardwareAccelerated { get; }
-    
+
     /// <summary>
     /// Enable or disable hardware acceleration
     /// </summary>
     void SetVectorizationEnabled(bool enabled);
-    
+
     /// <summary>
     /// Get the optimal buffer size for the current hardware
     /// </summary>

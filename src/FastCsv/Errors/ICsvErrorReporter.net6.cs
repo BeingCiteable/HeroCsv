@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace FastCsv.Errors;
 
 /// <summary>
-/// .NET 6+ error reporting statistics enhancements for ICsvErrorReporter
+/// Error reporting statistics enhancements for ICsvErrorReporter
 /// </summary>
 public partial interface ICsvErrorReporter
 {
@@ -26,7 +26,7 @@ public readonly struct ErrorReportingStatistics
     public double ErrorRate { get; }
     public TimeSpan ReportingDuration { get; }
     public Dictionary<int, int> ErrorsByLine { get; }
-    
+
     public ErrorReportingStatistics(int totalErrors, int totalWarnings, int uniqueErrors, double errorRate, TimeSpan reportingDuration, Dictionary<int, int> errorsByLine)
     {
         TotalErrors = totalErrors;

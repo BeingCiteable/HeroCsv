@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace FastCsv.Validation;
 
 /// <summary>
@@ -13,27 +10,27 @@ public partial interface ICsvValidator
     /// Check if a record has the expected number of fields
     /// </summary>
     bool IsValidRecord(ICsvRecord record, int expectedFieldCount);
-    
+
     /// <summary>
     /// Check if a record is properly formatted
     /// </summary>
     bool IsWellFormedRecord(ICsvRecord record);
-    
+
     /// <summary>
     /// Validate a specific field
     /// </summary>
     bool IsValidField(ReadOnlySpan<char> field);
-    
+
     /// <summary>
     /// Validate the overall CSV structure
     /// </summary>
     bool ValidateStructure(ReadOnlySpan<char> data, CsvOptions options);
-    
+
     /// <summary>
     /// Check if quotes are properly balanced in a field
     /// </summary>
     bool HasBalancedQuotes(ReadOnlySpan<char> field, char quoteChar);
-    
+
     /// <summary>
     /// Get validation issues for a record
     /// </summary>
@@ -50,7 +47,7 @@ public readonly struct ValidationIssue
     public int Position { get; }
     public int LineNumber { get; }
     public int FieldIndex { get; }
-    
+
     public ValidationIssue(ValidationSeverity severity, string message, int position, int lineNumber, int fieldIndex = -1)
     {
         Severity = severity;
@@ -83,7 +80,7 @@ public readonly struct ValidationResult
     public int ValidRecords { get; }
     public int InvalidRecords { get; }
     public TimeSpan Duration { get; }
-    
+
     public ValidationResult(bool isValid, IReadOnlyList<ValidationIssue> issues, int validRecords, int invalidRecords, TimeSpan duration)
     {
         IsValid = isValid;
@@ -104,7 +101,7 @@ public readonly struct ValidationRule
     public ValidationSeverity Severity { get; }
     public Func<string, bool> Validator { get; }
     public string ErrorMessage { get; }
-    
+
     public ValidationRule(string name, ValidationSeverity severity, Func<string, bool> validator, string errorMessage)
     {
         Name = name;

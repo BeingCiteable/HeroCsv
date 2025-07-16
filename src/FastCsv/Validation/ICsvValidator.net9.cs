@@ -4,7 +4,7 @@ using System;
 namespace FastCsv.Validation;
 
 /// <summary>
-/// .NET 9+ advanced validation enhancements for ICsvValidator
+/// Advanced validation enhancements for ICsvValidator
 /// </summary>
 public partial interface ICsvValidator
 {

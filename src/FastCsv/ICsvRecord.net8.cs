@@ -5,7 +5,7 @@ using System.Collections.Frozen;
 namespace FastCsv;
 
 /// <summary>
-/// .NET 8+ named field access enhancements for ICsvRecord
+/// Named field access enhancements for ICsvRecord
 /// </summary>
 public partial interface ICsvRecord
 {
@@ -13,12 +13,12 @@ public partial interface ICsvRecord
     /// Get field by name using header information
     /// </summary>
     bool TryGetFieldByName(string fieldName, out ReadOnlySpan<char> field);
-    
+
     /// <summary>
     /// Get all field names from header
     /// </summary>
     FrozenSet<string> GetFieldNames();
-    
+
     /// <summary>
     /// Get field index by name
     /// </summary>

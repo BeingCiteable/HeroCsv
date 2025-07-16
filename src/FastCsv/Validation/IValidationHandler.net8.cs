@@ -5,7 +5,7 @@ using System.Buffers;
 namespace FastCsv.Validation;
 
 /// <summary>
-/// .NET 8+ fast character detection enhancements for IValidationHandler
+/// Fast character detection enhancements for IValidationHandler
 /// </summary>
 public partial interface IValidationHandler
 {
@@ -13,7 +13,7 @@ public partial interface IValidationHandler
     /// Validate CSV structure with optimized character detection
     /// </summary>
     bool IsValidCsvStructureOptimized(ReadOnlySpan<char> data, SearchValues<char> invalidChars);
-    
+
     /// <summary>
     /// Validate field with optimized special character detection
     /// </summary>

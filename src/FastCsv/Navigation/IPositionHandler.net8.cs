@@ -5,7 +5,7 @@ using System.Buffers;
 namespace FastCsv.Navigation;
 
 /// <summary>
-/// .NET 8+ line counting enhancements for IPositionHandler
+/// Optimized line counting enhancements for IPositionHandler
 /// </summary>
 public partial interface IPositionHandler
 {
@@ -13,7 +13,7 @@ public partial interface IPositionHandler
     /// Count lines in a span with custom line terminators
     /// </summary>
     int CountLines(ReadOnlySpan<char> data, SearchValues<char> lineTerminators);
-    
+
     /// <summary>
     /// Seek to a specific line with custom line terminators
     /// </summary>

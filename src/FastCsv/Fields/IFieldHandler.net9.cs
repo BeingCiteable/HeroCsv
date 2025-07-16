@@ -4,7 +4,7 @@ using System;
 namespace FastCsv.Fields;
 
 /// <summary>
-/// .NET 9+ Vector512 enhancements for IFieldHandler
+/// Advanced hardware acceleration enhancements for IFieldHandler
 /// </summary>
 public partial interface IFieldHandler
 {
@@ -12,7 +12,7 @@ public partial interface IFieldHandler
     /// Whether advanced hardware acceleration is available for field processing
     /// </summary>
     bool IsVector512Available { get; }
-    
+
     /// <summary>
     /// Enable or disable advanced hardware acceleration
     /// </summary>

@@ -1,5 +1,3 @@
-using System;
-
 namespace FastCsv.Configuration;
 
 /// <summary>
@@ -12,17 +10,17 @@ public partial interface IConfigurationHandler
     /// Current CSV options
     /// </summary>
     CsvOptions Options { get; }
-    
+
     /// <summary>
     /// Auto-detect CSV format from sample data
     /// </summary>
     CsvOptions DetectFormat(ReadOnlySpan<char> sampleData);
-    
+
     /// <summary>
     /// Get preset options by name (e.g., "excel", "tab", "pipe")
     /// </summary>
     CsvOptions GetPresetOptions(string presetName);
-    
+
     /// <summary>
     /// Validate that the options are consistent
     /// </summary>

@@ -4,7 +4,7 @@ using System;
 namespace FastCsv;
 
 /// <summary>
-/// .NET 9+ Vector512 and advanced diagnostics enhancements for ICsvReader
+/// Advanced hardware acceleration and diagnostics enhancements for ICsvReader
 /// </summary>
 public partial interface ICsvReader
 {
@@ -12,7 +12,7 @@ public partial interface ICsvReader
     /// Whether advanced hardware acceleration is available
     /// </summary>
     bool IsVector512Supported { get; }
-    
+
     /// <summary>
     /// Enable advanced profiling and diagnostics
     /// </summary>

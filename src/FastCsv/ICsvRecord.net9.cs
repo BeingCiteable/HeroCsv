@@ -4,7 +4,7 @@ using System;
 namespace FastCsv;
 
 /// <summary>
-/// .NET 9+ advanced field operations enhancements for ICsvRecord
+/// Advanced field operations enhancements for ICsvRecord
 /// </summary>
 public partial interface ICsvRecord
 {
@@ -12,7 +12,7 @@ public partial interface ICsvRecord
     /// Get field with advanced optimization for large fields
     /// </summary>
     ReadOnlySpan<char> GetFieldOptimized(int index);
-    
+
     /// <summary>
     /// Get multiple fields efficiently
     /// </summary>

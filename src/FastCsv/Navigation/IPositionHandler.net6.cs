@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace FastCsv.Navigation;
 
 /// <summary>
-/// .NET 6+ performance tracking enhancements for IPositionHandler
+/// Performance tracking enhancements for IPositionHandler
 /// </summary>
 public partial interface IPositionHandler
 {
@@ -13,17 +13,17 @@ public partial interface IPositionHandler
     /// Get processing rate (records per second)
     /// </summary>
     double GetProcessingRate();
-    
+
     /// <summary>
     /// Get elapsed processing time
     /// </summary>
     TimeSpan GetElapsedTime();
-    
+
     /// <summary>
     /// Start performance measurement
     /// </summary>
     void StartMeasurement();
-    
+
     /// <summary>
     /// Stop performance measurement
     /// </summary>

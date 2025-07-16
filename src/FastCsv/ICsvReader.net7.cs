@@ -5,7 +5,7 @@ using System.Buffers.Text;
 namespace FastCsv;
 
 /// <summary>
-/// .NET 7+ fast parsing enhancements for ICsvReader
+/// Fast parsing enhancements for ICsvReader
 /// </summary>
 public partial interface ICsvReader
 {
@@ -13,17 +13,17 @@ public partial interface ICsvReader
     /// Parse field as specific type
     /// </summary>
     bool TryParseField<T>(int fieldIndex, out T value) where T : struct;
-    
+
     /// <summary>
     /// Parse field as Int32
     /// </summary>
     bool TryParseInt32(int fieldIndex, out int value);
-    
+
     /// <summary>
     /// Parse field as Decimal
     /// </summary>
     bool TryParseDecimal(int fieldIndex, out decimal value);
-    
+
     /// <summary>
     /// Get field as UTF-8 bytes
     /// </summary>

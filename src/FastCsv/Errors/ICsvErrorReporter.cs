@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace FastCsv.Errors;
 
 /// <summary>
@@ -13,32 +10,32 @@ public partial interface ICsvErrorReporter
     /// Whether any errors have been reported
     /// </summary>
     bool HasErrors { get; }
-    
+
     /// <summary>
     /// Last error message
     /// </summary>
     string? LastError { get; }
-    
+
     /// <summary>
     /// Clear all reported errors
     /// </summary>
     void ClearErrors();
-    
+
     /// <summary>
     /// Report an error
     /// </summary>
     void ReportError(string message, int position, int lineNumber);
-    
+
     /// <summary>
     /// Report a warning
     /// </summary>
     void ReportWarning(string message, int position, int lineNumber);
-    
+
     /// <summary>
     /// Get all reported errors
     /// </summary>
     IReadOnlyList<CsvReportedError> GetErrors();
-    
+
     /// <summary>
     /// Get all reported warnings
     /// </summary>
@@ -55,7 +52,7 @@ public readonly struct CsvReportedError
     public int LineNumber { get; }
     public ErrorSeverity Severity { get; }
     public DateTime Timestamp { get; }
-    
+
     public CsvReportedError(string message, int position, int lineNumber, ErrorSeverity severity)
     {
         Message = message;

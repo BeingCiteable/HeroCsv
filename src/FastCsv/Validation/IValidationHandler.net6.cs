@@ -5,7 +5,7 @@ using System.Numerics;
 namespace FastCsv.Validation;
 
 /// <summary>
-/// .NET 6+ hardware acceleration enhancements for IValidationHandler
+/// Hardware acceleration enhancements for IValidationHandler
 /// </summary>
 public partial interface IValidationHandler
 {
@@ -13,7 +13,7 @@ public partial interface IValidationHandler
     /// Validate record structure with hardware acceleration
     /// </summary>
     bool IsValidRecordAccelerated(ReadOnlySpan<char> record, CsvOptions options);
-    
+
     /// <summary>
     /// Check quote balance with hardware acceleration
     /// </summary>
