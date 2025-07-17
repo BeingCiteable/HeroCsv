@@ -55,6 +55,27 @@ public partial interface ICsvReaderBuilder
     ICsvReaderBuilder WithErrorTracking(bool trackErrors = true);
 
     /// <summary>
+    /// Configures whether to skip empty fields during mapping
+    /// </summary>
+    /// <param name="skipEmpty">True to skip empty fields</param>
+    /// <returns>Configuration builder for additional options</returns>
+    ICsvReaderBuilder WithSkipEmptyFields(bool skipEmpty = true);
+
+    /// <summary>
+    /// Configures whether to trim whitespace from field values
+    /// </summary>
+    /// <param name="trimWhitespace">True to trim whitespace</param>
+    /// <returns>Configuration builder for additional options</returns>
+    ICsvReaderBuilder WithTrimWhitespace(bool trimWhitespace = true);
+
+    /// <summary>
+    /// Configures complete CSV options at once
+    /// </summary>
+    /// <param name="options">Complete CSV options</param>
+    /// <returns>Configuration builder for additional options</returns>
+    ICsvReaderBuilder WithOptions(CsvOptions options);
+
+    /// <summary>
     /// Parses the configured CSV data and returns rows as string arrays
     /// </summary>
     /// <returns>Each CSV row as an array of field values</returns>
@@ -67,8 +88,37 @@ public partial interface ICsvReaderBuilder
     IEnumerable<Dictionary<string, string>> ReadWithHeaders();
 
     /// <summary>
+    /// Parses CSV data treating first row as column names with specified duplicate header handling
+    /// </summary>
+    /// <param name="duplicateHandling">Strategy for handling duplicate column headers</param>
+    /// <returns>Each data row as a dictionary mapping column names to field values</returns>
+    IEnumerable<Dictionary<string, string>> ReadWithHeaders(DuplicateHeaderHandling duplicateHandling);
+
+    /// <summary>
     /// Parses CSV data with comprehensive result including validation and performance metrics
     /// </summary>
     /// <returns>Detailed parsing result with data, errors, timing, and statistics</returns>
-    CsvReadResult ReadAdvanced();
+    CsvReadResult ReadWithDetails();
+
+    /// <summary>
+    /// Parses CSV data with comprehensive result using custom detail options
+    /// </summary>
+    /// <param name="options">Configuration for what details to collect during parsing</param>
+    /// <returns>Detailed parsing result based on configured options</returns>
+    CsvReadResult ReadWithDetails(CsvReadDetailsOptions options);
+
+    /// <summary>
+    /// Parses CSV data and maps each record to the specified type using auto mapping
+    /// </summary>
+    /// <typeparam name="T">Type to map CSV records to</typeparam>
+    /// <returns>Enumerable of mapped objects</returns>
+    IEnumerable<T> Read<T>() where T : class, new();
+
+    /// <summary>
+    /// Parses CSV data and maps each record to the specified type using manual mapping
+    /// </summary>
+    /// <typeparam name="T">Type to map CSV records to</typeparam>
+    /// <param name="mapping">Manual mapping configuration</param>
+    /// <returns>Enumerable of mapped objects</returns>
+    IEnumerable<T> Read<T>(CsvMapping<T> mapping) where T : class, new();
 }

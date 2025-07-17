@@ -11,6 +11,7 @@ public readonly struct CsvOptions(
     char quote = '"',
     bool hasHeader = true,
     bool trimWhitespace = false,
+    bool skipEmptyFields = false,
     string? newLine = null)
 {
     /// <summary>
@@ -32,6 +33,11 @@ public readonly struct CsvOptions(
     /// Whether to trim whitespace from fields
     /// </summary>
     public readonly bool TrimWhitespace = trimWhitespace;
+
+    /// <summary>
+    /// Whether to skip empty fields during mapping
+    /// </summary>
+    public readonly bool SkipEmptyFields = skipEmptyFields;
 
     /// <summary>
     /// The newline string to use when writing
