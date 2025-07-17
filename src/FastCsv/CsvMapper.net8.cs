@@ -35,19 +35,19 @@ internal sealed partial class CsvMapper<T> where T : class, new()
         var instance = new T();
         var indexMap = _frozenIndexMap ?? (IReadOnlyDictionary<int, PropertyInfo>)_indexMap;
         var converters = _frozenConverters ?? (IReadOnlyDictionary<int, Func<string, object?>>)_converters;
-        
+
         // Use frozen collections for optimal lookup performance
         foreach (var kvp in indexMap)
         {
             var index = kvp.Key;
             var property = kvp.Value;
-            
+
             if (index < record.Length)
             {
                 var value = record[index];
                 if (!string.IsNullOrEmpty(value) || !_options.SkipEmptyFields)
                 {
-                    var convertedValue = converters.TryGetValue(index, out var converter) 
+                    var convertedValue = converters.TryGetValue(index, out var converter)
                         ? converter(value)
                         : ConvertValue(index, value, property.PropertyType);
                     property.SetValue(instance, convertedValue);

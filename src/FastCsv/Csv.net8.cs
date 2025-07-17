@@ -13,17 +13,16 @@ public static partial class Csv
 {
     private static readonly SearchValues<char> CommonDelimiters = SearchValues.Create(",;\t|");
     private static readonly SearchValues<char> QuoteChars = SearchValues.Create("\"'");
-    private static readonly SearchValues<char> LineEndings = SearchValues.Create("\r\n");
 
     /// <summary>
     /// Auto-detect CSV format and read
     /// </summary>
-    /// <param name="csvContent">CSV content as string</param>
+    /// <param name="content">CSV content as string</param>
     /// <returns>Enumerable of string arrays representing records</returns>
-    public static IEnumerable<string[]> ReadAutoDetect(string csvContent)
+    public static IEnumerable<string[]> ReadAutoDetect(string content)
     {
-        var options = AutoDetectFormat(csvContent.AsSpan());
-        return new CsvMemoryEnumerable(csvContent.AsMemory(), options);
+        var options = AutoDetectFormat(content.AsSpan());
+        return Read(content, options);
     }
 
     /// <summary>
@@ -34,21 +33,18 @@ public static partial class Csv
     public static IEnumerable<string[]> ReadFileAutoDetect(string filePath)
     {
         var content = File.ReadAllText(filePath);
-        var options = AutoDetectFormat(content.AsSpan());
-        return new CsvMemoryEnumerable(content.AsMemory(), options);
+        return ReadAutoDetect(content);
     }
 
     /// <summary>
     /// Auto-detect CSV format and read with zero-allocation span processing
     /// </summary>
-    /// <param name="csvContent">CSV content as memory span</param>
+    /// <param name="content">CSV content as memory span</param>
     /// <returns>Enumerable of string arrays representing records</returns>
-    public static IEnumerable<string[]> ReadAutoDetect(ReadOnlySpan<char> csvContent)
+    public static IEnumerable<string[]> ReadAutoDetect(ReadOnlySpan<char> content)
     {
-        var options = AutoDetectFormat(csvContent);
-        // Need to convert span to string for IEnumerable
-        var contentString = csvContent.ToString();
-        return new CsvMemoryEnumerable(contentString.AsMemory(), options);
+        var options = AutoDetectFormat(content);
+        return ReadAllRecords(content, options);
     }
 
     private static CsvOptions AutoDetectFormat(ReadOnlySpan<char> content)
@@ -88,106 +84,6 @@ public static partial class Csv
             delimiter = '\t';
 
         return new CsvOptions(delimiter, hasQuotes ? '"' : '"', true);
-    }
-
-    /// <summary>
-    /// Optimized line ending detection using SearchValues
-    /// </summary>
-    /// <param name="content">Content to search</param>
-    /// <param name="start">Starting position</param>
-    /// <returns>Position of line ending</returns>
-    private static int FindLineEndOptimized(ReadOnlySpan<char> content, int start)
-    {
-        var searchSpan = content.Slice(start);
-        var lineEndIndex = searchSpan.IndexOfAny(LineEndings);
-
-        if (lineEndIndex == -1)
-            return content.Length;
-
-        var actualPos = start + lineEndIndex;
-
-        // Handle \r\n sequence
-        if (content[actualPos] == '\r' && actualPos + 1 < content.Length && content[actualPos + 1] == '\n')
-            return actualPos;
-
-        return actualPos;
-    }
-
-    /// <summary>
-    /// High-performance field parsing with SearchValues optimization
-    /// </summary>
-    /// <param name="line">Line to parse</param>
-    /// <param name="options">CSV parsing options</param>
-    /// <returns>Parsed field array</returns>
-    private static string[] ParseLineOptimized(ReadOnlySpan<char> line, CsvOptions options)
-    {
-        if (line.IsEmpty) return Array.Empty<string>();
-
-        var delimiterSearch = SearchValues.Create(stackalloc char[] { options.Delimiter });
-        var quoteSearch = SearchValues.Create(stackalloc char[] { options.Quote });
-
-        var fields = new List<string>();
-        var fieldStart = 0;
-        var inQuotes = false;
-
-        var position = 0;
-        while (position < line.Length)
-        {
-            int nextSpecial;
-            if (inQuotes)
-            {
-                nextSpecial = line.Slice(position).IndexOfAny(quoteSearch);
-                if (nextSpecial == -1) break;
-                nextSpecial += position;
-
-                if (line[nextSpecial] == options.Quote)
-                {
-                    inQuotes = false;
-                    position = nextSpecial + 1;
-                }
-            }
-            else
-            {
-                var delimiterPos = line.Slice(position).IndexOfAny(delimiterSearch);
-                var quotePos = line.Slice(position).IndexOfAny(quoteSearch);
-
-                if (delimiterPos == -1 && quotePos == -1)
-                {
-                    // No more special characters
-                    break;
-                }
-
-                if (quotePos != -1 && (delimiterPos == -1 || quotePos < delimiterPos))
-                {
-                    // Quote comes first
-                    inQuotes = true;
-                    if (fieldStart == position + quotePos)
-                        fieldStart = position + quotePos + 1;
-                    position += quotePos + 1;
-                }
-                else if (delimiterPos != -1)
-                {
-                    // Delimiter comes first
-                    var fieldSpan = line.Slice(fieldStart, position + delimiterPos - fieldStart);
-                    fields.Add(fieldSpan.ToString());
-                    fieldStart = position + delimiterPos + 1;
-                    position = fieldStart;
-                }
-                else
-                {
-                    position++;
-                }
-            }
-        }
-
-        // Add final field
-        if (fieldStart <= line.Length)
-        {
-            var fieldSpan = line.Slice(fieldStart);
-            fields.Add(fieldSpan.ToString());
-        }
-
-        return fields.ToArray();
     }
 }
 #endif

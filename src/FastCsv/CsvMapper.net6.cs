@@ -18,7 +18,7 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     public T[] MapRecords(string[][] records)
     {
         var results = new T[records.Length];
-        
+
         // Use vectorized operations when beneficial
         if (Vector.IsHardwareAccelerated && records.Length > Vector<int>.Count)
         {
@@ -28,7 +28,7 @@ internal sealed partial class CsvMapper<T> where T : class, new()
         {
             MapRecordsSequential(records, results);
         }
-        
+
         return results;
     }
 

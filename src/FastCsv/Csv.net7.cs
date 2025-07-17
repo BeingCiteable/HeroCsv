@@ -2,6 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FastCsv;
@@ -12,81 +15,53 @@ namespace FastCsv;
 public static partial class Csv
 {
     /// <summary>
-    /// Asynchronously loads and parses CSV data from a file
+    /// Reads CSV data from a stream asynchronously
     /// </summary>
-    /// <param name="filePath">Full or relative path to the CSV file</param>
-    /// <returns>Each CSV row as an array of field values</returns>
-    public static async Task<IEnumerable<string[]>> ReadFileAsync(string filePath)
+    /// <param name="stream">Stream containing CSV data</param>
+    /// <param name="options">CSV parsing options</param>
+    /// <param name="leaveOpen">Whether to leave the stream open after reading</param>
+    /// <returns>Async enumerable of CSV records</returns>
+    public static IAsyncEnumerable<string[]> ReadStreamAsync(Stream stream, CsvOptions options = default, bool leaveOpen = false)
     {
-        var content = await File.ReadAllTextAsync(filePath);
-        return new CsvMemoryEnumerable(content.AsMemory(), CsvOptions.Default);
+        var reader = CreateReader(stream, options, leaveOpen: leaveOpen);
+        return reader.GetRecordsAsync();
     }
 
     /// <summary>
-    /// Asynchronously loads and parses CSV data from a file with custom formatting settings
+    /// Reads CSV from a file asynchronously
     /// </summary>
-    /// <param name="filePath">Full or relative path to the CSV file</param>
-    /// <param name="options">Parsing configuration for delimiter, quotes, headers, etc.</param>
-    /// <returns>Each CSV row as an array of field values</returns>
-    public static async Task<IEnumerable<string[]>> ReadFileAsync(string filePath, CsvOptions options)
+    /// <param name="filePath">Path to CSV file</param>
+    /// <param name="options">CSV parsing options</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Async enumerable of CSV records</returns>
+    public static async IAsyncEnumerable<string[]> ReadFileAsync(
+        string filePath, 
+        CsvOptions options = default,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var content = await File.ReadAllTextAsync(filePath);
-        return new CsvMemoryEnumerable(content.AsMemory(), options);
+        await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
+        await foreach (var record in ReadStreamAsync(stream, options).WithCancellation(cancellationToken))
+        {
+            yield return record;
+        }
     }
 
     /// <summary>
-    /// Parses field value to specific type using high-performance parsing
+    /// Reads all CSV records from a stream asynchronously into memory
     /// </summary>
-    /// <typeparam name="T">Target type for parsing</typeparam>
-    /// <param name="fieldValue">Field content as span</param>
-    /// <param name="result">Parsed value output</param>
-    /// <returns>True if parsing succeeded</returns>
-    public static bool TryParseField<T>(ReadOnlySpan<char> fieldValue, out T result) where T : struct
+    /// <param name="stream">Stream containing CSV data</param>
+    /// <param name="options">CSV parsing options</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of all CSV records</returns>
+    public static async Task<IReadOnlyList<string[]>> ReadAllStreamAsync(
+        Stream stream,
+        CsvOptions options = default,
+        CancellationToken cancellationToken = default)
     {
-        result = default;
-
-        if (typeof(T) == typeof(int))
-        {
-            if (int.TryParse(fieldValue, out var intValue))
-            {
-                result = (T)(object)intValue;
-                return true;
-            }
-        }
-        else if (typeof(T) == typeof(decimal))
-        {
-            if (decimal.TryParse(fieldValue, out var decimalValue))
-            {
-                result = (T)(object)decimalValue;
-                return true;
-            }
-        }
-        else if (typeof(T) == typeof(double))
-        {
-            if (double.TryParse(fieldValue, out var doubleValue))
-            {
-                result = (T)(object)doubleValue;
-                return true;
-            }
-        }
-        else if (typeof(T) == typeof(DateTime))
-        {
-            if (DateTime.TryParse(fieldValue, out var dateValue))
-            {
-                result = (T)(object)dateValue;
-                return true;
-            }
-        }
-        else if (typeof(T) == typeof(DateTimeOffset))
-        {
-            if (DateTimeOffset.TryParse(fieldValue, out var dateOffsetValue))
-            {
-                result = (T)(object)dateOffsetValue;
-                return true;
-            }
-        }
-
-        return false;
+        using var reader = CreateReader(stream, options);
+        return await reader.ReadAllRecordsAsync(cancellationToken);
     }
+
+
 }
 #endif

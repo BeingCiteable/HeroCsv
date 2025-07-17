@@ -63,4 +63,3 @@ public enum ErrorSeverity
     Error,
     Critical
 }
-

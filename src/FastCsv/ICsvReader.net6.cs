@@ -1,27 +1,22 @@
 #if NET6_0_OR_GREATER
 using System;
-using System.Numerics;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FastCsv;
 
 /// <summary>
-/// Hardware acceleration enhancements for ICsvReader
+/// IAsyncEnumerable operations for ICsvReader (.NET 6.0+)
 /// </summary>
 public partial interface ICsvReader
 {
     /// <summary>
-    /// Whether hardware acceleration is available and being used
+    /// Get records as async enumerable
     /// </summary>
-    bool IsHardwareAccelerated { get; }
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Async enumerable of CSV records as string arrays</returns>
+    IAsyncEnumerable<string[]> GetRecordsAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Enable or disable hardware acceleration
-    /// </summary>
-    void SetVectorizationEnabled(bool enabled);
-
-    /// <summary>
-    /// Get the optimal buffer size for the current hardware
-    /// </summary>
-    int GetOptimalBufferSize();
 }
 #endif

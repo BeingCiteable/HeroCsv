@@ -1,75 +1,18 @@
-using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace FastCsv;
 
 /// <summary>
-/// Zero-allocation enumerator that works directly with spans
+/// Central utility class for CSV parsing operations
 /// </summary>
-internal struct CsvSpanEnumerator(
-    ReadOnlyMemory<char> content,
-    CsvOptions options) : IEnumerator<string[]>
+internal static class CsvParser
 {
-    private int _position = 0;
-    private string[]? _current = null;
-
-    public readonly string[] Current => _current ?? throw new InvalidOperationException();
-
-    readonly object IEnumerator.Current => Current;
-
-    public bool MoveNext()
-    {
-        var span = content.Span;
-        
-        if (_position >= span.Length)
-        {
-            _current = null;
-            return false;
-        }
-
-        // Find line end
-        var lineEnd = FindLineEnd(span, _position);
-        var lineSpan = span.Slice(_position, lineEnd - _position);
-
-        // Skip to next line
-        _position = SkipLineEnding(span, lineEnd);
-
-        // Parse line if not empty
-        if (lineSpan.Length > 0)
-        {
-            var fields = ParseLine(lineSpan, options);
-            if (fields.Length > 0)
-            {
-                _current = fields;
-                return true;
-            }
-            else
-            {
-                // Empty fields, try next line
-                return MoveNext();
-            }
-        }
-        else
-        {
-            // Empty line, try next
-            return MoveNext();
-        }
-    }
-
-    public void Reset()
-    {
-        _position = 0;
-        _current = null;
-    }
-
-    public readonly void Dispose()
-    {
-        // Nothing to dispose
-    }
-
+    /// <summary>
+    /// Finds the end of the current line starting from the given position
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static int FindLineEnd(ReadOnlySpan<char> content, int start)
+    public static int FindLineEnd(ReadOnlySpan<char> content, int start)
     {
         for (int i = start; i < content.Length; i++)
         {
@@ -79,8 +22,11 @@ internal struct CsvSpanEnumerator(
         return content.Length;
     }
 
+    /// <summary>
+    /// Skips line ending characters and returns the new position
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static int SkipLineEnding(ReadOnlySpan<char> content, int position)
+    public static int SkipLineEnding(ReadOnlySpan<char> content, int position)
     {
         if (position >= content.Length) return position;
 
@@ -98,11 +44,14 @@ internal struct CsvSpanEnumerator(
         return position;
     }
 
-    internal static string[] ParseLine(ReadOnlySpan<char> line, CsvOptions options)
+    /// <summary>
+    /// Parses a CSV line into fields using the optimized span-based approach
+    /// </summary>
+    public static string[] ParseLine(ReadOnlySpan<char> line, CsvOptions options)
     {
         if (line.IsEmpty) return [];
 
-        // Check if line contains quotes
+        // Check if line contains quotes for optimization
         bool hasQuotes = false;
         for (int i = 0; i < line.Length; i++)
         {
@@ -116,10 +65,13 @@ internal struct CsvSpanEnumerator(
         return hasQuotes ? ParseQuotedLine(line, options) : ParseUnquotedLine(line, options);
     }
 
+    /// <summary>
+    /// Fast path for parsing lines without quotes
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string[] ParseUnquotedLine(ReadOnlySpan<char> line, CsvOptions options)
     {
-        // Count fields
+        // Count fields first for exact allocation
         var fieldCount = 1;
         for (int i = 0; i < line.Length; i++)
         {
@@ -150,6 +102,9 @@ internal struct CsvSpanEnumerator(
         return fields;
     }
 
+    /// <summary>
+    /// Handles parsing lines with quoted fields
+    /// </summary>
     private static string[] ParseQuotedLine(ReadOnlySpan<char> line, CsvOptions options)
     {
         var fieldList = new List<string>(8);
@@ -198,23 +153,5 @@ internal struct CsvSpanEnumerator(
         fieldList.Add(options.TrimWhitespace ? finalField.Trim() : finalField);
 
         return [.. fieldList];
-    }
-}
-
-/// <summary>
-/// Zero-allocation enumerable that works with ReadOnlyMemory
-/// </summary>
-internal readonly struct CsvMemoryEnumerable(
-    ReadOnlyMemory<char> content,
-    CsvOptions options) : IEnumerable<string[]>
-{
-    public IEnumerator<string[]> GetEnumerator()
-    {
-        return new CsvSpanEnumerator(content, options);
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
     }
 }

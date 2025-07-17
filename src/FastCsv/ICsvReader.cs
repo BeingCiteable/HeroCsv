@@ -1,10 +1,13 @@
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace FastCsv;
 
 /// <summary>
 /// Core interface for CSV reading operations
 /// Focused on reading records and navigation
 /// </summary>
-public partial interface ICsvReader
+public partial interface ICsvReader : IDisposable
 {
     /// <summary>
     /// Current line number (1-based)
@@ -37,11 +40,6 @@ public partial interface ICsvReader
     bool TryReadRecord(out ICsvRecord record);
 
     /// <summary>
-    /// Skip the header row
-    /// </summary>
-    void SkipHeader();
-
-    /// <summary>
     /// Skip the next record without parsing it
     /// </summary>
     void SkipRecord();
@@ -60,4 +58,35 @@ public partial interface ICsvReader
     /// Reset the reader to the beginning
     /// </summary>
     void Reset();
+
+    /// <summary>
+    /// Read all records into a list
+    /// </summary>
+    /// <returns>List of all CSV records as string arrays</returns>
+    IReadOnlyList<string[]> ReadAllRecords();
+
+    /// <summary>
+    /// Get records as enumerable
+    /// </summary>
+    /// <returns>Enumerable of CSV records as string arrays</returns>
+    IEnumerable<string[]> GetRecords();
+
+    /// <summary>
+    /// Count the total number of records without parsing fields
+    /// </summary>
+    /// <returns>Total number of records</returns>
+    int CountRecords();
+
+    /// <summary>
+    /// Whether this reader is stream-based
+    /// </summary>
+    bool IsStreamBased { get; }
+
+    /// <summary>
+    /// Read all records asynchronously into a list
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of all CSV records as string arrays</returns>
+    Task<IReadOnlyList<string[]>> ReadAllRecordsAsync(CancellationToken cancellationToken = default);
+
 }

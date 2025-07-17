@@ -67,6 +67,7 @@
 	<!-- Include README in package -->
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+		<None Include="ICsvReader.net6.cs" />
 	</ItemGroup>
 
 </Project>

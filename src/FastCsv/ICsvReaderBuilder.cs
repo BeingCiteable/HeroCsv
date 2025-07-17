@@ -33,12 +33,6 @@ public partial interface ICsvReaderBuilder
     /// <returns>Configuration builder for additional options</returns>
     ICsvReaderBuilder WithQuote(char quote);
 
-    /// <summary>
-    /// Indicates whether the first row contains column names
-    /// </summary>
-    /// <param name="hasHeader">True if first row contains column headers</param>
-    /// <returns>Configuration builder for additional options</returns>
-    ICsvReaderBuilder WithHeaders(bool hasHeader = true);
 
     /// <summary>
     /// Enables validation of CSV structure and data integrity
@@ -81,31 +75,7 @@ public partial interface ICsvReaderBuilder
     /// <returns>Each CSV row as an array of field values</returns>
     IEnumerable<string[]> Read();
 
-    /// <summary>
-    /// Parses CSV data treating first row as column names, returns name-value pairs
-    /// </summary>
-    /// <returns>Each data row as a dictionary mapping column names to field values</returns>
-    IEnumerable<Dictionary<string, string>> ReadWithHeaders();
 
-    /// <summary>
-    /// Parses CSV data treating first row as column names with specified duplicate header handling
-    /// </summary>
-    /// <param name="duplicateHandling">Strategy for handling duplicate column headers</param>
-    /// <returns>Each data row as a dictionary mapping column names to field values</returns>
-    IEnumerable<Dictionary<string, string>> ReadWithHeaders(DuplicateHeaderHandling duplicateHandling);
-
-    /// <summary>
-    /// Parses CSV data with comprehensive result including validation and performance metrics
-    /// </summary>
-    /// <returns>Detailed parsing result with data, errors, timing, and statistics</returns>
-    CsvReadResult ReadWithDetails();
-
-    /// <summary>
-    /// Parses CSV data with comprehensive result using custom detail options
-    /// </summary>
-    /// <param name="options">Configuration for what details to collect during parsing</param>
-    /// <returns>Detailed parsing result based on configured options</returns>
-    CsvReadResult ReadWithDetails(CsvReadDetailsOptions options);
 
     /// <summary>
     /// Parses CSV data and maps each record to the specified type using auto mapping

@@ -40,7 +40,7 @@ internal sealed partial class CsvMapper<T> where T : class, new()
         _propertyMap = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
         _indexMap = new Dictionary<int, PropertyInfo>();
         _converters = new Dictionary<int, Func<string, object?>>();
-        
+
         // Initialize mixed mapping - auto mapping first, then manual overrides
         if (mapping.UseMixedMapping)
         {
@@ -68,13 +68,13 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     public T MapRecord(string[] record)
     {
         var instance = new T();
-        
+
         // Use index-based mapping for performance
         foreach (var kvp in _indexMap)
         {
             var index = kvp.Key;
             var property = kvp.Value;
-            
+
             if (index < record.Length)
             {
                 var value = record[index];
@@ -230,10 +230,12 @@ public sealed class CsvMapping<T> where T : class, new()
     /// </summary>
     public CsvOptions Options { get; set; } = CsvOptions.Default;
 
+    private readonly List<CsvPropertyMapping> _propertyMappings = new();
+
     /// <summary>
     /// Property mapping configurations
     /// </summary>
-    public List<CsvPropertyMapping> PropertyMappings { get; } = new();
+    public IReadOnlyList<CsvPropertyMapping> PropertyMappings => _propertyMappings;
 
     /// <summary>
     /// Whether to use mixed mapping (auto mapping with manual overrides)
@@ -248,7 +250,7 @@ public sealed class CsvMapping<T> where T : class, new()
     /// <returns>This mapping instance for fluent configuration</returns>
     public CsvMapping<T> MapProperty(string propertyName, string columnName)
     {
-        PropertyMappings.Add(new CsvPropertyMapping
+        _propertyMappings.Add(new CsvPropertyMapping
         {
             PropertyName = propertyName,
             ColumnName = columnName
@@ -264,7 +266,7 @@ public sealed class CsvMapping<T> where T : class, new()
     /// <returns>This mapping instance for fluent configuration</returns>
     public CsvMapping<T> MapProperty(string propertyName, int columnIndex)
     {
-        PropertyMappings.Add(new CsvPropertyMapping
+        _propertyMappings.Add(new CsvPropertyMapping
         {
             PropertyName = propertyName,
             ColumnIndex = columnIndex
@@ -281,7 +283,7 @@ public sealed class CsvMapping<T> where T : class, new()
     /// <returns>This mapping instance for fluent configuration</returns>
     public CsvMapping<T> MapProperty(string propertyName, string columnName, Func<string, object?> converter)
     {
-        PropertyMappings.Add(new CsvPropertyMapping
+        _propertyMappings.Add(new CsvPropertyMapping
         {
             PropertyName = propertyName,
             ColumnName = columnName,
@@ -299,7 +301,7 @@ public sealed class CsvMapping<T> where T : class, new()
     /// <returns>This mapping instance for fluent configuration</returns>
     public CsvMapping<T> MapProperty(string propertyName, int columnIndex, Func<string, object?> converter)
     {
-        PropertyMappings.Add(new CsvPropertyMapping
+        _propertyMappings.Add(new CsvPropertyMapping
         {
             PropertyName = propertyName,
             ColumnIndex = columnIndex,

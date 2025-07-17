@@ -1,45 +1,59 @@
 #if NET6_0_OR_GREATER
 using System;
-using System.Numerics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace FastCsv;
 
 /// <summary>
-/// Hardware acceleration features for FastCsvReader
+/// Async operations for FastCsvReader
 /// </summary>
 internal sealed partial class FastCsvReader
 {
-    /// <summary>
-    /// Indicates if hardware acceleration is available on current system
-    /// </summary>
-    public bool IsHardwareAccelerated => Vector.IsHardwareAccelerated;
-
-    /// <summary>
-    /// Configure vectorization settings for performance optimization
-    /// </summary>
-    /// <param name="enabled">True to enable vectorization when available</param>
-    public void SetVectorizationEnabled(bool enabled)
+    /// <inheritdoc />
+    public async IAsyncEnumerable<string[]> GetRecordsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        // Implementation would configure vectorization settings
-        // For now, this is a placeholder as vectorization is automatically used when available
+        Reset();
+        
+        if (_stream != null)
+        {
+            // True async for streams
+            await foreach (var record in GetRecordsAsyncFromStream(cancellationToken))
+            {
+                yield return record;
+            }
+        }
+        else
+        {
+            // Sync wrapped in async for string content
+            while (!cancellationToken.IsCancellationRequested && TryReadRecord(out var record))
+            {
+                yield return record.ToArray();
+            }
+        }
     }
 
-    /// <summary>
-    /// Gets optimal buffer size for current hardware configuration
-    /// </summary>
-    /// <returns>Recommended buffer size in characters</returns>
-    public int GetOptimalBufferSize()
+    
+    private async IAsyncEnumerable<string[]> GetRecordsAsyncFromStream([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        return Vector.IsHardwareAccelerated ? 8192 : 4096;
+        if (_streamReader == null) yield break;
+        
+        string? line;
+        while (!cancellationToken.IsCancellationRequested && (line = await _streamReader.ReadLineAsync()) != null)
+        {
+            if (string.IsNullOrEmpty(line))
+            {
+                _lineNumber++;
+                continue;
+            }
+            
+            var fields = CsvParser.ParseLine(line.AsSpan(), _options);
+            _recordCount++;
+            _lineNumber++;
+            yield return fields;
+        }
     }
-}
 
-/// <summary>
-/// Hardware acceleration features for FastCsvRecord
-/// </summary>
-internal sealed partial class FastCsvRecord
-{
-    // No additional NET6+ specific methods needed for ICsvRecord
 }
 #endif

@@ -1,26 +1,47 @@
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace FastCsv;
 
 /// <summary>
 /// High-performance CSV reader implementation optimized for zero allocations
 /// </summary>
-/// <remarks>
-/// Creates a new FastCsvReader with the specified content and options
-/// </remarks>
-/// <param name="content">CSV content to parse</param>
-/// <param name="options">Parsing options</param>
-internal sealed partial class FastCsvReader(string content, CsvOptions options) : ICsvReader, IDisposable
+internal sealed partial class FastCsvReader : ICsvReader, IDisposable
 {
-    private readonly string _content = content ?? throw new ArgumentNullException(nameof(content));
-    private readonly bool _hasHeader = options.HasHeader;
+    private readonly Stream? _stream;
+    private readonly StreamReader? _streamReader;
+    private readonly string? _content;
+    private readonly CsvOptions _options;
+    private readonly bool _leaveOpen;
+    
     private int _position = 0;
     private int _lineNumber = 1;
     private int _recordCount = 0;
     private bool _disposed = false;
-    private bool _headerSkipped = false;
-    private ICsvRecord? _currentRecord;
-    private int _validationErrorCount = 0;
+
+    // For stream-based reading
+    private bool _endOfStream = false;
+
+    /// <summary>
+    /// Creates a new FastCsvReader from string content
+    /// </summary>
+    public FastCsvReader(string content, CsvOptions options)
+    {
+        _content = content ?? throw new ArgumentNullException(nameof(content));
+        _options = options;
+        _leaveOpen = false;
+    }
+
+    /// <summary>
+    /// Creates a new FastCsvReader from a stream
+    /// </summary>
+    public FastCsvReader(Stream stream, CsvOptions options, Encoding? encoding = null, bool leaveOpen = false)
+    {
+        _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+        _streamReader = new StreamReader(stream, encoding ?? Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: leaveOpen);
+        _options = options;
+        _leaveOpen = leaveOpen;
+    }
 
     /// <summary>
     /// Current line number (1-based)
@@ -30,7 +51,7 @@ internal sealed partial class FastCsvReader(string content, CsvOptions options) 
     /// <summary>
     /// Whether there is more data to read
     /// </summary>
-    public bool HasMoreData => _position < _content.Length;
+    public bool HasMoreData => _content != null ? _position < _content.Length : !_endOfStream;
 
     /// <summary>
     /// Total number of records processed so far
@@ -45,17 +66,13 @@ internal sealed partial class FastCsvReader(string content, CsvOptions options) 
     /// <summary>
     /// Get the current CSV options being used
     /// </summary>
-    public CsvOptions Options => options;
+    public CsvOptions Options => _options;
+
 
     /// <summary>
-    /// Total number of bytes processed so far
+    /// Whether this reader is stream-based
     /// </summary>
-    public long BytesProcessed => _position * sizeof(char);
-
-    /// <summary>
-    /// Total number of validation errors encountered
-    /// </summary>
-    public int ValidationErrorCount => _validationErrorCount;
+    public bool IsStreamBased => _stream != null;
 
     /// <summary>
     /// Read the next CSV record
@@ -85,48 +102,47 @@ internal sealed partial class FastCsvReader(string content, CsvOptions options) 
             return false;
         }
 
-        // Skip header if not already skipped
-        if (_hasHeader && !_headerSkipped)
+        string line;
+        if (_content != null)
         {
-            SkipHeader();
-            if (!HasMoreData)
+            // String-based reading
+            var lineStart = _position;
+            var lineEnd = CsvParser.FindLineEnd(_content.AsSpan(), _position);
+
+            if (lineEnd == lineStart)
+            {
+                // Empty line, skip it
+                _position = CsvParser.SkipLineEnding(_content.AsSpan(), _position);
+                _lineNumber++;
+                return TryReadRecord(out record);
+            }
+
+            line = _content.Substring(lineStart, lineEnd - lineStart);
+            _position = CsvParser.SkipLineEnding(_content.AsSpan(), lineEnd);
+            _lineNumber++;
+        }
+        else
+        {
+            // Stream-based reading
+            line = ReadLineFromStream()!;
+            if (line == null)
             {
                 record = null!;
                 return false;
             }
+
+            if (string.IsNullOrEmpty(line))
+            {
+                // Empty line, skip it
+                return TryReadRecord(out record);
+            }
         }
 
-        var lineStart = _position;
-        var lineEnd = FindLineEnd();
-
-        if (lineEnd == lineStart)
-        {
-            // Empty line, skip it
-            SkipLineEnding();
-            return TryReadRecord(out record);
-        }
-
-        var line = _content.AsSpan(lineStart, lineEnd - lineStart);
-        var fields = ParseLine(line);
-
-        record = new FastCsvRecord(fields, _lineNumber);
-        _currentRecord = record;
+        var fields = CsvParser.ParseLine(line.AsSpan(), _options);
+        record = new CsvRecord(fields, _lineNumber);
         _recordCount++;
 
-        SkipLineEnding();
-
         return true;
-    }
-
-    /// <summary>
-    /// Skip the header row
-    /// </summary>
-    public void SkipHeader()
-    {
-        if (_headerSkipped) return;
-
-        SkipRecord();
-        _headerSkipped = true;
     }
 
     /// <summary>
@@ -136,8 +152,16 @@ internal sealed partial class FastCsvReader(string content, CsvOptions options) 
     {
         if (!HasMoreData) return;
 
-        FindLineEnd();
-        SkipLineEnding();
+        if (_content != null)
+        {
+            var lineEnd = CsvParser.FindLineEnd(_content.AsSpan(), _position);
+            _position = CsvParser.SkipLineEnding(_content.AsSpan(), lineEnd);
+            _lineNumber++;
+        }
+        else
+        {
+            ReadLineFromStream();
+        }
     }
 
     /// <summary>
@@ -156,10 +180,21 @@ internal sealed partial class FastCsvReader(string content, CsvOptions options) 
     /// </summary>
     public void Reset()
     {
+        if (_stream != null && !_stream.CanSeek)
+        {
+            throw new NotSupportedException("Cannot reset a non-seekable stream");
+        }
+
         _position = 0;
         _lineNumber = 1;
         _recordCount = 0;
-        _headerSkipped = false;
+        _endOfStream = false;
+
+        if (_stream != null)
+        {
+            _stream.Position = 0;
+            _streamReader!.DiscardBufferedData();
+        }
     }
 
     /// <summary>
@@ -167,373 +202,104 @@ internal sealed partial class FastCsvReader(string content, CsvOptions options) 
     /// </summary>
     public void Dispose()
     {
-        _disposed = true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int FindLineEnd()
-    {
-        var start = _position;
-        for (int i = start; i < _content.Length; i++)
+        if (!_disposed)
         {
-            var ch = _content[i];
-            if (ch == '\n' || ch == '\r')
+            if (!_leaveOpen)
             {
-                return i;
+                _streamReader?.Dispose();
+                _stream?.Dispose();
             }
+            _disposed = true;
         }
-        return _content.Length;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void SkipLineEnding()
+    private string? ReadLineFromStream()
     {
-        if (_position >= _content.Length) return;
+        if (_streamReader == null || _endOfStream)
+            return null;
 
-        var ch = _content[_position];
-        if (ch == '\r')
+        var line = _streamReader.ReadLine();
+        if (line == null)
         {
-            _position++;
-            if (_position < _content.Length && _content[_position] == '\n')
-            {
-                _position++;
-            }
+            _endOfStream = true;
         }
-        else if (ch == '\n')
+        else
         {
-            _position++;
+            _lineNumber++;
         }
-
-        _lineNumber++;
+        return line;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private string[] ParseLine(ReadOnlySpan<char> line)
+
+    /// <inheritdoc />
+    public IReadOnlyList<string[]> ReadAllRecords()
     {
-        if (line.IsEmpty) return Array.Empty<string>();
-
-        var fields = new List<string>(8); // Pre-allocate for common case
-        var fieldStart = 0;
-        var inQuotes = false;
-        var i = 0;
-
-        while (i < line.Length)
+        Reset();
+        var records = new List<string[]>();
+        
+        while (TryReadRecord(out var record))
         {
-            var ch = line[i];
-
-            if (ch == options.Quote)
-            {
-                if (!inQuotes)
-                {
-                    inQuotes = true;
-                    fieldStart = i + 1;
-                }
-                else if (i + 1 < line.Length && line[i + 1] == options.Quote)
-                {
-                    // Escaped quote, skip both
-                    i += 2;
-                    continue;
-                }
-                else
-                {
-                    inQuotes = false;
-                }
-            }
-            else if (ch == options.Delimiter && !inQuotes)
-            {
-                var fieldSpan = line.Slice(fieldStart, i - fieldStart);
-                var field = fieldSpan.ToString();
-                if (options.TrimWhitespace)
-                {
-                    field = field.Trim();
-                }
-                fields.Add(field);
-                fieldStart = i + 1;
-            }
-
-            i++;
+            records.Add(record.ToArray());
         }
-
-        // Add final field
-        if (fieldStart <= line.Length)
-        {
-            var fieldSpan = line.Slice(fieldStart);
-            var field = fieldSpan.ToString();
-            if (options.TrimWhitespace)
-            {
-                field = field.Trim();
-            }
-            fields.Add(field);
-        }
-
-        return [.. fields];
-    }
-}
-
-/// <summary>
-/// High-performance CSV record implementation using spans for zero allocations
-/// </summary>
-internal sealed partial class FastCsvRecord : ICsvRecord
-{
-    private readonly string[] _fields;
-    private readonly int _lineNumber;
-
-    /// <summary>
-    /// Creates a new FastCsvRecord with the specified fields and line number
-    /// </summary>
-    /// <param name="fields">Array of field values</param>
-    /// <param name="lineNumber">Line number of this record</param>
-    public FastCsvRecord(string[] fields, int lineNumber)
-    {
-        _fields = fields ?? throw new ArgumentNullException(nameof(fields));
-        _lineNumber = lineNumber;
+        
+        return records;
     }
 
-    /// <summary>
-    /// Line number of this record (1-based)
-    /// </summary>
-    public int LineNumber => _lineNumber;
-
-    /// <summary>
-    /// Number of fields in this record
-    /// </summary>
-    public int FieldCount => _fields.Length;
-
-    /// <summary>
-    /// Get a field by index (0-based)
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ReadOnlySpan<char> GetField(int index)
+    /// <inheritdoc />
+    public IEnumerable<string[]> GetRecords()
     {
-        if (index < 0 || index >= _fields.Length)
+        Reset();
+        while (TryReadRecord(out var record))
         {
-            throw new ArgumentOutOfRangeException(nameof(index));
+            yield return record.ToArray();
         }
-        return _fields[index].AsSpan();
     }
 
-    /// <summary>
-    /// Try to get a field by index
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGetField(int index, out ReadOnlySpan<char> field)
+    /// <inheritdoc />
+    public int CountRecords()
     {
-        if (index >= 0 && index < _fields.Length)
+        Reset();
+        var count = 0;
+        
+        while (TryReadRecord(out _))
         {
-            field = _fields[index].AsSpan();
-            return true;
+            count++;
         }
-        field = ReadOnlySpan<char>.Empty;
-        return false;
-    }
-
-    /// <summary>
-    /// Check if the field index is valid
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsValidIndex(int index)
-    {
-        return index >= 0 && index < _fields.Length;
-    }
-
-    /// <summary>
-    /// Get all fields into a destination span
-    /// </summary>
-    public int GetAllFields(Span<string> destination)
-    {
-        var count = Math.Min(_fields.Length, destination.Length);
-        for (int i = 0; i < count; i++)
-        {
-            destination[i] = _fields[i];
-        }
+        
         return count;
     }
 
-    /// <summary>
-    /// Get all fields as a string array
-    /// </summary>
-    public string[] ToArray()
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string[]>> ReadAllRecordsAsync(CancellationToken cancellationToken = default)
     {
-        var result = new string[_fields.Length];
-        Array.Copy(_fields, result, _fields.Length);
-        return result;
-    }
-}
-
-/// <summary>
-/// Extension methods for ICsvRecord
-/// </summary>
-public static class ExtensionsToICsvRecord
-{
-    /// <summary>
-    /// Convert CSV record to string array
-    /// </summary>
-    public static string[] ToArray(this ICsvRecord record)
-    {
-        if (record is FastCsvRecord fastRecord)
+        if (_stream != null && _streamReader != null)
         {
-            return fastRecord.ToArray();
-        }
-
-        var result = new string[record.FieldCount];
-        for (int i = 0; i < record.FieldCount; i++)
-        {
-            result[i] = record.GetField(i).ToString();
-        }
-        return result;
-    }
-
-    /// <summary>
-    /// Convert CSV record to a dictionary using provided headers
-    /// </summary>
-    /// <param name="record">CSV record to convert</param>
-    /// <param name="headers">Column headers to use as keys</param>
-    /// <returns>Dictionary mapping headers to field values</returns>
-    public static Dictionary<string, string> ToDictionary(this ICsvRecord record, string[] headers)
-    {
-        var result = new Dictionary<string, string>(Math.Min(headers.Length, record.FieldCount));
-        
-        for (int i = 0; i < Math.Min(headers.Length, record.FieldCount); i++)
-        {
-            result[headers[i]] = record.GetField(i).ToString();
-        }
-        
-        return result;
-    }
-
-    /// <summary>
-    /// Maps CSV record to the specified type using auto mapping
-    /// </summary>
-    /// <typeparam name="T">Type to map to</typeparam>
-    /// <param name="record">CSV record to map</param>
-    /// <param name="headers">Column headers for mapping</param>
-    /// <returns>Mapped object instance</returns>
-    public static T MapTo<T>(this ICsvRecord record, string[] headers) where T : class, new()
-    {
-        var mapper = new CsvMapper<T>(CsvOptions.Default);
-        mapper.SetHeaders(headers);
-        return mapper.MapRecord(record.ToArray());
-    }
-
-    /// <summary>
-    /// Maps CSV record to the specified type using custom mapping
-    /// </summary>
-    /// <typeparam name="T">Type to map to</typeparam>
-    /// <param name="record">CSV record to map</param>
-    /// <param name="mapping">Custom mapping configuration</param>
-    /// <returns>Mapped object instance</returns>
-    public static T MapTo<T>(this ICsvRecord record, CsvMapping<T> mapping) where T : class, new()
-    {
-        var mapper = new CsvMapper<T>(mapping);
-        return mapper.MapRecord(record.ToArray());
-    }
-
-    /// <summary>
-    /// Gets a field value as a specific type
-    /// </summary>
-    /// <typeparam name="T">Type to convert to</typeparam>
-    /// <param name="record">CSV record</param>
-    /// <param name="index">Field index</param>
-    /// <returns>Converted field value</returns>
-    public static T GetField<T>(this ICsvRecord record, int index)
-    {
-        var field = record.GetField(index);
-        var value = field.ToString();
-        
-        if (typeof(T) == typeof(string))
-        {
-            return (T)(object)value;
-        }
-        
-        return (T)Convert.ChangeType(value, typeof(T));
-    }
-
-    /// <summary>
-    /// Tries to get a field value as a specific type
-    /// </summary>
-    /// <typeparam name="T">Type to convert to</typeparam>
-    /// <param name="record">CSV record</param>
-    /// <param name="index">Field index</param>
-    /// <param name="value">Output value</param>
-    /// <returns>True if conversion was successful</returns>
-    public static bool TryGetField<T>(this ICsvRecord record, int index, out T value)
-    {
-        value = default(T)!;
-        
-        if (!record.TryGetField(index, out var field))
-        {
-            return false;
-        }
-        
-        try
-        {
-            var fieldValue = field.ToString();
-            if (typeof(T) == typeof(string))
+            // True async for streams
+            Reset();
+            var records = new List<string[]>();
+            
+            string? line;
+            while (!cancellationToken.IsCancellationRequested && (line = await _streamReader.ReadLineAsync()) != null)
             {
-                value = (T)(object)fieldValue;
-                return true;
+                if (string.IsNullOrEmpty(line))
+                {
+                    _lineNumber++;
+                    continue;
+                }
+                
+                var fields = CsvParser.ParseLine(line.AsSpan(), _options);
+                records.Add(fields);
+                _recordCount++;
+                _lineNumber++;
             }
             
-            value = (T)Convert.ChangeType(fieldValue, typeof(T));
-            return true;
+            return records;
         }
-        catch
+        else
         {
-            return false;
+            // Sync wrapped in Task.Run for string content
+            return await Task.Run(() => ReadAllRecords(), cancellationToken);
         }
     }
 
-    /// <summary>
-    /// Checks if a field at the given index is empty or null
-    /// </summary>
-    /// <param name="record">CSV record</param>
-    /// <param name="index">Field index</param>
-    /// <returns>True if field is empty or null</returns>
-    public static bool IsFieldEmpty(this ICsvRecord record, int index)
-    {
-        if (!record.TryGetField(index, out var field))
-        {
-            return true;
-        }
-        
-        return field.IsEmpty || field.IsWhiteSpace();
-    }
-
-    /// <summary>
-    /// Gets all non-empty fields from the record
-    /// </summary>
-    /// <param name="record">CSV record</param>
-    /// <returns>Array of non-empty field values</returns>
-    public static string[] GetNonEmptyFields(this ICsvRecord record)
-    {
-        var result = new List<string>();
-        
-        for (int i = 0; i < record.FieldCount; i++)
-        {
-            if (!record.IsFieldEmpty(i))
-            {
-                result.Add(record.GetField(i).ToString());
-            }
-        }
-        
-        return result.ToArray();
-    }
-
-    /// <summary>
-    /// Validates that all required fields are present and not empty
-    /// </summary>
-    /// <param name="record">CSV record</param>
-    /// <param name="requiredIndexes">Indexes of required fields</param>
-    /// <returns>True if all required fields are present</returns>
-    public static bool HasRequiredFields(this ICsvRecord record, params int[] requiredIndexes)
-    {
-        foreach (var index in requiredIndexes)
-        {
-            if (record.IsFieldEmpty(index))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
 }
