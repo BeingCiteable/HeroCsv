@@ -78,11 +78,6 @@ public partial interface ICsvReader : IDisposable
     int CountRecords();
 
     /// <summary>
-    /// Whether this reader is stream-based
-    /// </summary>
-    bool IsStreamBased { get; }
-
-    /// <summary>
     /// Read all records asynchronously into a list
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>

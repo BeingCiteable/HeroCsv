@@ -96,9 +96,9 @@ public static class ExtensionsToICsvRecord
     /// <param name="index">Field index</param>
     /// <param name="value">Output value</param>
     /// <returns>True if conversion was successful</returns>
-    public static bool TryGetField<T>(this ICsvRecord record, int index, out T value)
+    public static bool TryGetField<T>(this ICsvRecord record, int index, out T? value)
     {
-        value = default(T)!;
+        value = default;
         
         if (!record.TryGetField(index, out var field))
         {
@@ -156,7 +156,7 @@ public static class ExtensionsToICsvRecord
             }
         }
         
-        return result.ToArray();
+        return [.. result];
     }
 
     /// <summary>

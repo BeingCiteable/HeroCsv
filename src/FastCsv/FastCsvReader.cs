@@ -35,7 +35,11 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
     /// <summary>
     /// Creates a new FastCsvReader from a stream
     /// </summary>
-    public FastCsvReader(Stream stream, CsvOptions options, Encoding? encoding = null, bool leaveOpen = false)
+    public FastCsvReader(
+        Stream stream,
+        CsvOptions options,
+        Encoding? encoding = null,
+        bool leaveOpen = false)
     {
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
         _streamReader = new StreamReader(stream, encoding ?? Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: leaveOpen);
@@ -51,7 +55,8 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
     /// <summary>
     /// Whether there is more data to read
     /// </summary>
-    public bool HasMoreData => _content != null ? _position < _content.Length : !_endOfStream;
+    public bool HasMoreData => _content != null 
+        ? _position < _content.Length : !_endOfStream;
 
     /// <summary>
     /// Total number of records processed so far
@@ -70,20 +75,13 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
 
 
     /// <summary>
-    /// Whether this reader is stream-based
-    /// </summary>
-    public bool IsStreamBased => _stream != null;
-
-    /// <summary>
     /// Read the next CSV record
     /// </summary>
     public ICsvRecord ReadRecord()
     {
-        if (!TryReadRecord(out var record))
-        {
-            throw new InvalidOperationException("No more records available");
-        }
-        return record;
+        return !TryReadRecord(out var record) 
+            ? throw new InvalidOperationException("No more records available") 
+            : record;
     }
 
     /// <summary>
