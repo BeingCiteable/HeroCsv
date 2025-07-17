@@ -107,7 +107,8 @@ public static partial class Csv
         if (enableProfiling)
         {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var records = ReadInternal(csvContent, options);
+            var contentString = csvContent.ToString();
+            var records = new CsvMemoryEnumerable(contentString.AsMemory(), options);
             stopwatch.Stop();
 
             metrics["ProcessingTime"] = stopwatch.Elapsed;
@@ -118,7 +119,8 @@ public static partial class Csv
             return (records, metrics);
         }
 
-        return (ReadInternal(csvContent, options), metrics);
+        var contentStr = csvContent.ToString();
+        return (new CsvMemoryEnumerable(contentStr.AsMemory(), options), metrics);
     }
 }
 #endif

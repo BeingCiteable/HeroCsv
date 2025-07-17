@@ -248,7 +248,7 @@ internal sealed class CsvReaderBuilder : ICsvReaderBuilder
 
     private IEnumerable<T> MapRecords<T>(string content, CsvMapper<T> mapper) where T : class, new()
     {
-        var records = Csv.ReadInternal(content.AsSpan(), _options);
+        var records = Csv.ReadInternal(content.AsMemory(), _options);
         using var enumerator = records.GetEnumerator();
 
         // Handle headers if present

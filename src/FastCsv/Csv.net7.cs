@@ -19,7 +19,7 @@ public static partial class Csv
     public static async Task<IEnumerable<string[]>> ReadFileAsync(string filePath)
     {
         var content = await File.ReadAllTextAsync(filePath);
-        return ReadInternal(content.AsSpan(), CsvOptions.Default);
+        return new CsvMemoryEnumerable(content.AsMemory(), CsvOptions.Default);
     }
 
     /// <summary>
@@ -31,7 +31,7 @@ public static partial class Csv
     public static async Task<IEnumerable<string[]>> ReadFileAsync(string filePath, CsvOptions options)
     {
         var content = await File.ReadAllTextAsync(filePath);
-        return ReadInternal(content.AsSpan(), options);
+        return new CsvMemoryEnumerable(content.AsMemory(), options);
     }
 
     /// <summary>

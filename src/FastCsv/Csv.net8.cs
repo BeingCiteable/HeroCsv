@@ -23,7 +23,7 @@ public static partial class Csv
     public static IEnumerable<string[]> ReadAutoDetect(string csvContent)
     {
         var options = AutoDetectFormat(csvContent.AsSpan());
-        return ReadInternal(csvContent.AsSpan(), options);
+        return new CsvMemoryEnumerable(csvContent.AsMemory(), options);
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public static partial class Csv
     {
         var content = File.ReadAllText(filePath);
         var options = AutoDetectFormat(content.AsSpan());
-        return ReadInternal(content.AsSpan(), options);
+        return new CsvMemoryEnumerable(content.AsMemory(), options);
     }
 
     /// <summary>
@@ -46,7 +46,9 @@ public static partial class Csv
     public static IEnumerable<string[]> ReadAutoDetect(ReadOnlySpan<char> csvContent)
     {
         var options = AutoDetectFormat(csvContent);
-        return ReadInternal(csvContent, options);
+        // Need to convert span to string for IEnumerable
+        var contentString = csvContent.ToString();
+        return new CsvMemoryEnumerable(contentString.AsMemory(), options);
     }
 
     private static CsvOptions AutoDetectFormat(ReadOnlySpan<char> content)
