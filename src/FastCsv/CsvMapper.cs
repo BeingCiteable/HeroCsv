@@ -206,6 +206,7 @@ internal sealed partial class CsvMapper<T> where T : class, new()
         return targetType.Name switch
         {
             nameof(String) => value,
+            nameof(Byte) => byte.Parse(value),
             nameof(Int32) => int.Parse(value),
             nameof(Int64) => long.Parse(value),
             nameof(Double) => double.Parse(value),

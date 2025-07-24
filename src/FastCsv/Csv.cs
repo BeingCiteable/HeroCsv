@@ -7,7 +7,6 @@ namespace FastCsv;
 /// </summary>
 public static partial class Csv
 {
-
     /// <summary>
     /// Counts CSV records without allocating strings for maximum performance
     /// </summary>
@@ -16,7 +15,68 @@ public static partial class Csv
     /// <returns>Number of records found</returns>
     public static int CountRecords(ReadOnlySpan<char> content, CsvOptions options = default)
     {
-        using var reader = CreateReader(content.ToString(), options);
+        // Must convert to string for span safety
+        return CountRecords(content.ToString(), options);
+    }
+    
+    /// <summary>
+    /// Counts CSV records without allocating strings for maximum performance
+    /// </summary>
+    /// <param name="content">CSV text as memory</param>
+    /// <param name="options">CSV parsing options</param>
+    /// <returns>Number of records found</returns>
+    public static int CountRecords(ReadOnlyMemory<char> content, CsvOptions options = default)
+    {
+        // For simple cases without quotes, use ultra-fast counting
+        if (options.Quote == '"' && !ContainsQuote(content.Span, '"'))
+        {
+            return CountRecordsOptimized(content.Span, options);
+        }
+        
+        var dataSource = new MemoryDataSource(content);
+        using var reader = new FastCsvReader(dataSource, options);
+        return reader.CountRecords();
+    }
+    
+    /// <summary>
+    /// Check if span contains quote character
+    /// </summary>
+    private static bool ContainsQuote(ReadOnlySpan<char> content, char quote)
+    {
+        for (int i = 0; i < content.Length; i++)
+        {
+            if (content[i] == quote) return true;
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Ultra-fast record counting for CSV without quotes
+    /// </summary>
+    private static int CountRecordsOptimized(ReadOnlySpan<char> content, CsvOptions options)
+    {
+        if (content.IsEmpty) return 0;
+        
+        int recordCount = CsvParser.CountLinesOptimized(content);
+        
+        // Adjust for header if needed
+        if (options.HasHeader && recordCount > 0)
+        {
+            recordCount--;
+        }
+        
+        return recordCount > 0 ? recordCount : 0;
+    }
+    
+    /// <summary>
+    /// Counts CSV records from string content
+    /// </summary>
+    /// <param name="content">CSV text as string</param>
+    /// <param name="options">CSV parsing options</param>
+    /// <returns>Number of records found</returns>
+    public static int CountRecords(string content, CsvOptions options = default)
+    {
+        using var reader = CreateReader(content, options);
         return reader.CountRecords();
     }
 
@@ -25,9 +85,9 @@ public static partial class Csv
     /// </summary>
     /// <param name="content">Raw CSV text to parse</param>
     /// <returns>Each CSV row as an array of field values</returns>
-    public static IEnumerable<string[]> Read(string content)
+    public static IEnumerable<string[]> ReadContent(string content)
     {
-        return Read(content, CsvOptions.Default);
+        return ReadContent(content, CsvOptions.Default);
     }
 
     /// <summary>
@@ -36,10 +96,10 @@ public static partial class Csv
     /// <param name="content">Raw CSV text to parse</param>
     /// <param name="delimiter">Field separator character</param>
     /// <returns>Each CSV row as an array of field values</returns>
-    public static IEnumerable<string[]> Read(string content, char delimiter)
+    public static IEnumerable<string[]> ReadContent(string content, char delimiter)
     {
         var options = new CsvOptions(delimiter);
-        return Read(content, options);
+        return ReadContent(content, options);
     }
 
     /// <summary>
@@ -48,10 +108,10 @@ public static partial class Csv
     /// <param name="content">Raw CSV text to parse</param>
     /// <param name="options">Parsing configuration for delimiter, quotes, headers, etc.</param>
     /// <returns>Each CSV row as an array of field values</returns>
-    public static IEnumerable<string[]> Read(string content, CsvOptions options)
+    public static IEnumerable<string[]> ReadContent(string content, CsvOptions options)
     {
-        var reader = CreateReader(content, options);
-        return reader.GetRecords();
+        using var reader = CreateReader(content, options);
+        return [.. reader.GetRecords()];
     }
 
     /// <summary>
@@ -63,7 +123,7 @@ public static partial class Csv
     public static IEnumerable<string[]> ReadFile(string filePath, CsvOptions options = default)
     {
         var content = File.ReadAllText(filePath);
-        return Read(content, options);
+        return ReadContent(content, options);
     }
 
     /// <summary>
@@ -74,8 +134,45 @@ public static partial class Csv
     /// <returns>Read-only list of all parsed records</returns>
     public static IReadOnlyList<string[]> ReadAllRecords(ReadOnlySpan<char> content, CsvOptions options = default)
     {
-        using var reader = CreateReader(content.ToString(), options);
+        // Must convert to string for span safety
+        return ReadAllRecords(content.ToString(), options);
+    }
+    
+    /// <summary>
+    /// Parses CSV content from memory and returns all records as a read-only list for better performance
+    /// </summary>
+    /// <param name="content">CSV text as memory</param>
+    /// <param name="options">CSV parsing options</param>
+    /// <returns>Read-only list of all parsed records</returns>
+    public static IReadOnlyList<string[]> ReadAllRecords(ReadOnlyMemory<char> content, CsvOptions options = default)
+    {
+        var dataSource = new MemoryDataSource(content);
+        using var reader = new FastCsvReader(dataSource, options);
         return reader.ReadAllRecords();
+    }
+    
+    /// <summary>
+    /// Parses CSV content from string and returns all records as a read-only list
+    /// </summary>
+    /// <param name="content">CSV text as string</param>
+    /// <param name="options">CSV parsing options</param>
+    /// <returns>Read-only list of all parsed records</returns>
+    public static IReadOnlyList<string[]> ReadAllRecords(string content, CsvOptions options = default)
+    {
+        using var reader = CreateReader(content, options);
+        return reader.ReadAllRecords();
+    }
+
+    /// <summary>
+    /// Creates a CSV reader from ReadOnlyMemory for zero-allocation parsing
+    /// </summary>
+    /// <param name="content">CSV content as memory</param>
+    /// <param name="options">Parsing options</param>
+    /// <returns>Configured CSV reader that must be disposed after use</returns>
+    public static ICsvReader CreateReader(ReadOnlyMemory<char> content, CsvOptions options = default)
+    {
+        var dataSource = new MemoryDataSource(content);
+        return new FastCsvReader(dataSource, options);
     }
 
     /// <summary>
@@ -85,21 +182,15 @@ public static partial class Csv
     public static ICsvReaderBuilder Configure() => new CsvReaderBuilder();
 
     /// <summary>
-    /// Creates a configuration builder pre-loaded with CSV content
-    /// </summary>
-    /// <param name="content">Raw CSV text to be configured for parsing</param>
-    /// <returns>Builder for setting validation, error handling, and performance options</returns>
-    public static ICsvReaderBuilder Configure(string content)
-    {
-        return new CsvReaderBuilder().WithContent(content);
-    }
-
-    /// <summary>
     /// Creates a CSV reader with the specified content and options
     /// </summary>
     /// <param name="content">CSV content to read</param>
     /// <param name="options">Parsing options</param>
-    /// <returns>Configured CSV reader</returns>
+    /// <returns>Configured CSV reader that must be disposed after use</returns>
+    /// <remarks>
+    /// The returned ICsvReader implements IDisposable and must be disposed properly.
+    /// Use a using statement or call Dispose() when finished.
+    /// </remarks>
     public static ICsvReader CreateReader(string content, CsvOptions options)
     {
         return new FastCsvReader(content, options);
@@ -109,7 +200,11 @@ public static partial class Csv
     /// Creates a CSV reader with the specified content and default options
     /// </summary>
     /// <param name="content">CSV content to read</param>
-    /// <returns>Configured CSV reader</returns>
+    /// <returns>Configured CSV reader that must be disposed after use</returns>
+    /// <remarks>
+    /// The returned ICsvReader implements IDisposable and must be disposed properly.
+    /// Use a using statement or call Dispose() when finished.
+    /// </remarks>
     public static ICsvReader CreateReader(string content)
     {
         return CreateReader(content, CsvOptions.Default);
@@ -122,7 +217,12 @@ public static partial class Csv
     /// <param name="options">Parsing options</param>
     /// <param name="encoding">Text encoding (defaults to UTF-8)</param>
     /// <param name="leaveOpen">Whether to leave the stream open when disposing the reader</param>
-    /// <returns>Configured CSV reader</returns>
+    /// <returns>Configured CSV reader that must be disposed after use</returns>
+    /// <remarks>
+    /// The returned ICsvReader implements IDisposable and IAsyncDisposable (.NET 6+).
+    /// Use a using statement or call Dispose() when finished.
+    /// The underlying stream will be disposed unless leaveOpen is true.
+    /// </remarks>
     public static ICsvReader CreateReader(Stream stream, CsvOptions options = default, Encoding? encoding = null, bool leaveOpen = false)
     {
         return new FastCsvReader(stream, options, encoding, leaveOpen);
@@ -263,8 +363,8 @@ public static partial class Csv
     {
         using var streamReader = new StreamReader(stream);
         var content = streamReader.ReadToEnd();
-        var reader = CreateReader(content, options);
-        return reader.GetRecords();
+        using var reader = CreateReader(content, options);
+        return reader.GetRecords().ToList(); // Materialize to avoid accessing disposed reader
     }
 
     /// <summary>
@@ -320,13 +420,12 @@ public static partial class Csv
         return ReadMixed<T>(content, configureMapping);
     }
 
-
     /// <summary>
     /// Internal method for reading with a configured mapper
     /// </summary>
     private static IEnumerable<T> ReadWithMapper<T>(string content, CsvOptions options, CsvMapper<T> mapper) where T : class, new()
     {
-        var reader = CreateReader(content, options);
+        using var reader = CreateReader(content, options);
         var records = reader.GetRecords();
         using var enumerator = records.GetEnumerator();
 
@@ -337,6 +436,4 @@ public static partial class Csv
             yield return mapper.MapRecord(record);
         }
     }
-
-
 }

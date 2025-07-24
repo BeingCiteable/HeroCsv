@@ -6,7 +6,7 @@ namespace FastCsv;
 /// <summary>
 /// Central utility class for CSV parsing operations
 /// </summary>
-internal static class CsvParser
+internal static partial class CsvParser
 {
     /// <summary>
     /// Finds the end of the current line starting from the given position
@@ -51,18 +51,8 @@ internal static class CsvParser
     {
         if (line.IsEmpty) return [];
 
-        // Check if line contains quotes for optimization
-        bool hasQuotes = false;
-        for (int i = 0; i < line.Length; i++)
-        {
-            if (line[i] == options.Quote)
-            {
-                hasQuotes = true;
-                break;
-            }
-        }
-
-        return hasQuotes ? ParseQuotedLine(line, options) : ParseUnquotedLine(line, options);
+        // Use lightning-fast algorithms designed to beat Sep
+        return ParseLineLightning(line, options);
     }
 
     /// <summary>

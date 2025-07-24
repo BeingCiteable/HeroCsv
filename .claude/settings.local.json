@@ -26,7 +26,13 @@
       "Bash(powershell:*)",
       "Bash(git checkout:*)",
       "Bash(dotnet run:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(csc:*)",
+      "Bash(TestZeroAllocation.exe)",
+      "Bash(dotnet sln add:*)",
+      "Bash(if exist:*)",
+      "Bash(if exist bin rmdir /s /q bin)",
+      "Bash(if exist obj rmdir /s /q obj)"
     ],
     "deny": []
   }

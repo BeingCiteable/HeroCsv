@@ -21,10 +21,17 @@ public static partial class Csv
     /// <param name="options">CSV parsing options</param>
     /// <param name="leaveOpen">Whether to leave the stream open after reading</param>
     /// <returns>Async enumerable of CSV records</returns>
-    public static IAsyncEnumerable<string[]> ReadStreamAsync(Stream stream, CsvOptions options = default, bool leaveOpen = false)
+    public static async IAsyncEnumerable<string[]> ReadStreamAsync(Stream stream, CsvOptions options = default, bool leaveOpen = false)
     {
-        var reader = CreateReader(stream, options, leaveOpen: leaveOpen);
-        return reader.ReadRecordsAsync();
+#if NET6_0_OR_GREATER
+        await using var reader = CreateReader(stream, options, leaveOpen: leaveOpen);
+#else
+        using var reader = CreateReader(stream, options, leaveOpen: leaveOpen);
+#endif
+        await foreach (var record in reader.ReadRecordsAsync())
+        {
+            yield return record;
+        }
     }
 
     /// <summary>
@@ -58,7 +65,7 @@ public static partial class Csv
         CsvOptions options = default,
         CancellationToken cancellationToken = default)
     {
-        using var reader = CreateReader(stream, options);
+        await using var reader = CreateReader(stream, options);
         return await reader.ReadAllRecordsAsync(cancellationToken);
     }
 

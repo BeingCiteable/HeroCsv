@@ -19,6 +19,11 @@ public partial interface ICsvReaderBuilder
     /// <returns>Configuration builder for additional options</returns>
     ICsvReaderBuilder WithFile(string filePath);
 
+    /// <summary>
+    /// Specifies a stream containing CSV data to parse
+    /// </summary>
+    /// <param name="stream"></param>
+    /// <returns></returns>
     ICsvReaderBuilder WithStream(Stream stream);
 
     /// <summary>

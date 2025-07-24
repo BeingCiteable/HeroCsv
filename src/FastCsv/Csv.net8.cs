@@ -22,7 +22,7 @@ public static partial class Csv
     public static IEnumerable<string[]> ReadAutoDetect(string content)
     {
         var options = AutoDetectFormat(content.AsSpan());
-        return Read(content, options);
+        return ReadContent(content, options);
     }
 
     /// <summary>

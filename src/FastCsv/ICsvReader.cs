@@ -4,7 +4,11 @@ namespace FastCsv;
 /// Core interface for CSV reading operations
 /// Focused on reading records and navigation
 /// </summary>
+#if NET6_0_OR_GREATER
+public partial interface ICsvReader : IDisposable, IAsyncDisposable
+#else
 public partial interface ICsvReader : IDisposable
+#endif
 {
     /// <summary>
     /// Current line number (1-based)
