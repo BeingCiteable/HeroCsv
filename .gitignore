@@ -149,3 +149,14 @@ jspm_packages/
 
 ## Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+## BenchmarkDotNet results and artifacts
+BenchmarkDotNet.Artifacts/
+**/BenchmarkDotNet.Artifacts/
+*.etl
+*.vsperfx
+*.vsp
+*.psess
+*.vsps
+*.diagsession
+*.benchmarkdotnet.log
