@@ -24,7 +24,7 @@ public static partial class Csv
     public static IAsyncEnumerable<string[]> ReadStreamAsync(Stream stream, CsvOptions options = default, bool leaveOpen = false)
     {
         var reader = CreateReader(stream, options, leaveOpen: leaveOpen);
-        return reader.GetRecordsAsync();
+        return reader.ReadRecordsAsync();
     }
 
     /// <summary>

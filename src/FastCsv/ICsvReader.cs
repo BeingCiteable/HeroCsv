@@ -1,6 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace FastCsv;
 
 /// <summary>
@@ -66,10 +63,19 @@ public partial interface ICsvReader : IDisposable
     IReadOnlyList<string[]> ReadAllRecords();
 
     /// <summary>
+    /// Read all records asynchronously into a list
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of all CSV records as string arrays</returns>
+    Task<IReadOnlyList<string[]>> ReadAllRecordsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get records as enumerable
     /// </summary>
     /// <returns>Enumerable of CSV records as string arrays</returns>
     IEnumerable<string[]> GetRecords();
+
+    Task<IEnumerable<string[]>> GetRecordsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Count the total number of records without parsing fields
@@ -78,10 +84,17 @@ public partial interface ICsvReader : IDisposable
     int CountRecords();
 
     /// <summary>
-    /// Read all records asynchronously into a list
+    /// Get validation results if validation is enabled
     /// </summary>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all CSV records as string arrays</returns>
-    Task<IReadOnlyList<string[]>> ReadAllRecordsAsync(CancellationToken cancellationToken = default);
+    CsvValidationResult ValidationResult { get; }
 
+    /// <summary>
+    /// Whether validation is enabled
+    /// </summary>
+    bool IsValidationEnabled { get; }
+
+    /// <summary>
+    /// Whether error tracking is enabled
+    /// </summary>
+    bool IsErrorTrackingEnabled { get; }
 }

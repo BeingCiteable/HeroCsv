@@ -1,4 +1,5 @@
-using System.Runtime.CompilerServices;
+using FastCsv.Errors;
+using FastCsv.Validation;
 using System.Text;
 
 namespace FastCsv;
@@ -13,7 +14,7 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
     private readonly string? _content;
     private readonly CsvOptions _options;
     private readonly bool _leaveOpen;
-    
+
     private int _position = 0;
     private int _lineNumber = 1;
     private int _recordCount = 0;
@@ -22,14 +23,31 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
     // For stream-based reading
     private bool _endOfStream = false;
 
+    // Validation and error tracking handlers
+    private readonly IValidationHandler _validationHandler;
+    private readonly IErrorHandler _errorHandler;
+
     /// <summary>
     /// Creates a new FastCsvReader from string content
     /// </summary>
-    public FastCsvReader(string content, CsvOptions options)
+    public FastCsvReader(
+        string content,
+        CsvOptions options,
+        bool validateData = false,
+        bool trackErrors = false,
+        Action<CsvValidationError>? errorCallback = null)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         _options = options;
         _leaveOpen = false;
+
+        // Initialize handlers
+        _errorHandler = trackErrors ? new ErrorHandler(true) : new NullErrorHandler();
+        if (errorCallback != null && _errorHandler is ErrorHandler handler)
+        {
+            handler.ErrorOccurred += errorCallback;
+        }
+        _validationHandler = new ValidationHandler(options, _errorHandler, validateData);
     }
 
     /// <summary>
@@ -39,12 +57,28 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
         Stream stream,
         CsvOptions options,
         Encoding? encoding = null,
-        bool leaveOpen = false)
+        bool leaveOpen = false,
+        bool validateData = false,
+        bool trackErrors = false,
+        Action<CsvValidationError>? errorCallback = null)
     {
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        _streamReader = new StreamReader(stream, encoding ?? Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: leaveOpen);
+        _streamReader = new StreamReader(
+            stream,
+            encoding ?? Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: true,
+            bufferSize: 4096,
+            leaveOpen: leaveOpen);
         _options = options;
         _leaveOpen = leaveOpen;
+
+        // Initialize handlers
+        _errorHandler = trackErrors ? new ErrorHandler(true) : new NullErrorHandler();
+        if (errorCallback != null && _errorHandler is ErrorHandler handler)
+        {
+            handler.ErrorOccurred += errorCallback;
+        }
+        _validationHandler = new ValidationHandler(options, _errorHandler, validateData);
     }
 
     /// <summary>
@@ -55,7 +89,7 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
     /// <summary>
     /// Whether there is more data to read
     /// </summary>
-    public bool HasMoreData => _content != null 
+    public bool HasMoreData => _content != null
         ? _position < _content.Length : !_endOfStream;
 
     /// <summary>
@@ -73,14 +107,29 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
     /// </summary>
     public CsvOptions Options => _options;
 
+    /// <summary>
+    /// Get validation results if validation is enabled
+    /// </summary>
+    public CsvValidationResult ValidationResult => _errorHandler.GetValidationResult();
+
+    /// <summary>
+    /// Whether validation is enabled
+    /// </summary>
+    public bool IsValidationEnabled => _validationHandler.IsEnabled;
+
+    /// <summary>
+    /// Whether error tracking is enabled
+    /// </summary>
+    public bool IsErrorTrackingEnabled => _errorHandler.IsEnabled;
+
 
     /// <summary>
     /// Read the next CSV record
     /// </summary>
     public ICsvRecord ReadRecord()
     {
-        return !TryReadRecord(out var record) 
-            ? throw new InvalidOperationException("No more records available") 
+        return !TryReadRecord(out var record)
+            ? throw new InvalidOperationException("No more records available")
             : record;
     }
 
@@ -137,6 +186,13 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
         }
 
         var fields = CsvParser.ParseLine(line.AsSpan(), _options);
+
+        // Perform validation if enabled
+        if (_validationHandler.IsEnabled || _errorHandler.IsEnabled)
+        {
+            _validationHandler.ValidateRecord(fields, _lineNumber, _validationHandler.ExpectedFieldCount);
+        }
+
         record = new CsvRecord(fields, _lineNumber);
         _recordCount++;
 
@@ -187,6 +243,8 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
         _lineNumber = 1;
         _recordCount = 0;
         _endOfStream = false;
+        _validationHandler.Reset();
+        _errorHandler.Reset();
 
         if (_stream != null)
         {
@@ -200,15 +258,16 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (!_disposed)
+        if (_disposed)
+            return;
+
+        if (!_leaveOpen)
         {
-            if (!_leaveOpen)
-            {
-                _streamReader?.Dispose();
-                _stream?.Dispose();
-            }
-            _disposed = true;
+            _streamReader?.Dispose();
+            _stream?.Dispose();
         }
+
+        _disposed = true;
     }
 
     private string? ReadLineFromStream()
@@ -228,18 +287,17 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
         return line;
     }
 
-
     /// <inheritdoc />
     public IReadOnlyList<string[]> ReadAllRecords()
     {
         Reset();
         var records = new List<string[]>();
-        
+
         while (TryReadRecord(out var record))
         {
             records.Add(record.ToArray());
         }
-        
+
         return records;
     }
 
@@ -258,12 +316,12 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
     {
         Reset();
         var count = 0;
-        
+
         while (TryReadRecord(out _))
         {
             count++;
         }
-        
+
         return count;
     }
 
@@ -275,22 +333,27 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
             // True async for streams
             Reset();
             var records = new List<string[]>();
-            
+
             string? line;
-            while (!cancellationToken.IsCancellationRequested && (line = await _streamReader.ReadLineAsync()) != null)
+            while (!cancellationToken.IsCancellationRequested)
             {
+#if NET7_0_OR_GREATER
+                line = await _streamReader.ReadLineAsync(cancellationToken);
+#else
+                line = await _streamReader.ReadLineAsync();
+#endif
                 if (string.IsNullOrEmpty(line))
                 {
                     _lineNumber++;
                     continue;
                 }
-                
+
                 var fields = CsvParser.ParseLine(line.AsSpan(), _options);
                 records.Add(fields);
                 _recordCount++;
                 _lineNumber++;
             }
-            
+
             return records;
         }
         else
@@ -300,4 +363,8 @@ internal sealed partial class FastCsvReader : ICsvReader, IDisposable
         }
     }
 
+    public Task<IEnumerable<string[]>> GetRecordsAsync(CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -12,7 +12,7 @@ namespace FastCsv;
 internal sealed partial class FastCsvReader
 {
     /// <inheritdoc />
-    public async IAsyncEnumerable<string[]> GetRecordsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<string[]> ReadRecordsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         Reset();
         

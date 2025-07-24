@@ -12,6 +12,7 @@ internal sealed class CsvReaderBuilder : ICsvReaderBuilder
     private CsvOptions _options = CsvOptions.Default;
     private bool _validateData = false;
     private bool _trackErrors = false;
+    private Action<CsvValidationError>? _errorCallback = null;
 #if NET6_0_OR_GREATER
     private bool _hardwareAcceleration = false;
 #endif
@@ -30,6 +31,11 @@ internal sealed class CsvReaderBuilder : ICsvReaderBuilder
         _filePath = filePath;
         _content = null;
         return this;
+    }
+
+    public ICsvReaderBuilder WithStream(Stream stream)
+    {
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc />
@@ -57,6 +63,14 @@ internal sealed class CsvReaderBuilder : ICsvReaderBuilder
     public ICsvReaderBuilder WithErrorTracking(bool trackErrors = true)
     {
         _trackErrors = trackErrors;
+        return this;
+    }
+
+    /// <inheritdoc />
+    public ICsvReaderBuilder WithErrorCallback(Action<CsvValidationError> errorCallback)
+    {
+        _errorCallback = errorCallback;
+        _trackErrors = true; // Automatically enable error tracking when callback is set
         return this;
     }
 
@@ -101,49 +115,9 @@ internal sealed class CsvReaderBuilder : ICsvReaderBuilder
     }
 #endif
 
-    /// <inheritdoc />
-    public IEnumerable<string[]> Read()
+    public ICsvReader Build()
     {
-        var content = GetContent();
-        var reader = CreateConfiguredReader(content);
-        return ExtractRecords(reader);
-    }
-
-    /// <inheritdoc />
-    public IEnumerable<T> Read<T>() where T : class, new()
-    {
-        var content = GetContent();
-        var mapper = new CsvMapper<T>(_options);
-        return MapRecords(content, mapper);
-    }
-
-    /// <inheritdoc />
-    public IEnumerable<T> Read<T>(CsvMapping<T> mapping) where T : class, new()
-    {
-        var content = GetContent();
-        var mapper = new CsvMapper<T>(mapping);
-        return MapRecords(content, mapper);
-    }
-
-    private IEnumerable<T> MapRecords<T>(string content, CsvMapper<T> mapper) where T : class, new()
-    {
-        var reader = Csv.CreateReader(content, _options);
-        var records = reader.GetRecords();
-        using var enumerator = records.GetEnumerator();
-
-        // Handle headers if present
-        if (_options.HasHeader && enumerator.MoveNext())
-        {
-            var headers = enumerator.Current;
-            mapper.SetHeaders(headers);
-        }
-
-        // Map each record
-        while (enumerator.MoveNext())
-        {
-            var record = enumerator.Current;
-            yield return mapper.MapRecord(record);
-        }
+        throw new NotImplementedException();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -157,20 +131,12 @@ internal sealed class CsvReaderBuilder : ICsvReaderBuilder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private FastCsvReader CreateConfiguredReader(string content)
     {
-        return new FastCsvReader(content, _options);
+        return new FastCsvReader(
+            content,
+            _options,
+            _validateData,
+            _trackErrors,
+            _errorCallback);
     }
-
-    private static List<string[]> ExtractRecords(FastCsvReader reader)
-    {
-        var records = new List<string[]>();
-
-        while (reader.TryReadRecord(out var record))
-        {
-            records.Add(record.ToArray());
-        }
-
-        return records;
-    }
-
 }
 

@@ -6,13 +6,13 @@ An **ultra-fast and low memory usage** CSV parsing library for .NET focused on *
 
 - **Ultra-fast performance** with zero-allocation parsing using ReadOnlySpan<char>
 - **Extremely simple API** for basic use cases with advanced configuration options
-- **Partial class pattern** for framework-specific optimizations
-- **Progressive enhancement** across .NET versions (6+ → 7+ → 8+ → 9+)
-- **Hardware acceleration** with Vector and Vector512 operations
-- **SearchValues optimization** for ultra-fast character detection (.NET 8+)
+- **Generic object mapping** with automatic property mapping and custom converters
+- **Comprehensive validation system** with detailed error reporting
+- **Async operations** for file and stream processing (.NET 7+)
+- **Auto-detection** of CSV formats and delimiters (.NET 8+)
 - **Multi-framework support** (.NET Standard 2.0, .NET 6, .NET 7, .NET 8, .NET 9)
-- **DateTimeOffset support** for timezone-aware timestamps
-- **Feature-based organization** (Fields, Validation, Errors, Configuration)
+- **Rich extension methods** for type conversion and field access
+- **Stream processing** with encoding support and memory efficiency
 - **Reading-focused design** - no writing operations for maximum performance
 
 ## Installation
@@ -60,6 +60,74 @@ foreach (var record in Csv.ReadWithHeaders(csvData))
 }
 ```
 
+### Object Mapping
+
+```csharp
+using FastCsv;
+
+// Define your model
+public class Employee
+{
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Department { get; set; }
+    public decimal Salary { get; set; }
+    public DateTime HireDate { get; set; }
+}
+
+var csvData = """
+FirstName,LastName,Department,Salary,HireDate
+John,Doe,Engineering,75000,2020-01-15
+Jane,Smith,Marketing,65000,2019-06-20
+Bob,Johnson,Sales,55000,2021-03-10
+""";
+
+// Automatic mapping by property names
+var employees = Csv.Read<Employee>(csvData);
+foreach (var emp in employees)
+{
+    Console.WriteLine($"{emp.FirstName} {emp.LastName} - {emp.Department}: ${emp.Salary:N0}");
+}
+
+// Manual column mapping
+var employeesManual = Csv.ReadWithMapping<Employee>(csvData, mapping =>
+    mapping.Map(e => e.FirstName, 0)
+           .Map(e => e.LastName, 1)
+           .Map(e => e.Department, 2)
+           .Map(e => e.Salary, 3)
+           .Map(e => e.HireDate, 4));
+
+// Mixed mapping (some auto, some manual)
+var employeesMixed = Csv.ReadWithMapping<Employee>(csvData, mapping =>
+    mapping.AutoMap()  // Auto-map by header names
+           .Map(e => e.Salary, col => decimal.Parse(col) * 1.1m)); // Custom converter
+```
+
+### Type Conversion and Field Access
+
+```csharp
+// Using extension methods for type conversion
+foreach (var record in Csv.Read(csvData))
+{
+    var name = record.GetField<string>(0);
+    var age = record.GetField<int>(1);
+    var salary = record.GetField<decimal>(3);
+    var hireDate = record.GetField<DateTime>(4);
+    
+    // Safe conversion with TryGet
+    if (record.TryGetField<decimal>(3, out var salaryValue))
+    {
+        Console.WriteLine($"Salary: ${salaryValue:N0}");
+    }
+    
+    // Check for empty fields
+    if (!record.IsFieldEmpty(2))
+    {
+        Console.WriteLine($"Department: {record.GetField<string>(2)}");
+    }
+}
+```
+
 ### File Operations
 
 ```csharp
@@ -72,7 +140,7 @@ foreach (var record in Csv.ReadFile("data.csv"))
 }
 
 // Async file reading (.NET 7+)
-foreach (var record in await Csv.ReadFileAsync("data.csv"))
+await foreach (var record in Csv.ReadFileAsync("data.csv"))
 {
     Console.WriteLine($"Record: {string.Join(", ", record)}");
 }
@@ -89,26 +157,31 @@ foreach (var record in Csv.ReadFileAutoDetect("unknown_format.csv"))
 ```csharp
 using FastCsv;
 
-// Fluent builder pattern for complex scenarios
-var result = Csv.Configure()
-    .WithFile("data.csv")
-    .WithDelimiter(';')
-    .WithHeaders(true)
-    .WithValidation(true)
-    .WithErrorTracking(true)
-    .WithHardwareAcceleration(true)  // .NET 6+
-    .WithProfiling(true)            // .NET 9+
-    .ReadAdvanced();
+// Custom CSV options for complex scenarios
+var options = new CsvOptions
+{
+    Delimiter = ';',
+    HasHeaders = true,
+    TrimWhitespace = true,
+    SkipEmptyLines = true
+};
 
-Console.WriteLine($"Processed {result.TotalRecords} records in {result.ProcessingTime}");
+// Read with validation
+var result = Csv.Configure()
+    .WithContent(csvData)
+    .WithOptions(options)
+    .WithValidation(true)
+    .Read();
+
+Console.WriteLine($"Processed {result.Records.Count()} records");
 Console.WriteLine($"Valid: {result.IsValid}");
 
-if (result.ValidationErrors.Any())
+if (!result.IsValid)
 {
     Console.WriteLine("Validation errors:");
-    foreach (var error in result.ValidationErrors)
+    foreach (var error in result.ValidationResult.Errors)
     {
-        Console.WriteLine($"- {error}");
+        Console.WriteLine($"- Line {error.LineNumber}: {error.ErrorType} - {error.Message}");
     }
 }
 ```
@@ -268,33 +341,33 @@ Performance varies by .NET version due to progressive optimizations:
 
 ## Architecture
 
-The library follows a modular interface-based architecture:
+The library follows a modular architecture with core interfaces and implementations:
 
-### Core Interfaces
-- **ICsvReader**: Zero-allocation CSV reader with progressive enhancements
-- **ICsvRecord**: Single CSV record with field access capabilities
-- **IFieldHandler**: Field parsing and processing operations
-- **ICsvValidator**: CSV data structure and content validation
-- **IErrorHandler**: Error management and reporting
-- **ICsvErrorReporter**: Specialized error reporting and statistics
-- **IConfigurationHandler**: CSV configuration and format detection
-- **IPositionHandler**: Position tracking and navigation
-- **IValidationHandler**: Structure and field validation
+### Core Components
+- **Csv**: Static API providing simple entry points for common operations
+- **ICsvReader**: Core CSV reader interface with async support (.NET 6+)
+- **ICsvRecord**: Single CSV record with field access and type conversion
+- **ICsvReaderBuilder**: Fluent configuration interface for advanced scenarios
+- **CsvMapper<T>**: Generic object mapping with automatic and manual mapping
+- **CsvOptions**: Configuration struct for parsing behavior
 
-### Organization
-- **Fields/**: Field handling and processing
-- **Errors/**: Error handling and reporting
-- **Validation/**: Data validation
-- **Configuration/**: Configuration management
-- **Navigation/**: Position tracking
+### Key Classes
+- **FastCsvReader**: Main CSV reader implementation with async support
+- **CsvReaderBuilder**: Builder pattern implementation for configuration
+- **CsvRecord**: Record implementation with extension method support
+- **CsvParser**: Core parsing logic with ReadOnlySpan<char> optimization
 
-### Partial Interface Pattern
-Each interface uses framework-specific partial files:
-- **Core interface**: Framework-agnostic base functionality
-- **net6.cs**: Hardware acceleration features
-- **net7.cs**: Fast parsing and type conversion
-- **net8.cs**: Optimized collections and character detection
-- **net9.cs**: Advanced hardware acceleration
+### Supporting Features
+- **Errors/**: Comprehensive error handling with IErrorHandler and specific error types
+- **Validation/**: Data validation with IValidationHandler and detailed error reporting
+- **Extensions**: Rich extension methods for type conversion and field access
+
+### Progressive Enhancement
+Framework-specific optimizations through partial classes:
+- **Core files**: Framework-agnostic base functionality
+- **net6.cs**: Hardware acceleration and async enumerable support
+- **net7.cs**: Async operations and enhanced span processing
+- **net8.cs**: SearchValues optimization and auto-detection features
 
 ## Framework Support
 

@@ -19,6 +19,8 @@ public partial interface ICsvReaderBuilder
     /// <returns>Configuration builder for additional options</returns>
     ICsvReaderBuilder WithFile(string filePath);
 
+    ICsvReaderBuilder WithStream(Stream stream);
+
     /// <summary>
     /// Sets the character used to separate fields
     /// </summary>
@@ -33,7 +35,6 @@ public partial interface ICsvReaderBuilder
     /// <returns>Configuration builder for additional options</returns>
     ICsvReaderBuilder WithQuote(char quote);
 
-
     /// <summary>
     /// Enables validation of CSV structure and data integrity
     /// </summary>
@@ -47,6 +48,13 @@ public partial interface ICsvReaderBuilder
     /// <param name="trackErrors">True to gather error details during parsing</param>
     /// <returns>Configuration builder for additional options</returns>
     ICsvReaderBuilder WithErrorTracking(bool trackErrors = true);
+
+    /// <summary>
+    /// Sets a callback to be invoked when validation errors occur
+    /// </summary>
+    /// <param name="errorCallback">Action to execute for each validation error</param>
+    /// <returns>Configuration builder for additional options</returns>
+    ICsvReaderBuilder WithErrorCallback(Action<CsvValidationError> errorCallback);
 
     /// <summary>
     /// Configures whether to skip empty fields during mapping
@@ -69,26 +77,5 @@ public partial interface ICsvReaderBuilder
     /// <returns>Configuration builder for additional options</returns>
     ICsvReaderBuilder WithOptions(CsvOptions options);
 
-    /// <summary>
-    /// Parses the configured CSV data and returns rows as string arrays
-    /// </summary>
-    /// <returns>Each CSV row as an array of field values</returns>
-    IEnumerable<string[]> Read();
-
-
-
-    /// <summary>
-    /// Parses CSV data and maps each record to the specified type using auto mapping
-    /// </summary>
-    /// <typeparam name="T">Type to map CSV records to</typeparam>
-    /// <returns>Enumerable of mapped objects</returns>
-    IEnumerable<T> Read<T>() where T : class, new();
-
-    /// <summary>
-    /// Parses CSV data and maps each record to the specified type using manual mapping
-    /// </summary>
-    /// <typeparam name="T">Type to map CSV records to</typeparam>
-    /// <param name="mapping">Manual mapping configuration</param>
-    /// <returns>Enumerable of mapped objects</returns>
-    IEnumerable<T> Read<T>(CsvMapping<T> mapping) where T : class, new();
+    ICsvReader Build();
 }

@@ -19,33 +19,29 @@ Build an **ultra fast and low memory usage** CSV reading library that:
 
 The library follows a modular interface-based architecture with feature-based organization and **partial class pattern**:
 
-### Core Interfaces
-- **ICsvReader**: Zero-allocation CSV reader with framework-specific enhancements
-- **ICsvRecord**: Represents a single CSV record with field access capabilities
-- **IFieldHandler**: Handles field parsing and processing operations
-- **ICsvValidator**: Validates CSV data structure and content
-- **IErrorHandler**: Manages error reporting and statistics
-- **ICsvErrorReporter**: Specialized error reporting and management
-- **IConfigurationHandler**: Handles CSV configuration and format detection
-- **IPositionHandler**: Manages position tracking and navigation
-- **IValidationHandler**: Validates CSV structure and fields
+### Core Interfaces (Current Implementation)
+- **ICsvReader**: Core CSV reader with async enumerable support (.NET 6+)
+- **ICsvRecord**: Single CSV record with field access and type conversion capabilities
+- **ICsvReaderBuilder**: Fluent builder interface for advanced configuration scenarios
+- **IErrorHandler**: Error handling and reporting with customizable implementations
+- **IValidationHandler**: CSV validation with detailed error tracking and reporting
 
-### Interface Organization
-Interfaces are organized by feature area:
-- **Fields/**: Field handling and processing
-- **Records/**: Record access and manipulation
-- **Errors/**: Error handling and reporting
-- **Validation/**: Data validation
-- **Configuration/**: Configuration management
-- **Navigation/**: Position tracking and navigation
+### Current Organization
+The library is organized with the following key features:
+- **Core Static API**: `Csv` class provides simple entry points for common operations
+- **Object Mapping**: `CsvMapper<T>` with automatic property mapping and custom converters
+- **Error Handling**: `Errors/` directory with `IErrorHandler` interface and implementations
+- **Validation**: `Validation/` directory with `IValidationHandler` and detailed error reporting
+- **Extensions**: Rich extension methods in `ExtensionsToICsvRecord` for type conversion and field access
 
-### Partial Interface Pattern
-Each interface uses the partial interface pattern with framework-specific enhancements:
-- **Core interface**: Framework-agnostic base functionality
-- **net6.cs**: Hardware acceleration features
-- **net7.cs**: Fast parsing and type conversion
-- **net8.cs**: Optimized collections and character detection
-- **net9.cs**: Advanced hardware acceleration
+### Current Partial Implementation Pattern
+The library partially implements the partial class pattern with framework-specific enhancements:
+- **Core classes/interfaces**: Framework-agnostic base functionality
+- **net6.cs**: Async enumerable support and hardware acceleration options
+- **net7.cs**: Async operations for file and stream processing
+- **net8.cs**: SearchValues optimization and auto-detection features
+
+**Note**: The partial pattern is partially implemented. Many expected framework-specific files are not yet present in the current codebase.
 
 ### Performance Features
 - **Multi-target framework support**: NET6+, NET7+, NET8+ with conditional compilation
@@ -54,12 +50,15 @@ Each interface uses the partial interface pattern with framework-specific enhanc
 - **SearchValues optimization**: Fast character searching in NET8+
 - **Escaped quote handling**: Special path for fields with escaped quotes (only allocation point)
 
-### Key Patterns
-- **Partial Interface Pattern**: Framework-specific enhancements through partial interfaces
-- **Feature-based Organization**: Interfaces grouped by functionality (Fields, Errors, Validation, etc.)
-- **Single Responsibility Principle**: Each interface handles one core responsibility
-- **Framework-agnostic Design**: Core interfaces focus on functionality, not implementation details
-- **Progressive Enhancement**: Framework-specific optimizations through conditional compilation
+### Key Features (Current Implementation)
+- **Generic Object Mapping**: Comprehensive `CsvMapper<T>` with automatic property mapping, manual column mapping, and custom converters
+- **Three Mapping Modes**: Auto (by property names), Manual (by column index), and Mixed (combination of both)
+- **Rich Extension Methods**: `ExtensionsToICsvRecord` provides type conversion, field validation, and direct object mapping
+- **Comprehensive Error Handling**: Detailed error types with `CsvValidationResult` and `CsvValidationError` for specific error tracking
+- **Async Operations**: Full async support for file and stream operations (.NET 7+)
+- **Auto-Detection**: Automatic CSV format and delimiter detection (.NET 8+)
+- **Builder Pattern**: `ICsvReaderBuilder` for complex configuration scenarios
+- **Partial Class Pattern**: Framework-specific enhancements (partially implemented)
 - **DateTimeOffset Usage**: All timestamp fields use DateTimeOffset for timezone awareness
 - Extensive use of `[MethodImpl(MethodImplOptions.AggressiveInlining)]` for performance
 - Conditional compilation directives (`#if NET8_0_OR_GREATER`) for version-specific optimizations
@@ -124,59 +123,47 @@ dotnet run --project tests/FastCsv.Tests # Run test project
 - Memory pooling is used in PooledCsvWriter to reduce GC pressure
 - CsvRecordWrapper is provided for utility methods that need to return IEnumerable
 
-## Project Structure
+## Current Project Structure
 
 ```
 FastCsv/
 ├── src/
 │   └── FastCsv/
-│       ├── ICsvReader.cs           # Core CSV reader interface
-│       ├── ICsvReader.net6.cs      # Hardware acceleration enhancements
-│       ├── ICsvReader.net7.cs      # Fast parsing enhancements
-│       ├── ICsvReader.net8.cs      # Optimized collections enhancements
-│       ├── ICsvReader.net9.cs      # Advanced hardware acceleration
-│       ├── ICsvRecord.cs           # Core record interface
-│       ├── ICsvRecord.net7.cs      # Type conversion enhancements
-│       ├── ICsvRecord.net8.cs      # Named field access enhancements
-│       ├── ICsvRecord.net9.cs      # Advanced field operations
-│       ├── Fields/
-│       │   ├── IFieldHandler.cs    # Core field handling
-│       │   ├── IFieldHandler.net6.cs # Hardware acceleration
-│       │   ├── IFieldHandler.net8.cs # Character detection optimization
-│       │   └── IFieldHandler.net9.cs # Advanced acceleration
+│       ├── Csv.cs                  # Core static API
+│       ├── Csv.net7.cs            # Async operations (ReadFileAsync, ReadStreamAsync)
+│       ├── Csv.net8.cs            # Auto-detection features
+│       ├── ICsvReader.cs          # Core CSV reader interface
+│       ├── ICsvReader.net6.cs     # Async enumerable support
+│       ├── ICsvReaderBuilder.cs   # Core builder interface
+│       ├── ICsvReaderBuilder.net6.cs # Hardware acceleration options
+│       ├── ICsvRecord.cs          # Core record interface
+│       ├── FastCsvReader.cs       # Main reader implementation
+│       ├── FastCsvReader.net6.cs  # Hardware acceleration enhancements
+│       ├── CsvReaderBuilder.cs    # Builder implementation
+│       ├── CsvOptions.cs          # Configuration struct
+│       ├── CsvReadResult.cs       # Results container
+│       ├── CsvValidationResult.cs # Validation results
+│       ├── CsvRecord.cs           # Record implementation
+│       ├── CsvParser.cs           # Core parsing logic
+│       ├── CsvMapper.cs           # Generic object mapping
+│       ├── ExtensionsToICsvRecord.cs # Extension methods
 │       ├── Errors/
-│       │   ├── IErrorHandler.cs    # Core error handling
-│       │   ├── IErrorHandler.net6.cs # Error statistics
-│       │   ├── IErrorHandler.net8.cs # Advanced collections
-│       │   ├── ICsvErrorReporter.cs # Core error reporting
-│       │   ├── ICsvErrorReporter.net6.cs # Statistics
-│       │   └── ICsvErrorReporter.net8.cs # Collections
+│       │   ├── IErrorHandler.cs   # Core error handling interface
+│       │   ├── ErrorHandler.cs    # Default error handler
+│       │   └── NullErrorHandler.cs # Null object pattern
 │       ├── Validation/
-│       │   ├── ICsvValidator.cs    # Core validation
-│       │   ├── ICsvValidator.net6.cs # Hardware acceleration
-│       │   ├── ICsvValidator.net8.cs # Character detection
-│       │   ├── ICsvValidator.net9.cs # Advanced validation
-│       │   ├── IValidationHandler.cs # Core validation handling
-│       │   ├── IValidationHandler.net6.cs # Acceleration
-│       │   └── IValidationHandler.net8.cs # Detection
-│       ├── Configuration/
-│       │   ├── IConfigurationHandler.cs # Core configuration
-│       │   └── IConfigurationHandler.net8.cs # Advanced config
-│       ├── Navigation/
-│       │   ├── IPositionHandler.cs # Core position tracking
-│       │   ├── IPositionHandler.net6.cs # Performance tracking
-│       │   ├── IPositionHandler.net8.cs # Line counting
-│       │   └── IPositionHandler.net9.cs # Advanced counting
-│       └── FastCsv.csproj          # Project file
+│       │   ├── IValidationHandler.cs # Core validation interface
+│       │   └── ValidationHandler.cs  # Default validation handler
+│       └── FastCsv.csproj         # Project file
 ├── tests/
 │   └── FastCsv.Tests/
-│       ├── UnitTest1.cs            # Basic tests
-│       └── FastCsv.Tests.csproj    # Test project
-├── .vscode/                        # VS Code configuration
-├── FastCsv.sln                     # Solution file
-├── README.md                       # Project documentation
-├── CLAUDE.md                       # This file
-└── .gitignore                      # Git ignore rules
+│       ├── UnitTest1.cs           # Basic tests
+│       └── FastCsv.Tests.csproj   # Test project
+├── .vscode/                       # VS Code configuration
+├── FastCsv.sln                    # Solution file
+├── README.md                      # Project documentation
+├── CLAUDE.md                      # This file
+└── .gitignore                     # Git ignore rules
 ```
 
 ## NuGet Package Information
@@ -357,30 +344,36 @@ src/FastCsv/
 4. Optimize for zero-allocation parsing
 5. Use TodoWrite tool to track progress on complex tasks
 
-## API Design Philosophy
+## Current API Design
 
-### Progressive Disclosure Pattern
-FastCsv follows a **progressive enhancement** approach:
+### Progressive Disclosure Pattern (Current Implementation)
+FastCsv implements a **progressive enhancement** approach with three main entry points:
 
-1. **Simple by default**: `Csv.Read()` for basic operations (90% of cases)
-2. **Fluent when needed**: `Csv.Configure()` for advanced scenarios (10% of cases)
-3. **Framework-aware**: Automatically uses best features for your .NET version
+1. **Simple Static API**: `Csv.Read()` for basic string array operations
+2. **Object Mapping API**: `Csv.Read<T>()` for typed object mapping
+3. **Builder API**: `Csv.Configure()` for advanced validation and error handling
 
-### Usage Progression
+### Current Usage Patterns
 ```csharp
-// Level 1: Simple (90% of cases)
+// Level 1: Simple string array reading
 var records = Csv.Read("Name,Age\nJohn,25\nJane,30");
 
-// Level 2: Intermediate (custom options)
-var records = Csv.Read(csvData, ';'); // Custom delimiter
-var records = Csv.ReadWithHeaders(csvData); // Headers as dictionary
+// Level 2: Object mapping (major feature)
+var employees = Csv.Read<Employee>(csvData);
+var employeesWithMapping = Csv.ReadWithMapping<Employee>(csvData, 
+    mapping => mapping.Map(e => e.Name, 0).Map(e => e.Age, 1));
 
-// Level 3: Advanced (complex scenarios)
+// Level 3: Advanced with validation
 var result = Csv.Configure()
-    .WithFile("data.csv")
+    .WithContent(csvData)
     .WithValidation(true)
-    .WithErrorTracking(true)
-    .ReadAdvanced();
+    .Read();
+
+// Level 4: Async operations (.NET 7+)
+await foreach (var record in Csv.ReadFileAsync("data.csv"))
+{
+    // Process each record
+}
 ```
 
 ### Why This Design Works
@@ -405,11 +398,13 @@ private ICsvReader CreateReader(string content)
 }
 ```
 
-### Code Review Checklist
+### Code Review Checklist (Current Standards)
 - [ ] Does this class/interface have ONE clear responsibility?
-- [ ] Are framework-specific features in partial files?
+- [ ] Are framework-specific features in partial files where appropriate?
 - [ ] Do comments describe functionality, not implementation?
-- [ ] Does the API follow simple → advanced progression?
-- [ ] Are interfaces composed, not inherited?
-- [ ] Is the naming framework-agnostic?
+- [ ] Does the API follow simple → object mapping → advanced progression?
+- [ ] Are extension methods properly organized in `ExtensionsToXXX` classes?
+- [ ] Is the naming framework-agnostic and consistent?
 - [ ] Are ReadOnlySpan<char> overloads provided for performance?
+- [ ] Does object mapping support all three modes (Auto, Manual, Mixed)?
+- [ ] Are validation errors properly typed and detailed?
