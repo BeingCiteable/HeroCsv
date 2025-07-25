@@ -35,13 +35,13 @@ The library is organized with the following key features:
 - **Extensions**: Rich extension methods in `ExtensionsToICsvRecord` for type conversion and field access
 
 ### Current Partial Implementation Pattern
-The library partially implements the partial class pattern with framework-specific enhancements:
-- **Core classes/interfaces**: Framework-agnostic base functionality
-- **net6.cs**: Async enumerable support and hardware acceleration options
-- **net7.cs**: Async operations for file and stream processing
-- **net8.cs**: SearchValues optimization and auto-detection features
+The library implements the partial class pattern for key components:
+- **Core files**: Framework-agnostic base functionality
+- **.net6.cs files**: Async enumerable support and hardware acceleration options
+- **.net7.cs files**: Async file operations (only for Csv class)
+- **.net8.cs files**: SearchValues optimization, auto-detection, and frozen collections
 
-**Note**: The partial pattern is partially implemented. Many expected framework-specific files are not yet present in the current codebase.
+**Note**: The partial pattern is selectively implemented where it provides clear benefits. Not all classes need framework-specific versions.
 
 ### Performance Features
 - **Multi-target framework support**: NET6+, NET7+, NET8+ with conditional compilation
@@ -184,7 +184,6 @@ FastCsv/
 │       ├── CsvRow.cs              # Zero-allocation row struct
 │       ├── RowEnumerable.cs       # Zero-allocation row enumeration
 │       ├── CsvFieldEnumerator.cs  # Field-by-field parser
-│       ├── IInternalCsvReader.cs  # Internal reader interface
 │       ├── ICsvDataSource.cs      # Data source abstraction
 │       ├── Errors/
 │       │   ├── IErrorHandler.cs   # Core error handling interface
@@ -338,40 +337,51 @@ internal class CsvReaderBuilder : ICsvReaderBuilder
 
 ## File Organization
 
+### Actual Current Structure
 ```
 src/FastCsv/
 ├── Csv.cs                  # Core static API (partial)
-├── Csv.net6.cs            # Hardware acceleration
-├── Csv.net7.cs            # Async operations
-├── Csv.net8.cs            # SearchValues optimization
-├── Csv.net9.cs            # Vector512 operations
-├── ICsvReader.cs          # Core reader interface
-├── ICsvReader.net6.cs     # Hardware acceleration
-├── ICsvReader.net7.cs     # Advanced parsing
-├── ICsvReader.net8.cs     # Optimized collections
-├── ICsvReader.net9.cs     # Advanced acceleration
-├── ICsvReaderBuilder.cs   # Core builder interface
-├── ICsvReaderBuilder.net6.cs # Hardware options
-├── ICsvReaderBuilder.net9.cs # Profiling options
+├── Csv.net7.cs            # Async file operations
+├── Csv.net8.cs            # Auto-detection features
+├── ICsvReader.cs          # Core reader interface (partial)
+├── ICsvReader.net6.cs     # Async enumerable support
+├── ICsvReaderBuilder.cs   # Core builder interface (partial)
+├── ICsvReaderBuilder.net6.cs # Hardware acceleration options
+├── CsvMapper.cs           # Core mapper implementation (partial)
+├── CsvMapper.net6.cs      # Async mapping support
+├── CsvMapper.net8.cs      # Frozen collections optimization
+├── FastCsvReader.cs       # Main reader implementation (partial)
+├── FastCsvReader.net6.cs  # Async support
+├── CsvRecord.cs           # Record implementation
+├── CsvRow.cs              # Zero-allocation row struct
+├── CsvParser.cs           # Core parsing logic
+├── CsvFieldIterator.cs    # Field-by-field iteration
+├── CsvFieldEnumerator.cs  # Field enumeration
+├── CsvOptions.cs          # Configuration struct
+├── CsvReadResult.cs       # Read results container
+├── CsvValidationResult.cs # Validation results
+├── ExtensionsToICsvRecord.cs # Extension methods
+├── FastCsvParser.cs       # Optimized parser with SearchValues
+├── RowEnumerable.cs       # Zero-allocation row enumeration
+├── ICsvDataSource.cs      # Data source abstraction
+├── ICsvRecord.cs          # Record interface
 ├── CsvReaderBuilder.cs    # Builder implementation
-├── CsvReadResult.net8.cs  # Frozen collections optimization
-├── CsvReadResult.net9.cs  # Advanced profiling metrics
-├── Fields/
-│   ├── IFieldHandler.cs   # Core field handling
-│   ├── IFieldHandler.net6.cs
-│   ├── IFieldHandler.net8.cs
-│   └── IFieldHandler.net9.cs
 ├── Errors/
-│   ├── IErrorHandler.cs
-│   ├── IErrorHandler.net6.cs
-│   ├── IErrorHandler.net8.cs
-│   ├── ICsvErrorReporter.cs
-│   ├── ICsvErrorReporter.net6.cs
-│   └── ICsvErrorReporter.net8.cs
-├── Validation/
-├── Configuration/
-└── Navigation/
+│   ├── IErrorHandler.cs   # Error handling interface
+│   ├── ErrorHandler.cs    # Default error handler
+│   └── NullErrorHandler.cs # Null object pattern
+└── Validation/
+    ├── IValidationHandler.cs # Validation interface
+    └── ValidationHandler.cs  # Default validation handler
 ```
+
+### Framework-Specific Files (Partial Pattern)
+The library uses the partial class pattern, but not as extensively as originally planned:
+- **Csv**: Has .net7.cs and .net8.cs for async and auto-detection
+- **ICsvReader**: Has .net6.cs for async enumerable
+- **ICsvReaderBuilder**: Has .net6.cs for hardware options
+- **CsvMapper**: Has .net6.cs and .net8.cs for async and frozen collections
+- **FastCsvReader**: Has .net6.cs for async support
 
 ## Cleanup Notes
 

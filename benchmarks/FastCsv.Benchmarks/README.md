@@ -16,25 +16,19 @@ Comprehensive benchmarking comparing FastCsv with popular .NET CSV libraries.
 
 ## 🏃 Benchmark Suites
 
-### 1. Library Comparison (`comparison`)
-- **Purpose**: Compare parsing speed across different libraries
-- **Dataset Sizes**: 10, 1,000, 10,000 rows
-- **Metrics**: Execution time, memory allocation, throughput
-- **Focus**: Real-world CSV parsing performance
+### 1. Quick Performance Comparison (`quick`)
+- **Purpose**: Quick competitive analysis without complex setup
+- **Focus**: Fair comparison of string allocation performance
+- **Metrics**: Operations per iteration across all libraries
+- **Dataset**: 1,000 rows with realistic data
 
-### 2. Memory Allocation Analysis (`memory`)
-- **Purpose**: Analyze memory usage and allocation patterns
-- **Focus**: Zero-allocation capabilities of FastCsv
-- **Comparisons**: String vs Memory vs Stream approaches
-- **Metrics**: Allocated bytes, GC pressure, allocation rate
+### 2. Simplified Library Comparison (`simple`)
+- **Purpose**: BenchmarkDotNet comparison with major libraries
+- **Focus**: Detailed performance metrics with memory diagnostics
+- **Metrics**: Execution time, memory allocation, GC pressure
+- **Libraries**: CsvHelper, Sylvan, Sep, ServiceStack.Text
 
-### 3. File I/O Performance (`file`)
-- **Purpose**: Test file reading performance
-- **Scenarios**: File streams, memory-mapped files, in-memory content
-- **Focus**: Real-world file processing scenarios
-- **Dataset**: 5,000 rows with realistic data patterns
-
-### 4. Original FastCsv Tests (`original`)
+### 3. Original FastCsv Tests (`original`)
 - **Purpose**: Internal FastCsv performance validation
 - **Focus**: String vs Memory vs Span performance within FastCsv
 - **Metrics**: Detailed FastCsv feature benchmarks
@@ -46,13 +40,9 @@ Comprehensive benchmarking comparing FastCsv with popular .NET CSV libraries.
 dotnet run --project benchmarks/FastCsv.Benchmarks
 
 # Run specific benchmark suite
-dotnet run --project benchmarks/FastCsv.Benchmarks -- comparison
-dotnet run --project benchmarks/FastCsv.Benchmarks -- memory
-dotnet run --project benchmarks/FastCsv.Benchmarks -- file
+dotnet run --project benchmarks/FastCsv.Benchmarks -- quick
+dotnet run --project benchmarks/FastCsv.Benchmarks -- simple
 dotnet run --project benchmarks/FastCsv.Benchmarks -- original
-
-# Run all benchmarks (takes a while)
-dotnet run --project benchmarks/FastCsv.Benchmarks -- all
 ```
 
 ## 📈 Expected Results

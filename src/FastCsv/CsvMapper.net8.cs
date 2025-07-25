@@ -30,7 +30,7 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     /// <param name="record">CSV record as string array</param>
     /// <returns>Mapped object instance</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T MapRecordOptimized(string[] record)
+    public T MapRecordFast(string[] record)
     {
         var instance = new T();
         var indexMap = _frozenIndexMap ?? (IReadOnlyDictionary<int, PropertyInfo>)_indexMap;

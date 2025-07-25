@@ -7,7 +7,7 @@ namespace FastCsv;
 /// <summary>
 /// High-performance CSV reader implementation optimized for zero allocations
 /// </summary>
-public sealed partial class FastCsvReader : ICsvReader, IInternalCsvReader, IDisposable
+public sealed partial class FastCsvReader : ICsvReader, IDisposable
 {
     private readonly ICsvDataSource _dataSource;
     private readonly CsvOptions _options;
@@ -103,10 +103,6 @@ public sealed partial class FastCsvReader : ICsvReader, IInternalCsvReader, IDis
     /// </summary>
     public int RecordCount => _recordCount;
 
-    /// <summary>
-    /// Current position in the input data
-    /// </summary>
-    public int Position => 0; // Position tracking moved to data source
 
     /// <summary>
     /// Get the current CSV options being used
@@ -118,65 +114,12 @@ public sealed partial class FastCsvReader : ICsvReader, IInternalCsvReader, IDis
     /// </summary>
     public CsvValidationResult ValidationResult => _errorHandler.GetValidationResult();
 
-    /// <summary>
-    /// Whether validation is enabled
-    /// </summary>
-    public bool IsValidationEnabled => _validationHandler.IsEnabled;
-
-    /// <summary>
-    /// Whether error tracking is enabled
-    /// </summary>
-    public bool IsErrorTrackingEnabled => _errorHandler.IsEnabled;
     
-    /// <inheritdoc />
-    public RowEnumerable EnumerateRows() => new RowEnumerable(this);
-    
-    /// <inheritdoc />
-    public UltraFastRowEnumerable EnumerateRowsFast() => new UltraFastRowEnumerable(this);
-    
-    /// <inheritdoc />
-    public SepStyleParser.SepStyleEnumerable EnumerateSepStyle()
-    {
-        if (_dataSource is StringDataSource stringSource)
-        {
-            var buffer = stringSource.GetBuffer();
-            return SepStyleParser.Parse(buffer, _options);
-        }
-        else if (_dataSource is MemoryDataSource memorySource)
-        {
-            var buffer = memorySource.GetBuffer();
-            return SepStyleParser.Parse(buffer, _options);
-        }
-        else
-        {
-            throw new NotSupportedException("Sep-style enumeration is only supported for string and memory data sources");
-        }
-    }
-    
-    /// <inheritdoc />
-    public CsvFieldIterator.CsvFieldCollection IterateFields()
-    {
-        // Get the entire content as a span
-        if (_dataSource is StringDataSource stringSource)
-        {
-            var buffer = stringSource.GetBuffer();
-            return CsvFieldIterator.IterateFields(buffer, _options);
-        }
-        else if (_dataSource is MemoryDataSource memorySource)
-        {
-            var buffer = memorySource.GetBuffer();
-            return CsvFieldIterator.IterateFields(buffer, _options);
-        }
-        else
-        {
-            throw new NotSupportedException("Field iteration is only supported for string and memory data sources");
-        }
-    }
     
     /// <summary>
     /// Internal method to get the next line position
     /// </summary>
-    bool IInternalCsvReader.TryGetNextLine(out int lineStart, out int lineLength, out int lineNumber)
+    internal bool TryGetNextLine(out int lineStart, out int lineLength, out int lineNumber)
     {
         if (_dataSource.TryGetLinePosition(out lineStart, out lineLength, out lineNumber))
         {
@@ -193,7 +136,65 @@ public sealed partial class FastCsvReader : ICsvReader, IInternalCsvReader, IDis
     /// <summary>
     /// Get the buffer for zero-copy access
     /// </summary>
-    ReadOnlySpan<char> IInternalCsvReader.GetBuffer() => _dataSource.GetBuffer();
+    internal ReadOnlySpan<char> GetBuffer() => _dataSource.GetBuffer();
+    
+    /// <summary>
+    /// Check if we can use the optimized parsing path
+    /// </summary>
+    private bool CanUseOptimizedPath()
+    {
+        return _dataSource is StringDataSource || _dataSource is MemoryDataSource;
+    }
+    
+    /// <summary>
+    /// Get zero-allocation enumerator that returns ref struct records
+    /// </summary>
+    /// <returns>Enumerator that returns CsvRow ref structs with span-based field access</returns>
+    public RowEnumerable EnumerateRows() => new RowEnumerable(this);
+    
+    /// <summary>
+    /// Get FastCsv's optimized enumerator for maximum performance
+    /// </summary>
+    /// <returns>Enumerator using SearchValues API and optimized line parsing</returns>
+    public FastCsvParser.BufferBasedCsvEnumerable EnumerateRowsOptimized()
+    {
+        if (_dataSource is StringDataSource stringSource)
+        {
+            var buffer = stringSource.GetBuffer();
+            return FastCsvParser.Parse(buffer, _options);
+        }
+        else if (_dataSource is MemoryDataSource memorySource)
+        {
+            var buffer = memorySource.GetBuffer();
+            return FastCsvParser.Parse(buffer, _options);
+        }
+        else
+        {
+            throw new NotSupportedException("Optimized enumeration is only supported for string and memory data sources");
+        }
+    }
+    
+    /// <summary>
+    /// Provides high-performance field iteration without allocations
+    /// </summary>
+    /// <returns>Iterator for efficient field-by-field processing</returns>
+    public CsvFieldIterator.CsvFieldCollection IterateFields()
+    {
+        if (_dataSource is StringDataSource stringSource)
+        {
+            var buffer = stringSource.GetBuffer();
+            return CsvFieldIterator.IterateFields(buffer, _options);
+        }
+        else if (_dataSource is MemoryDataSource memorySource)
+        {
+            var buffer = memorySource.GetBuffer();
+            return CsvFieldIterator.IterateFields(buffer, _options);
+        }
+        else
+        {
+            throw new NotSupportedException("Field iteration is only supported for string and memory data sources");
+        }
+    }
 
 
     /// <summary>
@@ -316,9 +317,30 @@ public sealed partial class FastCsvReader : ICsvReader, IInternalCsvReader, IDis
         Reset();
         var records = new List<string[]>();
 
-        while (TryReadRecord(out var record))
+        // Use optimized path when possible
+        if (CanUseOptimizedPath())
         {
-            records.Add(record.ToArray());
+            // The optimized parser uses SearchValues API and SIMD operations
+            // It's faster for parsing but accessing row.FieldCount triggers field counting
+            // which adds overhead. Users wanting max performance should use
+            // EnumerateRowsOptimized() directly with known field counts.
+            foreach (var row in EnumerateRowsOptimized())
+            {
+                var fields = new string[row.FieldCount];
+                for (int i = 0; i < row.FieldCount; i++)
+                {
+                    fields[i] = row[i].ToString();
+                }
+                records.Add(fields);
+            }
+        }
+        else
+        {
+            // Fallback to standard path for stream sources
+            while (TryReadRecord(out var record))
+            {
+                records.Add(record.ToArray());
+            }
         }
 
         return records;
@@ -328,6 +350,9 @@ public sealed partial class FastCsvReader : ICsvReader, IInternalCsvReader, IDis
     public IEnumerable<string[]> GetRecords()
     {
         Reset();
+        
+        // Can't use optimized path with yield due to ref struct limitations
+        // Users who want optimized performance should use ReadAllRecords() or EnumerateRowsOptimized() directly
         while (TryReadRecord(out var record))
         {
             yield return record.ToArray();
@@ -340,7 +365,7 @@ public sealed partial class FastCsvReader : ICsvReader, IInternalCsvReader, IDis
         Reset();
         
         // Use ultra-fast counting when validation is disabled
-        if (!IsValidationEnabled && !IsErrorTrackingEnabled)
+        if (!_validationHandler.IsEnabled && !_errorHandler.IsEnabled)
         {
             var totalLines = _dataSource.CountLinesDirectly();
             
@@ -371,25 +396,4 @@ public sealed partial class FastCsvReader : ICsvReader, IInternalCsvReader, IDis
         return await Task.Run(() => ReadAllRecords(), cancellationToken);
     }
 
-    public Task<IEnumerable<string[]>> GetRecordsAsync(CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-    
-    /// <inheritdoc />
-    public IEnumerable<int> EnumerateWithoutParsing()
-    {
-        Reset();
-        int count = 0;
-        
-        // Ultra-fast counting without any parsing
-        while (_dataSource.HasMoreData)
-        {
-            if (_dataSource.TryReadLine(out _, out _))
-            {
-                count++;
-                yield return count;
-            }
-        }
-    }
 }

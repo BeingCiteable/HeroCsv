@@ -30,7 +30,7 @@ public static partial class Csv
         // Use optimized counting algorithm when quotes aren't present
         if (options.Quote == '"' && !ContainsQuote(content.Span, '"'))
         {
-            return CountRecordsOptimized(content.Span, options);
+            return CountRecordsFast(content.Span, options);
         }
         
         var dataSource = new MemoryDataSource(content);
@@ -53,7 +53,7 @@ public static partial class Csv
     /// <summary>
     /// Ultra-fast record counting for CSV without quotes
     /// </summary>
-    private static int CountRecordsOptimized(ReadOnlySpan<char> content, CsvOptions options)
+    private static int CountRecordsFast(ReadOnlySpan<char> content, CsvOptions options)
     {
         if (content.IsEmpty) return 0;
         
@@ -84,7 +84,7 @@ public static partial class Csv
     public static int CountRecords(string content, CsvOptions options = default)
     {
         // Always use optimized counting for best performance
-        return CountRecordsOptimized(content.AsSpan(), options);
+        return CountRecordsFast(content.AsSpan(), options);
     }
 
     /// <summary>

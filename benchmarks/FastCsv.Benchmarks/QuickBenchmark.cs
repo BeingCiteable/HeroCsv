@@ -37,15 +37,16 @@ public class QuickBenchmark
         results["FastCsv"]["ReadAll_String"] = BenchmarkAction(() =>
         {
             using var reader = global::FastCsv.Csv.CreateReader(testData);
+            // ReadAllRecords uses optimized path internally when possible
+            var records = reader.ReadAllRecords();
             int count = 0;
-            // Use Sep-style parser with always-SIMD optimizations
-            foreach (var row in reader.EnumerateSepStyle())
+            foreach (var record in records)
             {
                 count++;
-                // Access fields to match Sep's behavior (accessing by index)
-                for (int i = 0; i < 6; i++) // We know there are 6 fields
+                // Access fields for complete parsing
+                for (int i = 0; i < record.Length; i++)
                 {
-                    var _ = row[i]; // Access span without allocating
+                    var _ = record[i]; // This allocates strings like other libraries
                 }
             }
             return count;
@@ -56,7 +57,15 @@ public class QuickBenchmark
             using var reader = new StringReader(testData);
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             int count = 0;
-            while (csv.Read()) count++;
+            while (csv.Read())
+            {
+                count++;
+                // Access fields for fair comparison
+                for (int i = 0; i < 6; i++)
+                {
+                    var _ = csv.GetField(i);
+                }
+            }
             return count;
         }, iterations, "CsvHelper");
         
@@ -98,7 +107,15 @@ public class QuickBenchmark
             using var reader = new StringReader(testData);
             using var csv = new LumenWorks.Framework.IO.Csv.CsvReader(reader, true);
             int count = 0;
-            while (csv.ReadNextRecord()) count++;
+            while (csv.ReadNextRecord())
+            {
+                count++;
+                // Access fields for fair comparison
+                for (int i = 0; i < csv.FieldCount; i++)
+                {
+                    var _ = csv[i];
+                }
+            }
             return count;
         }, iterations, "LumenWorks");
         
@@ -170,11 +187,44 @@ public class QuickBenchmark
         
         Console.WriteLine();
         
-        // Feature 4: Ultra-Fast Field Iteration (Direct Buffer Access)
-        Console.WriteLine("🔥 FEATURE: Ultra-Fast Field Iteration (Direct Buffer Access)");
+        // Feature 4: Zero-Allocation Row Enumeration (FastCsv Advanced)
+        Console.WriteLine("🚀 FEATURE: Zero-Allocation Row Enumeration (FastCsv Advanced)");
+        Console.WriteLine("=" + new string('=', 65));
+        
+        results["FastCsv"]["ZeroAlloc"] = BenchmarkAction(() =>
+        {
+            using var reader = global::FastCsv.Csv.CreateReader(testData);
+            int count = 0;
+            // Use optimized enumerator for zero-allocation parsing
+            foreach (var row in ((global::FastCsv.FastCsvReader)reader).EnumerateRowsOptimized())
+            {
+                count++;
+                // Access fields without allocation
+                for (int i = 0; i < 6; i++)
+                {
+                    var _ = row[i]; // Access span without allocating
+                }
+            }
+            return count;
+        }, iterations, "FastCsv (Zero-Alloc)");
+        
+        Console.WriteLine("CsvHelper        : N/A (no zero-allocation mode)");
+        Console.WriteLine("LumenWorks       : N/A (no zero-allocation mode)");
+        Console.WriteLine("Sep              : Uses spans (similar capability)");
+        Console.WriteLine("Sylvan.Data.Csv  : Uses spans (similar capability)");
+        
+        results["CsvHelper"]["ZeroAlloc"] = -1; // N/A
+        results["LumenWorks"]["ZeroAlloc"] = -1; // N/A
+        results["Sep"]["ZeroAlloc"] = -1; // N/A
+        results["Sylvan"]["ZeroAlloc"] = -1; // N/A
+        
+        Console.WriteLine();
+        
+        // Feature 5: Direct Field Iteration (Direct Buffer Access)
+        Console.WriteLine("🔥 FEATURE: Direct Field Iteration (Direct Buffer Access)");
         Console.WriteLine("=" + new string('=', 63));
         
-        results["FastCsv"]["UltraFast"] = BenchmarkAction(() =>
+        results["FastCsv"]["DirectFieldIteration"] = BenchmarkAction(() =>
         {
             var options = new global::FastCsv.CsvOptions(hasHeader: true);
             int count = 0;
@@ -195,10 +245,10 @@ public class QuickBenchmark
         Console.WriteLine("Sep              : N/A (no direct field iteration)");
         Console.WriteLine("Sylvan.Data.Csv  : N/A (no direct field iteration)");
         
-        results["CsvHelper"]["UltraFast"] = -1; // N/A
-        results["LumenWorks"]["UltraFast"] = -1; // N/A  
-        results["Sep"]["UltraFast"] = -1; // N/A
-        results["Sylvan"]["UltraFast"] = -1; // N/A
+        results["CsvHelper"]["DirectFieldIteration"] = -1; // N/A
+        results["LumenWorks"]["DirectFieldIteration"] = -1; // N/A  
+        results["Sep"]["DirectFieldIteration"] = -1; // N/A
+        results["Sylvan"]["DirectFieldIteration"] = -1; // N/A
         
         Console.WriteLine();
         
@@ -237,7 +287,8 @@ public class QuickBenchmark
             ("Read All Records (String)", "ReadAll_String"),
             ("Read All Records (Memory)", "ReadAll_Memory"),
             ("Count Records Only", "CountOnly"),
-            ("Ultra-Fast Field Iteration", "UltraFast")
+            ("Zero-Allocation Row Enumeration", "ZeroAlloc"),
+            ("Direct Field Iteration", "DirectFieldIteration")
         };
         
         foreach (var (featureName, featureKey) in features)

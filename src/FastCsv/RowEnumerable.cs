@@ -7,13 +7,13 @@ namespace FastCsv;
 /// </summary>
 public readonly struct RowEnumerable
 {
-    private readonly ICsvReader _reader;
-    
-    internal RowEnumerable(ICsvReader reader)
+    private readonly FastCsvReader _reader;
+
+    internal RowEnumerable(FastCsvReader reader)
     {
         _reader = reader;
     }
-    
+
     /// <summary>
     /// Gets the enumerator
     /// </summary>
@@ -25,37 +25,32 @@ public readonly struct RowEnumerable
 /// </summary>
 public ref struct RowEnumerator
 {
-    private readonly IInternalCsvReader _reader;
+    private readonly FastCsvReader _reader;
     private readonly CsvOptions _options;
     private readonly ReadOnlySpan<char> _buffer;
     private int _lineStart;
     private int _lineLength;
     private int _lineNumber;
-    
-    internal RowEnumerator(ICsvReader reader)
+
+    internal RowEnumerator(FastCsvReader reader)
     {
-        if (reader is not IInternalCsvReader internalReader)
-        {
-            throw new InvalidOperationException("Reader must implement IInternalCsvReader");
-        }
-        
-        _reader = internalReader;
+        _reader = reader;
         _options = reader.Options;
-        _buffer = internalReader.GetBuffer();
+        _buffer = reader.GetBuffer();
         _lineStart = 0;
         _lineLength = 0;
         _lineNumber = 0;
     }
-    
+
     /// <summary>
     /// Gets the current row
     /// </summary>
-    public CsvRow Current
+    public readonly CsvRow Current
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => new CsvRow(_buffer, _lineStart, _lineLength, _options);
+        get => new(_buffer, _lineStart, _lineLength, _options);
     }
-    
+
     /// <summary>
     /// Moves to the next row
     /// </summary>

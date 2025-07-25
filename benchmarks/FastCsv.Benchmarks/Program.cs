@@ -19,10 +19,8 @@ public class Program
             Console.WriteLine("  simple        - Simplified comparison with major libraries (recommended)");
             Console.WriteLine("  original      - Original FastCsv internal benchmarks");
             Console.WriteLine();
-            Console.WriteLine("Note: Advanced benchmarks (comparison, memory, file) are being updated");
-            Console.WriteLine();
             Console.WriteLine("Usage: dotnet run -- <suite-name>");
-            Console.WriteLine("Example: dotnet run -- comparison");
+            Console.WriteLine("Example: dotnet run -- quick");
             return;
         }
 
@@ -30,11 +28,6 @@ public class Program
         
         switch (suite)
         {
-            case "debug":
-                Console.WriteLine("Running Debug Test...");
-                DebugTest.Run();
-                break;
-                
             case "quick":
                 Console.WriteLine("Running Quick Performance Comparison...");
                 QuickBenchmark.RunComparison();
