@@ -47,5 +47,5 @@ public readonly struct CsvOptions(
     /// <summary>
     /// Default CSV options (comma-separated, quoted, with header)
     /// </summary>
-    public static CsvOptions Default => new();
+    public static CsvOptions Default => new(',', '"', true);
 }

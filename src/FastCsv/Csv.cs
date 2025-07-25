@@ -15,7 +15,7 @@ public static partial class Csv
     /// <returns>Number of records found</returns>
     public static int CountRecords(ReadOnlySpan<char> content, CsvOptions options = default)
     {
-        // Must convert to string for span safety
+        // Convert span to string to ensure memory safety across method boundaries
         return CountRecords(content.ToString(), options);
     }
     
@@ -27,7 +27,7 @@ public static partial class Csv
     /// <returns>Number of records found</returns>
     public static int CountRecords(ReadOnlyMemory<char> content, CsvOptions options = default)
     {
-        // For simple cases without quotes, use ultra-fast counting
+        // Use optimized counting algorithm when quotes aren't present
         if (options.Quote == '"' && !ContainsQuote(content.Span, '"'))
         {
             return CountRecordsOptimized(content.Span, options);
@@ -57,15 +57,22 @@ public static partial class Csv
     {
         if (content.IsEmpty) return 0;
         
-        int recordCount = CsvParser.CountLinesOptimized(content);
+        // Count newlines to determine the number of CSV records
+        int recordCount = CsvParser.CountLines(content);
         
-        // Adjust for header if needed
+        // Check if last character is not a newline (indicates one more record)
+        if (content.Length > 0 && content[content.Length - 1] != '\n' && content[content.Length - 1] != '\r')
+        {
+            recordCount++; // Add one for the final line without newline
+        }
+        
+        // Subtract header row from total count when headers are present
         if (options.HasHeader && recordCount > 0)
         {
             recordCount--;
         }
         
-        return recordCount > 0 ? recordCount : 0;
+        return recordCount;
     }
     
     /// <summary>
@@ -76,8 +83,8 @@ public static partial class Csv
     /// <returns>Number of records found</returns>
     public static int CountRecords(string content, CsvOptions options = default)
     {
-        using var reader = CreateReader(content, options);
-        return reader.CountRecords();
+        // Always use optimized counting for best performance
+        return CountRecordsOptimized(content.AsSpan(), options);
     }
 
     /// <summary>
@@ -134,7 +141,7 @@ public static partial class Csv
     /// <returns>Read-only list of all parsed records</returns>
     public static IReadOnlyList<string[]> ReadAllRecords(ReadOnlySpan<char> content, CsvOptions options = default)
     {
-        // Must convert to string for span safety
+        // Convert span to string to ensure memory safety across method boundaries
         return ReadAllRecords(content.ToString(), options);
     }
     
@@ -193,6 +200,7 @@ public static partial class Csv
     /// </remarks>
     public static ICsvReader CreateReader(string content, CsvOptions options)
     {
+        // Use original reader - it's actually faster
         return new FastCsvReader(content, options);
     }
 
@@ -429,7 +437,7 @@ public static partial class Csv
         var records = reader.GetRecords();
         using var enumerator = records.GetEnumerator();
 
-        // Map each record
+        // Transform each CSV record into the target object type
         while (enumerator.MoveNext())
         {
             var record = enumerator.Current;

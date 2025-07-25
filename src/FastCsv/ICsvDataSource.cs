@@ -13,6 +13,16 @@ internal interface ICsvDataSource : IDisposable
     bool TryReadLine(out ReadOnlySpan<char> line, out int lineNumber);
     
     /// <summary>
+    /// Try to get the next line position without allocating
+    /// </summary>
+    bool TryGetLinePosition(out int lineStart, out int lineLength, out int lineNumber);
+    
+    /// <summary>
+    /// Get the entire buffer for zero-copy access
+    /// </summary>
+    ReadOnlySpan<char> GetBuffer();
+    
+    /// <summary>
     /// Reset the data source to the beginning if supported
     /// </summary>
     void Reset();
@@ -26,6 +36,11 @@ internal interface ICsvDataSource : IDisposable
     /// Whether there is more data to read
     /// </summary>
     bool HasMoreData { get; }
+    
+    /// <summary>
+    /// Counts total lines in the data source for performance optimization
+    /// </summary>
+    int CountLinesDirectly();
 }
 
 /// <summary>
@@ -47,6 +62,14 @@ internal sealed class StringDataSource : ICsvDataSource
     public bool SupportsReset => true;
     
     public bool HasMoreData => _position < _content.Length;
+    
+    /// <summary>
+    /// Ultra-fast line counting without parsing
+    /// </summary>
+    public int CountLinesDirectly()
+    {
+        return CsvParser.CountLines(_content.AsSpan());
+    }
     
     public bool TryReadLine(out ReadOnlySpan<char> line, out int lineNumber)
     {
@@ -80,6 +103,31 @@ internal sealed class StringDataSource : ICsvDataSource
         return true;
     }
     
+    public bool TryGetLinePosition(out int lineStart, out int lineLength, out int lineNumber)
+    {
+        lineNumber = _lineNumber;
+        lineStart = _position;
+        
+        if (_position >= _content.Length)
+        {
+            lineLength = 0;
+            return false;
+        }
+        
+#if NET8_0_OR_GREATER
+        var lineEnd = CsvParser.FindLineEndVectorized(_content.AsSpan(), _position);
+#else
+        var lineEnd = CsvParser.FindLineEnd(_content.AsSpan(), _position);
+#endif
+        
+        lineLength = lineEnd - lineStart;
+        _position = CsvParser.SkipLineEnding(_content.AsSpan(), lineEnd);
+        _lineNumber++;
+        return true;
+    }
+    
+    public ReadOnlySpan<char> GetBuffer() => _content.AsSpan();
+    
     public void Reset()
     {
         _position = 0;
@@ -112,6 +160,14 @@ internal sealed class MemoryDataSource : ICsvDataSource
     
     public bool HasMoreData => _position < _memory.Length;
     
+    /// <summary>
+    /// Ultra-fast line counting without parsing
+    /// </summary>
+    public int CountLinesDirectly()
+    {
+        return CsvParser.CountLines(_memory.Span);
+    }
+    
     public bool TryReadLine(out ReadOnlySpan<char> line, out int lineNumber)
     {
         lineNumber = _lineNumber;
@@ -143,6 +199,32 @@ internal sealed class MemoryDataSource : ICsvDataSource
         _lineNumber++;
         return true;
     }
+    
+    public bool TryGetLinePosition(out int lineStart, out int lineLength, out int lineNumber)
+    {
+        lineNumber = _lineNumber;
+        lineStart = _position;
+        
+        if (_position >= _memory.Length)
+        {
+            lineLength = 0;
+            return false;
+        }
+        
+        var span = _memory.Span;
+#if NET8_0_OR_GREATER
+        var lineEnd = CsvParser.FindLineEndVectorized(span, _position);
+#else
+        var lineEnd = CsvParser.FindLineEnd(span, _position);
+#endif
+        
+        lineLength = lineEnd - lineStart;
+        _position = CsvParser.SkipLineEnding(span, lineEnd);
+        _lineNumber++;
+        return true;
+    }
+    
+    public ReadOnlySpan<char> GetBuffer() => _memory.Span;
     
     public void Reset()
     {
@@ -184,6 +266,32 @@ internal sealed class StreamDataSource : ICsvDataSource
     
     public bool HasMoreData => !_reader.EndOfStream;
     
+    /// <summary>
+    /// Counts lines in stream by reading entire content
+    /// </summary>
+    public int CountLinesDirectly()
+    {
+        if (!_stream.CanSeek)
+        {
+            throw new NotSupportedException("Cannot count lines in non-seekable stream");
+        }
+        
+        var currentPosition = _stream.Position;
+        _stream.Position = 0;
+        _reader.DiscardBufferedData();
+        
+        try
+        {
+            var content = _reader.ReadToEnd();
+            return CsvParser.CountLines(content.AsSpan());
+        }
+        finally
+        {
+            _stream.Position = currentPosition;
+            _reader.DiscardBufferedData();
+        }
+    }
+    
     public bool TryReadLine(out ReadOnlySpan<char> line, out int lineNumber)
     {
         lineNumber = _lineNumber;
@@ -198,6 +306,18 @@ internal sealed class StreamDataSource : ICsvDataSource
         _lineNumber++;
         line = lineStr.AsSpan();
         return true;
+    }
+    
+    public bool TryGetLinePosition(out int lineStart, out int lineLength, out int lineNumber)
+    {
+        // StreamDataSource can't support zero-copy
+        throw new NotSupportedException("StreamDataSource does not support zero-copy line access");
+    }
+    
+    public ReadOnlySpan<char> GetBuffer()
+    {
+        // StreamDataSource doesn't have a buffer
+        throw new NotSupportedException("StreamDataSource does not have a buffer for zero-copy access");
     }
     
     public void Reset()

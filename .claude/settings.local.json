@@ -32,7 +32,10 @@
       "Bash(dotnet sln add:*)",
       "Bash(if exist:*)",
       "Bash(if exist bin rmdir /s /q bin)",
-      "Bash(if exist obj rmdir /s /q obj)"
+      "Bash(if exist obj rmdir /s /q obj)",
+      "Bash(timeout:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:nietras.com)"
     ],
     "deny": []
   }

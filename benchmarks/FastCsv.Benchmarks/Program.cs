@@ -30,6 +30,11 @@ public class Program
         
         switch (suite)
         {
+            case "debug":
+                Console.WriteLine("Running Debug Test...");
+                DebugTest.Run();
+                break;
+                
             case "quick":
                 Console.WriteLine("Running Quick Performance Comparison...");
                 QuickBenchmark.RunComparison();

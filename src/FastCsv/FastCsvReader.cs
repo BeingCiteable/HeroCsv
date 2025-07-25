@@ -7,7 +7,7 @@ namespace FastCsv;
 /// <summary>
 /// High-performance CSV reader implementation optimized for zero allocations
 /// </summary>
-public sealed partial class FastCsvReader : ICsvReader, IDisposable
+public sealed partial class FastCsvReader : ICsvReader, IInternalCsvReader, IDisposable
 {
     private readonly ICsvDataSource _dataSource;
     private readonly CsvOptions _options;
@@ -127,6 +127,73 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     /// Whether error tracking is enabled
     /// </summary>
     public bool IsErrorTrackingEnabled => _errorHandler.IsEnabled;
+    
+    /// <inheritdoc />
+    public RowEnumerable EnumerateRows() => new RowEnumerable(this);
+    
+    /// <inheritdoc />
+    public UltraFastRowEnumerable EnumerateRowsFast() => new UltraFastRowEnumerable(this);
+    
+    /// <inheritdoc />
+    public SepStyleParser.SepStyleEnumerable EnumerateSepStyle()
+    {
+        if (_dataSource is StringDataSource stringSource)
+        {
+            var buffer = stringSource.GetBuffer();
+            return SepStyleParser.Parse(buffer, _options);
+        }
+        else if (_dataSource is MemoryDataSource memorySource)
+        {
+            var buffer = memorySource.GetBuffer();
+            return SepStyleParser.Parse(buffer, _options);
+        }
+        else
+        {
+            throw new NotSupportedException("Sep-style enumeration is only supported for string and memory data sources");
+        }
+    }
+    
+    /// <inheritdoc />
+    public CsvFieldIterator.CsvFieldCollection IterateFields()
+    {
+        // Get the entire content as a span
+        if (_dataSource is StringDataSource stringSource)
+        {
+            var buffer = stringSource.GetBuffer();
+            return CsvFieldIterator.IterateFields(buffer, _options);
+        }
+        else if (_dataSource is MemoryDataSource memorySource)
+        {
+            var buffer = memorySource.GetBuffer();
+            return CsvFieldIterator.IterateFields(buffer, _options);
+        }
+        else
+        {
+            throw new NotSupportedException("Field iteration is only supported for string and memory data sources");
+        }
+    }
+    
+    /// <summary>
+    /// Internal method to get the next line position
+    /// </summary>
+    bool IInternalCsvReader.TryGetNextLine(out int lineStart, out int lineLength, out int lineNumber)
+    {
+        if (_dataSource.TryGetLinePosition(out lineStart, out lineLength, out lineNumber))
+        {
+            _recordCount++;
+            return true;
+        }
+        
+        lineStart = 0;
+        lineLength = 0;
+        lineNumber = 0;
+        return false;
+    }
+    
+    /// <summary>
+    /// Get the buffer for zero-copy access
+    /// </summary>
+    ReadOnlySpan<char> IInternalCsvReader.GetBuffer() => _dataSource.GetBuffer();
 
 
     /// <summary>
@@ -271,13 +338,28 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     public int CountRecords()
     {
         Reset();
+        
+        // Use ultra-fast counting when validation is disabled
+        if (!IsValidationEnabled && !IsErrorTrackingEnabled)
+        {
+            var totalLines = _dataSource.CountLinesDirectly();
+            
+            // Account for header if present
+            if (_options.HasHeader && totalLines > 0)
+            {
+                return totalLines - 1;
+            }
+            
+            return totalLines;
+        }
+        
+        // Fall back to record-by-record counting when validation is needed
         var count = 0;
-
         while (TryReadRecord(out _))
         {
             count++;
         }
-
+        
         return count;
     }
 
@@ -292,5 +374,22 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     public Task<IEnumerable<string[]>> GetRecordsAsync(CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
+    }
+    
+    /// <inheritdoc />
+    public IEnumerable<int> EnumerateWithoutParsing()
+    {
+        Reset();
+        int count = 0;
+        
+        // Ultra-fast counting without any parsing
+        while (_dataSource.HasMoreData)
+        {
+            if (_dataSource.TryReadLine(out _, out _))
+            {
+                count++;
+                yield return count;
+            }
+        }
     }
 }
