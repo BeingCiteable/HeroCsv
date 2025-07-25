@@ -441,15 +441,40 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         // Use ultra-fast counting when validation is disabled
         if (!_validationHandler.IsEnabled && !_errorHandler.IsEnabled)
         {
-            var totalLines = _dataSource.CountLinesDirectly();
-            
-            // Account for header if present
-            if (_options.HasHeader && totalLines > 0)
+            // Only use buffer optimization for data sources that support it
+            if (_dataSource is StringDataSource || _dataSource is MemoryDataSource)
             {
-                return totalLines - 1;
+                var buffer = GetBuffer();
+                var newlineCount = _dataSource.CountLinesDirectly();
+                var totalLines = newlineCount;
+                
+                // Check if last character is not a newline (indicates one more line)
+                if (buffer.Length > 0 && buffer[buffer.Length - 1] != '\n' && buffer[buffer.Length - 1] != '\r')
+                {
+                    totalLines++; // Add one for the final line without newline
+                }
+                
+                // Account for header if present
+                if (_options.HasHeader && totalLines > 0)
+                {
+                    return totalLines - 1;
+                }
+                
+                return totalLines;
             }
-            
-            return totalLines;
+            else
+            {
+                // For stream-based sources, use CountLinesDirectly as-is
+                var totalLines = _dataSource.CountLinesDirectly();
+                
+                // Account for header if present
+                if (_options.HasHeader && totalLines > 0)
+                {
+                    return totalLines - 1;
+                }
+                
+                return totalLines;
+            }
         }
         
         // Fall back to record-by-record counting when validation is needed
@@ -465,9 +490,51 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     /// <inheritdoc />
     public async Task<IReadOnlyList<string[]>> ReadAllRecordsAsync(CancellationToken cancellationToken = default)
     {
-        // For now, use sync method wrapped in Task.Run
-        // TODO: Add async support to ICsvDataSource for true async streaming
-        return await Task.Run(() => ReadAllRecords(), cancellationToken);
+#if NET6_0_OR_GREATER
+        // Only reset if the data source supports it
+        if (_dataSource.SupportsReset)
+        {
+            Reset();
+        }
+        
+        // Use async data source if available
+        if (_dataSource is IAsyncCsvDataSource asyncSource)
+        {
+            var records = new List<string[]>();
+            bool headerSkipped = !_options.HasHeader; // If no header, consider it already skipped
+            
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var result = await asyncSource.TryReadLineAsync(cancellationToken).ConfigureAwait(false);
+                if (!result.success) break;
+                
+                // Skip empty lines
+                if (string.IsNullOrEmpty(result.line)) continue;
+                
+                // Skip header if configured and not yet skipped
+                if (_options.HasHeader && !headerSkipped)
+                {
+                    headerSkipped = true;
+                    continue;
+                }
+                
+                var fields = CsvParser.ParseLine(result.line.AsSpan(), _options);
+                
+                // Perform validation if enabled
+                if (_validationHandler.IsEnabled || _errorHandler.IsEnabled)
+                {
+                    _validationHandler.ValidateRecord(fields, result.lineNumber, _validationHandler.ExpectedFieldCount);
+                }
+                
+                records.Add(fields);
+                _recordCount++;
+            }
+            
+            return records;
+        }
+#endif
+        // Fallback to sync method wrapped in Task.Run for non-async sources
+        return await Task.Run(() => ReadAllRecords(), cancellationToken).ConfigureAwait(false);
     }
 
 }

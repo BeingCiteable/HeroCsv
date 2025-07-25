@@ -270,6 +270,129 @@ public class QuickBenchmark
         
         Console.WriteLine();
         
+        // Feature 6: Async vs Sync Performance (File I/O)
+        Console.WriteLine("⚡ FEATURE: Async vs Sync Performance (File I/O)");
+        Console.WriteLine("=" + new string('=', 49));
+        
+        // Create test file
+        var testFilePath = Path.GetTempFileName();
+        File.WriteAllText(testFilePath, testData);
+        
+        try
+        {
+            results["FastCsv"]["Sync_File"] = BenchmarkAction(() =>
+            {
+                var options = new global::FastCsv.CsvOptions(hasHeader: true);
+                using var stream = File.OpenRead(testFilePath);
+                using var reader = global::FastCsv.Csv.CreateReader(stream, options);
+                int count = 0;
+                foreach (var record in reader.GetRecords())
+                {
+                    count++;
+                    // Access fields to ensure parsing happens
+                    for (int i = 0; i < record.Length; i++)
+                    {
+                        var _ = record[i];
+                    }
+                }
+                return count;
+            }, 10, "FastCsv (Sync File)"); // Fewer iterations for file I/O
+            
+#if NET7_0_OR_GREATER
+            results["FastCsv"]["Async_File"] = BenchmarkAsyncAction(async () =>
+            {
+                var options = new global::FastCsv.CsvOptions(hasHeader: true);
+                var records = await global::FastCsv.Csv.ReadFileAsync(
+                    filePath: testFilePath, 
+                    options: options, 
+                    encoding: null, 
+                    cancellationToken: CancellationToken.None);
+                int count = 0;
+                foreach (var record in records)
+                {
+                    count++;
+                    // Access fields to ensure parsing happens
+                    for (int i = 0; i < record.Length; i++)
+                    {
+                        var _ = record[i];
+                    }
+                }
+                return count;
+            }, 10, "FastCsv (Async File)");
+            
+            results["FastCsv"]["Async_Stream"] = BenchmarkAsyncAction(async () =>
+            {
+                var options = new global::FastCsv.CsvOptions(hasHeader: true);
+                await using var stream = File.OpenRead(testFilePath);
+                var records = await global::FastCsv.Csv.ReadStreamAsync(stream, options);
+                int count = 0;
+                foreach (var record in records)
+                {
+                    count++;
+                    // Access fields to ensure parsing happens
+                    for (int i = 0; i < record.Length; i++)
+                    {
+                        var _ = record[i];
+                    }
+                }
+                return count;
+            }, 10, "FastCsv (Async Stream)");
+            
+            results["FastCsv"]["Async_Enumerable"] = BenchmarkAsyncAction(async () =>
+            {
+                var options = new global::FastCsv.CsvOptions(hasHeader: true);
+                int count = 0;
+                await foreach (var record in global::FastCsv.Csv.ReadFileAsyncEnumerable(testFilePath, options))
+                {
+                    count++;
+                    // Access fields to ensure parsing happens
+                    for (int i = 0; i < record.Length; i++)
+                    {
+                        var _ = record[i];
+                    }
+                }
+                return count;
+            }, 10, "FastCsv (Async Enumerable)");
+#else
+            Console.WriteLine("FastCsv (Async)      : N/A (requires .NET 7+)");
+            results["FastCsv"]["Async_File"] = -1;
+            results["FastCsv"]["Async_Stream"] = -1;
+            results["FastCsv"]["Async_Enumerable"] = -1;
+#endif
+        }
+        finally
+        {
+            if (File.Exists(testFilePath))
+                File.Delete(testFilePath);
+        }
+        
+        Console.WriteLine();
+        
+        // Feature 7: Data Source Comparison
+        Console.WriteLine("📊 FEATURE: Data Source Performance Comparison");
+        Console.WriteLine("=" + new string('=', 47));
+        
+        results["FastCsv"]["String_Source"] = BenchmarkAction(() =>
+        {
+            using var reader = global::FastCsv.Csv.CreateReader(testData);
+            return reader.CountRecords();
+        }, iterations, "FastCsv (String)");
+        
+        results["FastCsv"]["Memory_Source"] = BenchmarkAction(() =>
+        {
+            using var reader = global::FastCsv.Csv.CreateReader(testMemory);
+            return reader.CountRecords();
+        }, iterations, "FastCsv (Memory)");
+        
+        results["FastCsv"]["Stream_Source"] = BenchmarkAction(() =>
+        {
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(testData));
+            using var reader = global::FastCsv.Csv.CreateReader(stream);
+            return reader.CountRecords();
+        }, iterations, "FastCsv (Stream)");
+        
+        Console.WriteLine();
+        
         // Summary Report
         PrintSummaryReport(results);
     }
@@ -294,6 +417,26 @@ public class QuickBenchmark
         return msPerOp;
     }
     
+    private static double BenchmarkAsyncAction(Func<Task<int>> action, int iterations, string name)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        int totalCount = 0;
+        
+        for (int i = 0; i < iterations; i++)
+        {
+            var count = action().GetAwaiter().GetResult(); // Sync wait for fair comparison
+            totalCount += count;
+            if (count == 0) throw new Exception($"No records returned by {name}");
+        }
+        
+        stopwatch.Stop();
+        double msPerOp = stopwatch.ElapsedMilliseconds / (double)iterations;
+        
+        Console.WriteLine($"{name,-20} : {stopwatch.ElapsedMilliseconds:N0} ms ({msPerOp:F2} ms/op)");
+        
+        return msPerOp;
+    }
+    
     private static void PrintSummaryReport(Dictionary<string, Dictionary<string, double>> results)
     {
         Console.WriteLine("📊 PERFORMANCE SUMMARY REPORT");
@@ -306,7 +449,14 @@ public class QuickBenchmark
             ("Read All Records (Memory)", "ReadAll_Memory"),
             ("Count Records Only", "CountOnly"),
             ("Zero-Allocation Row Enumeration", "ZeroAlloc"),
-            ("Direct Field Iteration", "DirectFieldIteration")
+            ("Direct Field Iteration", "DirectFieldIteration"),
+            ("Sync File I/O", "Sync_File"),
+            ("Async File I/O", "Async_File"),
+            ("Async Stream I/O", "Async_Stream"),
+            ("Async Enumerable", "Async_Enumerable"),
+            ("String Data Source", "String_Source"),
+            ("Memory Data Source", "Memory_Source"),
+            ("Stream Data Source", "Stream_Source")
         };
         
         foreach (var (featureName, featureKey) in features)

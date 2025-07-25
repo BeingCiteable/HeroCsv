@@ -1,0 +1,11 @@
+TransactionID,Date,Amount,Currency,AccountBalance,IsDebit,Description,Rate,TaxAmount
+TXN001,2023-01-15,-2500.75,USD,15000.25,true,"Office Rent Payment",1.0000,0.00
+TXN002,2023-01-16,3250.00,EUR,18250.25,false,"Client Payment - Project A",1.0850,325.00
+TXN003,2023-01-17,-89.99,USD,18160.26,true,"Software License",1.0000,7.20
+TXN004,2023-01-18,12000.00,GBP,30160.26,false,"Quarterly Bonus",0.8250,2400.00
+TXN005,2023-01-19,-1500.50,USD,28659.76,true,"Marketing Campaign",1.0000,150.05
+TXN006,2023-01-20,750.25,CAD,29410.01,false,"Freelance Payment",0.7400,75.03
+TXN007,2023-01-21,-45.00,USD,29365.01,true,"Bank Fee",1.0000,0.00
+TXN008,2023-01-22,5000.00,USD,34365.01,false,"Investment Return",1.0000,1000.00
+TXN009,2023-01-23,-299.99,EUR,34065.02,true,"Equipment Purchase",1.0850,30.00
+TXN010,2023-01-24,800.00,USD,34865.02,false,"Refund Received",1.0000,0.00

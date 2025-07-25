@@ -1,0 +1,11 @@
+ID,Name,Score,IsActive,JoinDate,Balance,Grade
+1,Alice,95.5,true,2023-01-15,1250.75,A
+2,Bob,87.2,false,2022-11-30,850.00,B
+3,Charlie,92.8,true,2023-03-22,2100.50,A
+4,Diana,78.9,true,2022-08-14,975.25,C
+5,Eve,88.1,false,2023-02-28,1500.00,B
+6,Frank,96.3,true,2021-12-01,3250.75,A
+7,Grace,82.7,true,2023-05-10,1125.50,B
+8,Henry,91.4,false,2022-09-18,1875.25,A
+9,Ivy,85.6,true,2023-04-05,1350.00,B
+10,Jack,89.9,true,2022-07-23,2025.75,A

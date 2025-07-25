@@ -1,0 +1,11 @@
+Date,Region,Product,Quantity,Revenue,Customer
+2023-01-01,North,Laptop Pro,2,2599.98,ABC Corp
+2023-01-01,South,Wireless Mouse,5,149.95,Tech Solutions
+2023-01-02,East,Office Chair,1,249.50,StartUp Inc
+2023-01-02,West,Smartphone X,3,2699.97,Mobile World
+2023-01-03,North,Headphones,4,639.96,Audio Experts
+2023-01-03,South,Coffee Maker,2,398.00,Office Supply Co
+2023-01-04,East,Standing Desk,1,399.99,Ergo Solutions
+2023-01-04,West,Tablet Mini,6,2099.94,Device Hub
+2023-01-05,North,Desk Lamp,3,269.97,Lighting Ltd
+2023-01-05,South,Bookshelf,2,259.98,Furniture Plus

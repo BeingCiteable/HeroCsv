@@ -1,0 +1,11 @@
+ProductID,Name,Category,Price,InStock,Description
+P001,Laptop Pro,"Electronics, Computers",1299.99,25,"High-performance laptop with ""cutting-edge"" technology"
+P002,Wireless Mouse,Electronics,29.99,150,Ergonomic wireless mouse with USB receiver
+P003,Office Chair,Furniture,249.50,12,"Comfortable chair with lumbar support, adjustable height"
+P004,Desk Lamp,Furniture,89.99,45,LED desk lamp with adjustable brightness
+P005,Coffee Maker,Appliances,199.00,8,Programmable coffee maker with timer
+P006,Smartphone X,Electronics,899.99,30,"Latest smartphone with 5G, 128GB storage"
+P007,Bookshelf,Furniture,129.99,20,5-tier wooden bookshelf
+P008,Headphones,"Electronics, Audio",159.99,75,Noise-canceling over-ear headphones
+P009,Standing Desk,Furniture,399.99,6,Electric height-adjustable standing desk
+P010,Tablet Mini,Electronics,349.99,40,Compact tablet with 10-inch display

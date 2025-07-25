@@ -1,0 +1,11 @@
+ID,Name,Department,Salary,HireDate,IsActive
+1,John Smith,Engineering,75000,2020-01-15,true
+2,Jane Doe,Marketing,65000,2019-03-22,true
+3,Bob Johnson,Sales,55000,2021-06-10,false
+4,Alice Brown,Engineering,80000,2018-11-05,true
+5,Charlie Wilson,HR,60000,2022-02-28,true
+6,Diana Davis,Marketing,70000,2020-08-14,true
+7,Frank Miller,Sales,52000,2021-09-03,true
+8,Grace Lee,Engineering,85000,2017-12-01,true
+9,Henry Taylor,HR,58000,2023-01-20,false
+10,Ivy Chen,Marketing,68000,2019-07-16,true

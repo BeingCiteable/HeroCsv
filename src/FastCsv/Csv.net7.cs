@@ -21,7 +21,7 @@ public static partial class Csv
     /// <param name="options">CSV parsing options</param>
     /// <param name="leaveOpen">Whether to leave the stream open after reading</param>
     /// <returns>Async enumerable of CSV records</returns>
-    public static async IAsyncEnumerable<string[]> ReadStreamAsync(Stream stream, CsvOptions options = default, bool leaveOpen = false)
+    public static async IAsyncEnumerable<string[]> ReadStreamAsyncEnumerable(Stream stream, CsvOptions options = default, bool leaveOpen = false)
     {
 #if NET6_0_OR_GREATER
         await using var reader = CreateReader(stream, options, leaveOpen: leaveOpen);
@@ -47,7 +47,7 @@ public static partial class Csv
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
-        await foreach (var record in ReadStreamAsync(stream, options).WithCancellation(cancellationToken))
+        await foreach (var record in ReadStreamAsyncEnumerable(stream, options).WithCancellation(cancellationToken))
         {
             yield return record;
         }

@@ -8,6 +8,14 @@ namespace FastCsv;
 public static partial class Csv
 {
     /// <summary>
+    /// Ensures we have valid options (not default struct)
+    /// </summary>
+    private static CsvOptions GetValidOptions(CsvOptions options)
+    {
+        // If delimiter is null char, it means we got default(CsvOptions)
+        return options.Delimiter == '\0' ? CsvOptions.Default : options;
+    }
+    /// <summary>
     /// Counts CSV records without allocating strings for maximum performance
     /// </summary>
     /// <param name="content">CSV text as memory span</param>
@@ -83,6 +91,7 @@ public static partial class Csv
     /// <returns>Number of records found</returns>
     public static int CountRecords(string content, CsvOptions options = default)
     {
+        options = GetValidOptions(options);
         // Always use optimized counting for best performance
         return CountRecordsFast(content.AsSpan(), options);
     }
