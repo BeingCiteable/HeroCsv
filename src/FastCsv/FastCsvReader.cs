@@ -146,31 +146,26 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         return _dataSource is StringDataSource || _dataSource is MemoryDataSource;
     }
     
-    /// <summary>
-    /// Get zero-allocation enumerator that returns ref struct records
-    /// </summary>
-    /// <returns>Enumerator that returns CsvRow ref structs with span-based field access</returns>
-    public RowEnumerable EnumerateRows() => new RowEnumerable(this);
     
     /// <summary>
-    /// Get FastCsv's optimized enumerator for maximum performance
+    /// Get zero-allocation row enumerator for processing rows as spans
     /// </summary>
-    /// <returns>Enumerator using SearchValues API and optimized line parsing</returns>
-    public FastCsvParser.BufferBasedCsvEnumerable EnumerateRowsOptimized()
+    /// <returns>Enumerator that returns CsvRow ref structs with fast field access</returns>
+    public CsvParser.WholeBufferCsvEnumerable EnumerateRows()
     {
         if (_dataSource is StringDataSource stringSource)
         {
             var buffer = stringSource.GetBuffer();
-            return FastCsvParser.Parse(buffer, _options);
+            return CsvParser.ParseWholeBuffer(buffer, _options);
         }
         else if (_dataSource is MemoryDataSource memorySource)
         {
             var buffer = memorySource.GetBuffer();
-            return FastCsvParser.Parse(buffer, _options);
+            return CsvParser.ParseWholeBuffer(buffer, _options);
         }
         else
         {
-            throw new NotSupportedException("Optimized enumeration is only supported for string and memory data sources");
+            throw new NotSupportedException("Maximum performance enumeration is only supported for string and memory data sources");
         }
     }
     
@@ -320,11 +315,8 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         // Use optimized path when possible
         if (CanUseOptimizedPath())
         {
-            // The optimized parser uses SearchValues API and SIMD operations
-            // It's faster for parsing but accessing row.FieldCount triggers field counting
-            // which adds overhead. Users wanting max performance should use
-            // EnumerateRowsOptimized() directly with known field counts.
-            foreach (var row in EnumerateRowsOptimized())
+            // Use whole-buffer parsing with pre-computed field positions for maximum performance
+            foreach (var row in EnumerateRows())
             {
                 var fields = new string[row.FieldCount];
                 for (int i = 0; i < row.FieldCount; i++)
@@ -352,7 +344,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         Reset();
         
         // Can't use optimized path with yield due to ref struct limitations
-        // Users who want optimized performance should use ReadAllRecords() or EnumerateRowsOptimized() directly
+        // Users who want optimized performance should use ReadAllRecords() or EnumerateRows() directly
         while (TryReadRecord(out var record))
         {
             yield return record.ToArray();

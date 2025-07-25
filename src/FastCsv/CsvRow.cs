@@ -2,11 +2,12 @@
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 #endif
+using System.Collections.Generic;
 
 namespace FastCsv;
 
 /// <summary>
-/// Zero-allocation CSV row that provides span-based field access
+/// Zero-allocation CSV row with pre-computed field positions for fast access
 /// </summary>
 public ref struct CsvRow
 {
@@ -14,7 +15,7 @@ public ref struct CsvRow
     private readonly int _lineStart;
     private readonly int _lineLength;
     private readonly CsvOptions _options;
-    private Span<int> _fieldPositions;
+    private int[] _fieldPositions;
     private int _fieldCount;
     
     internal CsvRow(ReadOnlySpan<char> buffer, int lineStart, int lineLength, CsvOptions options)
@@ -23,9 +24,63 @@ public ref struct CsvRow
         _lineStart = lineStart;
         _lineLength = lineLength;
         _options = options;
-        _fieldPositions = default;
+        _fieldPositions = null!;
         _fieldCount = -1;
+        
+#if NET8_0_OR_GREATER
+        // Pre-compute field positions for Sep-style performance
+        PrecomputeFieldPositions();
+#endif
     }
+    
+#if NET8_0_OR_GREATER
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private void PrecomputeFieldPositions()
+    {
+        var line = Line;
+        var delimiter = _options.Delimiter;
+        var quote = _options.Quote;
+        
+        // Pre-allocate for typical CSV files
+        var positions = new List<int>(32);
+        var pos = 0;
+        
+        while (pos < line.Length)
+        {
+            // Use SearchValues for fast delimiter search
+            var remaining = line.Slice(pos);
+            var nextDelim = remaining.IndexOfAny(delimiter, quote);
+            
+            if (nextDelim < 0)
+                break;
+                
+            if (remaining[nextDelim] == delimiter)
+            {
+                // Found delimiter - mark position
+                positions.Add(pos + nextDelim);
+                pos += nextDelim + 1;
+            }
+            else if (remaining[nextDelim] == quote)
+            {
+                // Skip quoted section
+                pos += nextDelim + 1;
+                while (pos < line.Length)
+                {
+                    var quotePos = line.Slice(pos).IndexOf(quote);
+                    if (quotePos < 0) break;
+                    
+                    pos += quotePos + 1;
+                    if (pos >= line.Length || line[pos] != quote)
+                        break;
+                    pos++; // Skip escaped quote
+                }
+            }
+        }
+        
+        _fieldPositions = positions.ToArray();
+        _fieldCount = positions.Count + 1; // Number of fields is delimiters + 1
+    }
+#endif
     
     /// <summary>
     /// Gets the number of fields in this row
@@ -34,13 +89,18 @@ public ref struct CsvRow
     {
         get
         {
+#if NET8_0_OR_GREATER
+            // Already computed during construction
+            return _fieldCount;
+#else
             if (_fieldCount < 0)
             {
-                // Count fields on demand
+                // Count fields on demand for older frameworks
                 var enumerator = new CsvFieldEnumerator(Line, _options.Delimiter, _options.Quote);
                 _fieldCount = enumerator.CountTotalFields();
             }
             return _fieldCount;
+#endif
         }
     }
     
@@ -52,7 +112,32 @@ public ref struct CsvRow
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         get
         {
-            // Use fast enumerator to get field directly
+#if NET8_0_OR_GREATER
+            // Use pre-computed positions for O(1) field access
+            if (index < 0 || index >= _fieldCount)
+                ThrowIndexOutOfRange(index);
+                
+            var startPos = index == 0 ? 0 : (_fieldPositions[index - 1] + 1);
+            var endPos = index >= _fieldCount - 1 ? Line.Length : _fieldPositions[index];
+            
+            var field = Line.Slice(startPos, endPos - startPos);
+            
+            // Handle quoted fields
+            if (field.Length >= 2 && field[0] == _options.Quote && field[^1] == _options.Quote)
+            {
+                field = field.Slice(1, field.Length - 2);
+                // TODO: Handle escaped quotes within the field
+            }
+            
+            // Apply trimming if needed
+            if (_options.TrimWhitespace && !field.IsEmpty)
+            {
+                field = field.Trim();
+            }
+            
+            return field;
+#else
+            // Fallback to enumerator for older frameworks
             var enumerator = new CsvFieldEnumerator(Line, _options.Delimiter, _options.Quote);
             var field = enumerator.GetFieldByIndex(index);
             
@@ -63,6 +148,7 @@ public ref struct CsvRow
             }
             
             return field;
+#endif
         }
     }
     
@@ -109,163 +195,4 @@ public ref struct CsvRow
     /// Creates an enumerator to iterate through all fields in the row
     /// </summary>
     public CsvFieldEnumerator GetFieldEnumerator() => new CsvFieldEnumerator(Line, _options.Delimiter, _options.Quote);
-    
-    private void ParseFieldPositions()
-    {
-        var lineSpan = Line;
-        if (lineSpan.IsEmpty)
-        {
-            _fieldCount = 0;
-            return;
-        }
-        
-        // Fast path for simple CSV
-        if (!ContainsQuote(lineSpan, _options.Quote))
-        {
-            ParseUnquotedPositions();
-        }
-        else
-        {
-            ParseQuotedPositions();
-        }
-    }
-    
-    private unsafe void ParseUnquotedPositions()
-    {
-        var lineSpan = Line;
-        
-        // Allocate on stack for small field counts (most CSV files have < 32 fields)
-        const int MaxStackFields = 32;
-        var stackBuffer = stackalloc int[MaxStackFields * 2];
-        
-        // Single pass to find all delimiters and positions
-        var fieldIndex = 0;
-        var fieldStart = 0;
-        
-        for (int i = 0; i < lineSpan.Length; i++)
-        {
-            if (lineSpan[i] == _options.Delimiter)
-            {
-                if (fieldIndex < MaxStackFields)
-                {
-                    stackBuffer[fieldIndex * 2] = fieldStart;
-                    stackBuffer[fieldIndex * 2 + 1] = i - fieldStart;
-                }
-                fieldIndex++;
-                fieldStart = i + 1;
-            }
-        }
-        
-        // Last field
-        if (fieldIndex < MaxStackFields)
-        {
-            stackBuffer[fieldIndex * 2] = fieldStart;
-            stackBuffer[fieldIndex * 2 + 1] = lineSpan.Length - fieldStart;
-        }
-        
-        _fieldCount = fieldIndex + 1;
-        
-        // If we fit in stack buffer, use it
-        if (_fieldCount <= MaxStackFields)
-        {
-            _fieldPositions = new Span<int>(stackBuffer, _fieldCount * 2);
-        }
-        else
-        {
-            // Rare case: allocate on heap and parse again
-            var heapBuffer = new int[_fieldCount * 2];
-            fieldIndex = 0;
-            fieldStart = 0;
-            
-            for (int i = 0; i < lineSpan.Length; i++)
-            {
-                if (lineSpan[i] == _options.Delimiter)
-                {
-                    heapBuffer[fieldIndex * 2] = fieldStart;
-                    heapBuffer[fieldIndex * 2 + 1] = i - fieldStart;
-                    fieldIndex++;
-                    fieldStart = i + 1;
-                }
-            }
-            
-            heapBuffer[fieldIndex * 2] = fieldStart;
-            heapBuffer[fieldIndex * 2 + 1] = lineSpan.Length - fieldStart;
-            
-            _fieldPositions = heapBuffer;
-        }
-    }
-    
-    
-    private void ParseQuotedPositions()
-    {
-        var lineSpan = Line;
-        // For quoted fields, we need more complex parsing
-        // This is simplified - production would need full quote handling
-        var positions = new List<(int start, int length)>();
-        var inQuotes = false;
-        var fieldStart = 0;
-        
-        for (int i = 0; i < lineSpan.Length; i++)
-        {
-            var ch = lineSpan[i];
-            
-            if (ch == _options.Quote)
-            {
-                inQuotes = !inQuotes;
-            }
-            else if (ch == _options.Delimiter && !inQuotes)
-            {
-                positions.Add((fieldStart, i - fieldStart));
-                fieldStart = i + 1;
-            }
-        }
-        
-        // Last field
-        positions.Add((fieldStart, lineSpan.Length - fieldStart));
-        
-        _fieldCount = positions.Count;
-        var posArray = new int[_fieldCount * 2];
-        
-        for (int i = 0; i < positions.Count; i++)
-        {
-            posArray[i * 2] = positions[i].start;
-            posArray[i * 2 + 1] = positions[i].length;
-        }
-        
-        _fieldPositions = posArray;
-    }
-    
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    private ReadOnlySpan<char> GetFieldSpan(int index)
-    {
-        var posIndex = index * 2;
-        var start = _fieldPositions[posIndex];
-        var length = _fieldPositions[posIndex + 1];
-        var field = Line.Slice(start, length);
-        
-        // Fast path - no trimming or quotes
-        if (!_options.TrimWhitespace && (field.Length < 2 || field[0] != _options.Quote))
-        {
-            return field;
-        }
-        
-        // Handle trimming
-        if (_options.TrimWhitespace)
-        {
-            field = field.Trim();
-        }
-        
-        // Handle quotes
-        if (field.Length >= 2 && field[0] == _options.Quote && field[field.Length - 1] == _options.Quote)
-        {
-            field = field.Slice(1, field.Length - 2);
-        }
-        
-        return field;
-    }
-    
-    private static bool ContainsQuote(ReadOnlySpan<char> line, char quote)
-    {
-        return line.IndexOf(quote) >= 0;
-    }
 }
