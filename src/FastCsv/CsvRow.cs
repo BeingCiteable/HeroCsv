@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace FastCsv;
 
 /// <summary>
-/// Zero-allocation CSV row with pre-computed field positions for fast access
+/// Zero-allocation CSV row with lazy field position caching for optimal performance
 /// </summary>
 public ref struct CsvRow
 {
@@ -17,6 +17,7 @@ public ref struct CsvRow
     private readonly CsvOptions _options;
     private int[] _fieldPositions;
     private int _fieldCount;
+    private bool _positionsComputed;
     
     internal CsvRow(ReadOnlySpan<char> buffer, int lineStart, int lineLength, CsvOptions options)
     {
@@ -26,11 +27,7 @@ public ref struct CsvRow
         _options = options;
         _fieldPositions = null!;
         _fieldCount = -1;
-        
-#if NET8_0_OR_GREATER
-        // Pre-compute field positions for Sep-style performance
-        PrecomputeFieldPositions();
-#endif
+        _positionsComputed = false;
     }
     
 #if NET8_0_OR_GREATER
@@ -89,18 +86,11 @@ public ref struct CsvRow
     {
         get
         {
-#if NET8_0_OR_GREATER
-            // Already computed during construction
-            return _fieldCount;
-#else
-            if (_fieldCount < 0)
+            if (!_positionsComputed)
             {
-                // Count fields on demand for older frameworks
-                var enumerator = new CsvFieldEnumerator(Line, _options.Delimiter, _options.Quote);
-                _fieldCount = enumerator.CountTotalFields();
+                ComputeFieldPositions();
             }
             return _fieldCount;
-#endif
         }
     }
     
@@ -112,22 +102,22 @@ public ref struct CsvRow
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         get
         {
-#if NET8_0_OR_GREATER
-            // Use pre-computed positions for O(1) field access
+            // Compute field positions on first access for efficient repeated access
+            if (!_positionsComputed)
+            {
+                ComputeFieldPositions();
+            }
+            
             if (index < 0 || index >= _fieldCount)
+            {
                 ThrowIndexOutOfRange(index);
-                
-            var startPos = index == 0 ? 0 : (_fieldPositions[index - 1] + 1);
-            var endPos = index >= _fieldCount - 1 ? Line.Length : _fieldPositions[index];
-            
-            var field = Line.Slice(startPos, endPos - startPos);
-            
-            // Handle quoted fields
-            if (field.Length >= 2 && field[0] == _options.Quote && field[^1] == _options.Quote)
-            {
-                field = field.Slice(1, field.Length - 2);
-                // TODO: Handle escaped quotes within the field
             }
+            
+            // Calculate field boundaries from cached positions
+            var start = index == 0 ? 0 : _fieldPositions[index - 1] + 1;
+            var end = index == _fieldCount - 1 ? Line.Length : _fieldPositions[index];
+            
+            var field = Line.Slice(start, end - start);
             
             // Apply trimming if needed
             if (_options.TrimWhitespace && !field.IsEmpty)
@@ -136,20 +126,42 @@ public ref struct CsvRow
             }
             
             return field;
-#else
-            // Fallback to enumerator for older frameworks
-            var enumerator = new CsvFieldEnumerator(Line, _options.Delimiter, _options.Quote);
-            var field = enumerator.GetFieldByIndex(index);
-            
-            // Apply trimming if needed
-            if (_options.TrimWhitespace && !field.IsEmpty)
-            {
-                field = field.Trim();
-            }
-            
-            return field;
-#endif
         }
+    }
+    
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private void ComputeFieldPositions()
+    {
+        if (_positionsComputed) return;
+        
+        var line = Line;
+        var positions = new List<int>(16); // Pre-allocate for typical CSV
+        var inQuotes = false;
+        
+        for (int i = 0; i < line.Length; i++)
+        {
+            var ch = line[i];
+            
+            if (ch == _options.Quote)
+            {
+                if (inQuotes && i + 1 < line.Length && line[i + 1] == _options.Quote)
+                {
+                    i++; // Skip escaped quote
+                }
+                else
+                {
+                    inQuotes = !inQuotes;
+                }
+            }
+            else if (ch == _options.Delimiter && !inQuotes)
+            {
+                positions.Add(i);
+            }
+        }
+        
+        _fieldPositions = positions.ToArray();
+        _fieldCount = positions.Count + 1;
+        _positionsComputed = true;
     }
     
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
@@ -168,7 +180,12 @@ public ref struct CsvRow
     /// </summary>
     public string GetString(int index)
     {
-        return this[index].ToString();
+        var span = this[index];
+        if (_options.StringPool != null)
+        {
+            return _options.StringPool.GetString(span);
+        }
+        return span.ToString();
     }
     
     /// <summary>
@@ -185,7 +202,15 @@ public ref struct CsvRow
             {
                 field = field.Trim();
             }
-            fields.Add(field.ToString());
+            
+            if (_options.StringPool != null)
+            {
+                fields.Add(_options.StringPool.GetString(field));
+            }
+            else
+            {
+                fields.Add(field.ToString());
+            }
         }
         
         return fields.ToArray();

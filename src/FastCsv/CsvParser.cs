@@ -2,6 +2,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 #if NET8_0_OR_GREATER
 using System.Buffers;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+using System.Runtime.InteropServices;
 #endif
 
 namespace FastCsv;
@@ -107,7 +110,7 @@ public static class CsvParser
         // Fast path: comma-delimited with no quotes (90% of use cases)
         if (options.Delimiter == ',' && !options.TrimWhitespace && line.IndexOf('"') < 0)
         {
-            return ParseSimpleCommaLine(line);
+            return ParseSimpleCommaLine(line, options.StringPool);
         }
 
         // Smart path: check for quotes first, then choose best algorithm
@@ -122,8 +125,16 @@ public static class CsvParser
     /// Ultra-fast parsing for simple comma-separated lines (no quotes, no trimming)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static unsafe string[] ParseSimpleCommaLine(ReadOnlySpan<char> line)
+    private static unsafe string[] ParseSimpleCommaLine(ReadOnlySpan<char> line, StringPool? stringPool = null)
     {
+#if NET8_0_OR_GREATER
+        // Use SIMD to count commas when line is large enough
+        if (Avx2.IsSupported && line.Length >= 32)
+        {
+            return ParseSimpleCommaLineSIMD(line, stringPool);
+        }
+#endif
+
         // Count commas in single pass
         var commaCount = 0;
         for (int i = 0; i < line.Length; i++)
@@ -140,15 +151,126 @@ public static class CsvParser
         {
             if (line[i] == ',')
             {
-                fields[fieldIndex++] = CreateString(line.Slice(start, i - start));
+                fields[fieldIndex++] = CreateString(line.Slice(start, i - start), stringPool);
                 start = i + 1;
             }
         }
 
         // Final field
-        fields[fieldIndex] = CreateString(line.Slice(start));
+        fields[fieldIndex] = CreateString(line.Slice(start), stringPool);
         return fields;
     }
+
+#if NET8_0_OR_GREATER
+    /// <summary>
+    /// Parses comma-separated values using hardware-accelerated SIMD operations
+    /// </summary>
+    /// <param name="line">CSV line containing comma-separated values without quotes</param>
+    /// <param name="stringPool">Optional string pool for deduplicating values</param>
+    /// <returns>Array of field values extracted from the line</returns>
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    private static unsafe string[] ParseSimpleCommaLineSIMD(ReadOnlySpan<char> line, StringPool? stringPool = null)
+    {
+        const char COMMA_SEPARATOR = ',';
+        const int CHARS_PER_VECTOR = 16; // AVX2 processes 256 bits = 16 chars (2 bytes each)
+        const int BYTES_PER_CHAR = 2;
+        
+        // Create a vector filled with comma values for parallel comparison
+        var commaSearchVector = Vector256.Create((ushort)COMMA_SEPARATOR);
+        
+        // Phase 1: Count total commas to allocate exact array size
+        var totalCommaCount = 0;
+        var currentPosition = 0;
+        
+        fixed (char* linePtr = line)
+        {
+            // Process multiple characters simultaneously using SIMD
+            while (currentPosition + CHARS_PER_VECTOR <= line.Length)
+            {
+                // Load 16 characters into a 256-bit vector
+                var characterVector = Avx2.LoadVector256((ushort*)(linePtr + currentPosition));
+                
+                // Compare all 16 characters against comma in parallel
+                var commaMatchVector = Avx2.CompareEqual(characterVector, commaSearchVector);
+                
+                // Extract match results as a bitmask (2 bits per character)
+                var matchBitmask = (uint)Avx2.MoveMask(commaMatchVector.AsByte());
+                
+                // Count the number of commas found in this vector
+                // Divide by 2 because each character produces 2 bits in the mask
+                totalCommaCount += System.Numerics.BitOperations.PopCount(matchBitmask) / BYTES_PER_CHAR;
+                
+                currentPosition += CHARS_PER_VECTOR;
+            }
+        }
+        
+        // Process any remaining characters that don't fit in a full vector
+        while (currentPosition < line.Length)
+        {
+            if (line[currentPosition] == COMMA_SEPARATOR) 
+                totalCommaCount++;
+            currentPosition++;
+        }
+        
+        // Phase 2: Extract fields using comma positions found via SIMD
+        var fieldArray = new string[totalCommaCount + 1];
+        var currentFieldIndex = 0;
+        var fieldStartPosition = 0;
+        currentPosition = 0;
+        
+        fixed (char* linePtr = line)
+        {
+            while (currentPosition + CHARS_PER_VECTOR <= line.Length)
+            {
+                // Load and compare characters in parallel
+                var characterVector = Avx2.LoadVector256((ushort*)(linePtr + currentPosition));
+                var commaMatchVector = Avx2.CompareEqual(characterVector, commaSearchVector);
+                var matchBitmask = (uint)Avx2.MoveMask(commaMatchVector.AsByte());
+                
+                if (matchBitmask != 0)
+                {
+                    // Extract field for each comma found in this vector
+                    for (int bitPosition = 0; bitPosition < 32; bitPosition += BYTES_PER_CHAR)
+                    {
+                        if ((matchBitmask & (1u << bitPosition)) != 0)
+                        {
+                            // Calculate actual character position from bit position
+                            var commaCharPosition = currentPosition + (bitPosition / BYTES_PER_CHAR);
+                            
+                            // Verify position is valid and contains a comma
+                            if (commaCharPosition < line.Length && line[commaCharPosition] == COMMA_SEPARATOR)
+                            {
+                                // Extract field from start position to comma
+                                fieldArray[currentFieldIndex++] = CreateString(line.Slice(fieldStartPosition, commaCharPosition - fieldStartPosition), stringPool);
+                                fieldStartPosition = commaCharPosition + 1;
+                            }
+                        }
+                    }
+                }
+                currentPosition += CHARS_PER_VECTOR;
+            }
+        }
+        
+        // Process remaining characters that don't fit in a full vector
+        while (currentPosition < line.Length)
+        {
+            if (line[currentPosition] == COMMA_SEPARATOR)
+            {
+                fieldArray[currentFieldIndex++] = CreateString(line.Slice(fieldStartPosition, currentPosition - fieldStartPosition), stringPool);
+                fieldStartPosition = currentPosition + 1;
+            }
+            currentPosition++;
+        }
+        
+        // Extract the final field after the last comma
+        if (currentFieldIndex < fieldArray.Length)
+        {
+            fieldArray[currentFieldIndex] = CreateString(line.Slice(fieldStartPosition), stringPool);
+        }
+        
+        return fieldArray;
+    }
+#endif
     
     /// <summary>
     /// Creates string without unnecessary allocations
@@ -163,6 +285,20 @@ public static class CsvParser
         {
             return new string(ptr, 0, span.Length);
         }
+    }
+    
+    /// <summary>
+    /// Creates string with optional pooling for deduplication
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static unsafe string CreateString(ReadOnlySpan<char> span, StringPool? pool)
+    {
+        if (pool != null)
+        {
+            return pool.GetString(span);
+        }
+        
+        return CreateString(span);
     }
 
     /// <summary>
@@ -189,7 +325,7 @@ public static class CsvParser
             {
                 var field = line.Slice(fieldStart, i - fieldStart);
                 if (options.TrimWhitespace) field = field.Trim();
-                fields[fieldIndex++] = CreateString(field);
+                fields[fieldIndex++] = CreateString(field, options.StringPool);
                 fieldStart = i + 1;
             }
         }
@@ -199,7 +335,7 @@ public static class CsvParser
         {
             var field = line.Slice(fieldStart);
             if (options.TrimWhitespace) field = field.Trim();
-            fields[fieldIndex] = CreateString(field);
+            fields[fieldIndex] = CreateString(field, options.StringPool);
         }
 
         return fields;

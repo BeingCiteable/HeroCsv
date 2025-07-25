@@ -17,6 +17,7 @@ public class Program
             Console.WriteLine("Available benchmark suites:");
             Console.WriteLine("  quick         - Quick performance comparison (no complex setup)");
             Console.WriteLine("  simple        - Simplified comparison with major libraries (recommended)");
+            Console.WriteLine("  direct        - Direct comparison between FastCsv and Sep");
             Console.WriteLine("  original      - Original FastCsv internal benchmarks");
             Console.WriteLine();
             Console.WriteLine("Usage: dotnet run -- <suite-name>");
@@ -38,6 +39,11 @@ public class Program
                 BenchmarkRunner.Run<SimplifiedComparison>();
                 break;
                                 
+            case "direct":
+                Console.WriteLine("Running Direct FastCsv vs Sep Comparison...");
+                BenchmarkRunner.Run<DirectComparison>();
+                break;
+                
             case "original":
                 Console.WriteLine("Running Original FastCsv Benchmarks...");
                 BenchmarkRunner.Run<CsvParsingBenchmarks>();

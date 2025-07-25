@@ -161,7 +161,14 @@ BenchmarkDotNet.Artifacts/
 *.diagsession
 *.benchmarkdotnet.log
 
+## Unified benchmark results (new structure)
+BenchmarkResults/
+
 ## nul
 # This is a special file in Windows that represents a null device.
 # It is not a directory or file that should be ignored, but rather a device file.
 nul
+NUL
+
+## Claude
+.claude

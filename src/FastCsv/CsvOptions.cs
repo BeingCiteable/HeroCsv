@@ -12,7 +12,8 @@ public readonly struct CsvOptions(
     bool hasHeader = true,
     bool trimWhitespace = false,
     bool skipEmptyFields = false,
-    string? newLine = null)
+    string? newLine = null,
+    StringPool? stringPool = null)
 {
     /// <summary>
     /// The delimiter character (e.g., comma, semicolon, tab)
@@ -43,6 +44,11 @@ public readonly struct CsvOptions(
     /// The newline string to use when writing
     /// </summary>
     public readonly string NewLine = newLine ?? Environment.NewLine;
+    
+    /// <summary>
+    /// Optional string pool for deduplicating repeated string values
+    /// </summary>
+    public readonly StringPool? StringPool = stringPool;
 
     /// <summary>
     /// Default CSV options (comma-separated, quoted, with header)

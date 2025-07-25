@@ -1,5 +1,6 @@
 using FastCsv.Errors;
 using FastCsv.Validation;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace FastCsv;
@@ -310,32 +311,113 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     public IReadOnlyList<string[]> ReadAllRecords()
     {
         Reset();
-        var records = new List<string[]>();
-
-        // Use optimized path when possible
-        if (CanUseOptimizedPath())
+        
+        // Automatically select optimal parsing strategy based on data source
+        if (_dataSource is StringDataSource stringSource)
         {
-            // Use whole-buffer parsing with pre-computed field positions for maximum performance
-            foreach (var row in EnumerateRows())
-            {
-                var fields = new string[row.FieldCount];
-                for (int i = 0; i < row.FieldCount; i++)
-                {
-                    fields[i] = row[i].ToString();
-                }
-                records.Add(fields);
-            }
+            var buffer = stringSource.GetBuffer();
+            
+            // Pre-allocate list capacity for better performance
+            var estimatedRows = EstimateRowCount(buffer);
+            var records = new List<string[]>(estimatedRows);
+            
+            ParseBufferDirectly(buffer, records);
+            return records;
+        }
+        else if (_dataSource is MemoryDataSource memorySource)
+        {
+            var buffer = memorySource.GetBuffer();
+            
+            // Pre-allocate list capacity for better performance
+            var estimatedRows = EstimateRowCount(buffer);
+            var records = new List<string[]>(estimatedRows);
+            
+            ParseBufferDirectly(buffer, records);
+            return records;
         }
         else
         {
-            // Fallback to standard path for stream sources
+            // Stream-based sources require incremental parsing
+            var records = new List<string[]>();
             while (TryReadRecord(out var record))
             {
                 records.Add(record.ToArray());
             }
+            return records;
         }
+    }
+    
+    /// <summary>
+    /// Estimates row count for pre-allocation to reduce list resizing overhead
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int EstimateRowCount(ReadOnlySpan<char> buffer)
+    {
+        if (buffer.IsEmpty) return 0;
+        
+        // Quick estimation: count newlines for rough row count
+        var newlineCount = 0;
+        for (int i = 0; i < Math.Min(buffer.Length, 1000); i++)
+        {
+            if (buffer[i] == '\n') newlineCount++;
+        }
+        
+        // Extrapolate if we only sampled part of the buffer
+        if (buffer.Length > 1000)
+        {
+            newlineCount = (int)((long)newlineCount * buffer.Length / 1000);
+        }
+        
+        return Math.Max(16, newlineCount + 1);
+    }
 
-        return records;
+    /// <summary>
+    /// Parses CSV content using the fastest available method for the current platform
+    /// </summary>
+    private unsafe void ParseBufferDirectly(ReadOnlySpan<char> buffer, List<string[]> records)
+    {
+        // For maximum performance, work directly with the buffer like Sep/Sylvan
+        var position = 0;
+        var length = buffer.Length;
+        
+        // Skip header row if configured
+        if (_options.HasHeader && length > 0)
+        {
+            // Find end of header line
+            while (position < length && buffer[position] != '\r' && buffer[position] != '\n')
+                position++;
+            // Skip newline characters
+            if (position < length && buffer[position] == '\r') position++;
+            if (position < length && buffer[position] == '\n') position++;
+        }
+        
+        // Process all data rows with optimized parsing
+        fixed (char* bufferPtr = buffer)
+        {
+            while (position < length)
+            {
+                var lineStart = position;
+                
+                // Find end of current line
+                while (position < length && buffer[position] != '\r' && buffer[position] != '\n')
+                    position++;
+                
+                var lineLength = position - lineStart;
+                if (lineLength > 0)
+                {
+                    // Create span for current line without allocation
+                    var lineSpan = buffer.Slice(lineStart, lineLength);
+                    
+                    // Parse line with optimized parser (SIMD-enabled for common cases)
+                    var fields = CsvParser.ParseLine(lineSpan, _options);
+                    records.Add(fields);
+                }
+                
+                // Skip newline sequence (\r, \n, or \r\n)
+                if (position < length && buffer[position] == '\r') position++;
+                if (position < length && buffer[position] == '\n') position++;
+            }
+        }
     }
 
     /// <inheritdoc />
