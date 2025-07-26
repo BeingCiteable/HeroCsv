@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
+using FastCsv.Models;
 
-namespace FastCsv;
+namespace FastCsv.Parsing;
 
 /// <summary>
 /// Provides high-performance iteration over CSV fields without allocations
@@ -8,7 +9,7 @@ namespace FastCsv;
 public static class CsvFieldIterator
 {
     /// <summary>
-    /// Creates an iterator to efficiently process all fields in CSV data
+    /// Creates an iterator for field-by-field CSV processing
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static CsvFieldCollection IterateFields(ReadOnlySpan<char> data, CsvOptions options)
@@ -17,7 +18,7 @@ public static class CsvFieldIterator
     }
 
     /// <summary>
-    /// Represents a collection of CSV fields that can be enumerated
+    /// Collection of CSV fields for enumeration
     /// </summary>
     public readonly ref struct CsvFieldCollection
     {
@@ -34,7 +35,7 @@ public static class CsvFieldIterator
     }
 
     /// <summary>
-    /// Reads CSV fields one by one with minimal overhead
+    /// Zero-allocation CSV field reader
     /// </summary>
     public ref struct CsvFieldReader
     {
@@ -58,7 +59,6 @@ public static class CsvFieldIterator
             _rowIndex = -1;
             _fieldIndex = 0;
 
-            // Skip header if needed
             if (_hasHeader && _data.Length > 0)
             {
                 SkipLine();
@@ -70,7 +70,6 @@ public static class CsvFieldIterator
             if (_position >= _data.Length)
                 return false;
 
-            // New row
             if (_fieldIndex == 0)
             {
                 _rowIndex++;

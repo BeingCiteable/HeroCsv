@@ -1,8 +1,9 @@
 #if NET6_0_OR_GREATER
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using FastCsv.Core;
 
-namespace FastCsv;
+namespace FastCsv.Mapping;
 
 /// <summary>
 /// NET6+ hardware acceleration optimizations for CsvMapper
@@ -81,4 +82,5 @@ internal sealed partial class CsvMapper<T> where T : class, new()
         return Vector.IsHardwareAccelerated ? 1024 : 256;
     }
 }
+
 #endif

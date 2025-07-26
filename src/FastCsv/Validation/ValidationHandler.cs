@@ -1,4 +1,5 @@
 using FastCsv.Errors;
+using FastCsv.Models;
 
 namespace FastCsv.Validation;
 

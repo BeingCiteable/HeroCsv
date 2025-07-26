@@ -1,8 +1,9 @@
-namespace FastCsv;
+using FastCsv.Models;
+
+namespace FastCsv.Core;
 
 /// <summary>
 /// Core interface for CSV reading operations
-/// Focused on reading records and navigation
 /// </summary>
 #if NET6_0_OR_GREATER
 public partial interface ICsvReader : IDisposable, IAsyncDisposable
@@ -16,7 +17,7 @@ public partial interface ICsvReader : IDisposable
     int LineNumber { get; }
 
     /// <summary>
-    /// Whether there is more data to read
+    /// Indicates whether more data is available to read
     /// </summary>
     bool HasMoreData { get; }
 
@@ -47,47 +48,47 @@ public partial interface ICsvReader : IDisposable
     void SkipRecords(int count);
 
     /// <summary>
-    /// Get the current CSV options being used
+    /// CSV parsing options
     /// </summary>
     CsvOptions Options { get; }
 
     /// <summary>
-    /// Reset the reader to the beginning
+    /// Resets the reader to the beginning
     /// </summary>
     void Reset();
 
     /// <summary>
-    /// Read all records into a list
+    /// Reads all records into a list
     /// </summary>
-    /// <returns>List of all CSV records as string arrays</returns>
+    /// <returns>All CSV records</returns>
     IReadOnlyList<string[]> ReadAllRecords();
 
     /// <summary>
-    /// Read all records asynchronously into a list
+    /// Reads all records asynchronously into a list
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of all CSV records as string arrays</returns>
+    /// <returns>All CSV records</returns>
     Task<IReadOnlyList<string[]>> ReadAllRecordsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get records as enumerable
+    /// Gets records as enumerable for streaming
     /// </summary>
-    /// <returns>Enumerable of CSV records as string arrays</returns>
+    /// <returns>CSV records</returns>
     IEnumerable<string[]> GetRecords();
 
 
     /// <summary>
-    /// Count the total number of records without parsing fields
+    /// Counts records without parsing fields for optimal performance
     /// </summary>
-    /// <returns>Total number of records</returns>
+    /// <returns>Record count</returns>
     int CountRecords();
-    
-    
+
+
 
     /// <summary>
-    /// Get validation results if validation is enabled
+    /// Validation results (empty if validation disabled)
     /// </summary>
     CsvValidationResult ValidationResult { get; }
-    
+
 
 }

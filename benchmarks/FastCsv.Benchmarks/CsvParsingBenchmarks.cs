@@ -1,6 +1,7 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnostics.Windows.Configs;
 using System.Text;
+using FastCsv; // For Csv static class
 
 namespace FastCsv.Benchmarks;
 

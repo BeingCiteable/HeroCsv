@@ -1,7 +1,9 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using FastCsv.Core;
+using FastCsv.Models;
 
-namespace FastCsv;
+namespace FastCsv.Mapping;
 
 /// <summary>
 /// High-performance CSV to object mapper with auto, manual, and mixed mapping support

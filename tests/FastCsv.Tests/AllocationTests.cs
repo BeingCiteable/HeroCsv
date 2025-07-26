@@ -1,6 +1,10 @@
 using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using FastCsv.Core;
+using FastCsv.Models;
+using FastCsv.Parsing;
+using FastCsv.Utilities;
 using Xunit;
 
 namespace FastCsv.Tests;
@@ -32,12 +36,12 @@ ID,Name,Email,Age,City,Country,Phone,Status,Score,Date
     {
         // Warmup to ensure JIT compilation
         _ = Csv.CountRecords(SimpleCsvData, CsvOptions.Default);
-        
+
         // Measure allocations
         var allocationsBefore = GC.GetAllocatedBytesForCurrentThread();
         var count = Csv.CountRecords(LargeCsvData, CsvOptions.Default);
         var allocationsAfter = GC.GetAllocatedBytesForCurrentThread();
-        
+
         // Assert zero allocations (allowing small tolerance for measurement overhead)
         var allocatedBytes = allocationsAfter - allocationsBefore;
         Assert.True(allocatedBytes < 100, $"CountRecords allocated {allocatedBytes} bytes, expected near zero");
@@ -52,27 +56,27 @@ ID,Name,Email,Age,City,Country,Phone,Status,Score,Date
     {
         using var reader = Csv.CreateReader(LargeCsvData);
         var fastReader = (FastCsvReader)reader;
-        
+
         // Warmup
         foreach (var row in fastReader.EnumerateRows())
         {
             _ = row.FieldCount;
             break;
         }
-        
+
         // Reset reader
         reader.Reset();
-        
+
         // Measure allocations for enumeration without string creation
         var allocationsBefore = GC.GetAllocatedBytesForCurrentThread();
         var rowCount = 0;
         var fieldCount = 0;
-        
+
         foreach (var row in fastReader.EnumerateRows())
         {
             rowCount++;
             fieldCount += row.FieldCount;
-            
+
             // Access fields as spans (no allocation)
             for (int i = 0; i < row.FieldCount; i++)
             {
@@ -80,10 +84,10 @@ ID,Name,Email,Age,City,Country,Phone,Status,Score,Date
                 _ = span.Length; // Use the span without creating string
             }
         }
-        
+
         var allocationsAfter = GC.GetAllocatedBytesForCurrentThread();
         var allocatedBytes = allocationsAfter - allocationsBefore;
-        
+
         // EnumerateRows should have minimal allocations (only for internal arrays)
         // Allowing up to 2KB for internal structures and arrays
         Assert.True(allocatedBytes < 2048, $"EnumerateRows allocated {allocatedBytes} bytes, expected < 2KB");
@@ -98,18 +102,18 @@ ID,Name,Email,Age,City,Country,Phone,Status,Score,Date
     public void CsvFieldIterator_ShouldHaveZeroAllocations()
     {
         var options = CsvOptions.Default;
-        
+
         // Warmup
         foreach (var field in CsvFieldIterator.IterateFields(SimpleCsvData.AsSpan(), options))
         {
             _ = field.Value.Length;
             break;
         }
-        
+
         // Measure allocations
         var allocationsBefore = GC.GetAllocatedBytesForCurrentThread();
         var fieldCount = 0;
-        
+
         foreach (var field in CsvFieldIterator.IterateFields(LargeCsvData.AsSpan(), options))
         {
             fieldCount++;
@@ -117,10 +121,10 @@ ID,Name,Email,Age,City,Country,Phone,Status,Score,Date
             _ = field.RowIndex;
             _ = field.FieldIndex;
         }
-        
+
         var allocationsAfter = GC.GetAllocatedBytesForCurrentThread();
         var allocatedBytes = allocationsAfter - allocationsBefore;
-        
+
         // CsvFieldIterator should have true zero allocations
         Assert.Equal(0, allocatedBytes);
         Assert.Equal(50, fieldCount); // 5 data rows * 10 fields (excluding header)
@@ -134,15 +138,15 @@ ID,Name,Email,Age,City,Country,Phone,Status,Score,Date
     {
         using var reader = Csv.CreateReader(SimpleCsvData);
         var fastReader = (FastCsvReader)reader;
-        
+
         // Skip header
         reader.Reset();
         reader.SkipRecord();
-        
+
         // Measure allocations for string creation
         var allocationsBefore = GC.GetAllocatedBytesForCurrentThread();
         var totalLength = 0;
-        
+
         foreach (var row in fastReader.EnumerateRows())
         {
             for (int i = 0; i < row.FieldCount; i++)
@@ -151,14 +155,14 @@ ID,Name,Email,Age,City,Country,Phone,Status,Score,Date
                 totalLength += str.Length;
             }
         }
-        
+
         var allocationsAfter = GC.GetAllocatedBytesForCurrentThread();
         var allocatedBytes = allocationsAfter - allocationsBefore;
-        
+
         // Should allocate approximately the size of the strings created
         // Each string has overhead (24 bytes on 64-bit) + character data (2 bytes per char)
         var expectedMinimum = totalLength * 2; // Just character data
-        Assert.True(allocatedBytes >= expectedMinimum, 
+        Assert.True(allocatedBytes >= expectedMinimum,
             $"Expected at least {expectedMinimum} bytes for string data, but allocated {allocatedBytes}");
     }
 
@@ -170,23 +174,23 @@ ID,Name,Email,Age,City,Country,Phone,Status,Score,Date
     {
         var line = "John,25,NYC,USA,Active".AsSpan();
         var options = CsvOptions.Default;
-        
+
         // Warmup
         _ = CsvParser.ParseLine(line, options);
-        
+
         // Measure allocations
         var allocationsBefore = GC.GetAllocatedBytesForCurrentThread();
-        
+
         for (int i = 0; i < 100; i++)
         {
             var fields = CsvParser.ParseLine(line, options);
             // ParseLine should return 5 fields for comma-delimited line
             Assert.Equal(5, fields.Length);
         }
-        
+
         var allocationsAfter = GC.GetAllocatedBytesForCurrentThread();
         var allocatedBytesPerIteration = (allocationsAfter - allocationsBefore) / 100.0;
-        
+
         // Each parse should allocate: array + strings
         // Array overhead: ~40 bytes
         // 5 strings: "John" (4), "25" (2), "NYC" (3), "USA" (3), "Active" (6) = 18 chars total
@@ -194,7 +198,7 @@ ID,Name,Email,Age,City,Country,Phone,Status,Score,Date
         // Character data: 18 chars * 2 bytes = 36 bytes
         // Total expected: 40 + 120 + 36 = ~196 bytes minimum
         // Allow for additional overhead
-        Assert.True(allocatedBytesPerIteration < 1000, 
+        Assert.True(allocatedBytesPerIteration < 1000,
             $"ParseLine allocated {allocatedBytesPerIteration} bytes per iteration, expected < 1000");
     }
 
@@ -214,7 +218,7 @@ Active,A,Standard";
         var pool = new StringPool();
         var optionsWithPool = new CsvOptions(',', '"', true, false, false, null, pool);
         var optionsWithoutPool = CsvOptions.Default;
-        
+
         // Measure without pool
         var allocationsBefore = GC.GetAllocatedBytesForCurrentThread();
         using (var reader = Csv.CreateReader(csvWithRepeatedValues, optionsWithoutPool))
@@ -223,7 +227,7 @@ Active,A,Standard";
             Assert.Equal(5, records.Count); // 5 data rows (header skipped by default)
         }
         var allocationsWithoutPool = GC.GetAllocatedBytesForCurrentThread() - allocationsBefore;
-        
+
         // Measure with pool
         allocationsBefore = GC.GetAllocatedBytesForCurrentThread();
         using (var reader = Csv.CreateReader(csvWithRepeatedValues, optionsWithPool))
@@ -232,11 +236,11 @@ Active,A,Standard";
             Assert.Equal(5, records.Count); // 5 data rows (header skipped by default)
         }
         var allocationsWithPool = GC.GetAllocatedBytesForCurrentThread() - allocationsBefore;
-        
+
         // Pool might have initial overhead from ConcurrentDictionary, but should still show benefit
         // For small datasets, the overhead might actually be higher
         // Let's just verify that StringPool works (not necessarily reduces allocations for small data)
-        Assert.True(allocationsWithPool > 0, 
+        Assert.True(allocationsWithPool > 0,
             $"StringPool test completed: {allocationsWithPool} bytes with pool vs {allocationsWithoutPool} bytes without");
     }
 

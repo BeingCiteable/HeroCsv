@@ -1,3 +1,5 @@
+using FastCsv.Models;
+
 namespace FastCsv.Validation;
 
 /// <summary>

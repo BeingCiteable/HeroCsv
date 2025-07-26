@@ -1,4 +1,4 @@
-namespace FastCsv;
+namespace FastCsv.Models;
 
 /// <summary>
 /// Represents the result of CSV validation including any errors found

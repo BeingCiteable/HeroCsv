@@ -28,20 +28,20 @@ public class Program
 
         // Real data benchmark command
         var realDataCommand = new Command("realdata", "Run real CSV file performance benchmarks");
-        
+
         var quickOption = new Option<bool>("--quick", "-q")
         {
             Description = "Run quick subset of tests (faster execution)"
         };
-            
+
         var noExportOption = new Option<bool>("--no-export")
         {
             Description = "Skip exporting results to files"
         };
-            
+
         realDataCommand.Add(quickOption);
         realDataCommand.Add(noExportOption);
-        
+
         realDataCommand.SetAction(parseResult =>
         {
             var output = parseResult.GetValue(outputOption);
@@ -54,7 +54,7 @@ public class Program
 
         // Library comparison commands
         var libraryCommand = new Command("library", "Compare FastCsv with other CSV libraries");
-        
+
         var simpleCompareCommand = new Command("simple", "Simplified comparison with major libraries");
         var rowsOption1 = new Option<int>("--rows", "-r")
         {
@@ -66,7 +66,7 @@ public class Program
             Description = "Number of benchmark iterations",
             DefaultValueFactory = _ => 10
         };
-        
+
         simpleCompareCommand.Add(rowsOption1);
         simpleCompareCommand.Add(iterationsOption1);
         simpleCompareCommand.SetAction(parseResult =>
@@ -90,7 +90,7 @@ public class Program
             Description = "Number of benchmark iterations",
             DefaultValueFactory = _ => 10
         };
-            
+
         directCompareCommand.Add(rowsOption2);
         directCompareCommand.Add(iterationsOption2);
         directCompareCommand.SetAction(parseResult =>
@@ -108,7 +108,7 @@ public class Program
 
         // Performance analysis commands
         var perfCommand = new Command("perf", "Performance analysis and profiling");
-        
+
         var quickPerfCommand = new Command("quick", "Quick performance comparison");
         var rowsOption3 = new Option<int>("--rows", "-r")
         {
@@ -120,7 +120,7 @@ public class Program
             Description = "Number of benchmark iterations",
             DefaultValueFactory = _ => 10
         };
-            
+
         quickPerfCommand.Add(rowsOption3);
         quickPerfCommand.Add(iterationsOption3);
         quickPerfCommand.SetAction(parseResult =>
@@ -175,28 +175,28 @@ public class Program
     private static void RunSimpleComparison(DirectoryInfo? output, bool verbose, int rows, int iterations)
     {
         if (verbose) AnsiConsole.MarkupLine($"[yellow]📊 Running Library Comparison[/] [grey](rows: {rows}, iterations: {iterations})[/]");
-        
+
         BenchmarkRunner.Run<SimplifiedComparison>(CreateUnifiedConfig("SimplifiedComparison", output));
     }
 
     private static void RunDirectComparison(DirectoryInfo? output, bool verbose, int rows, int iterations)
     {
         if (verbose) AnsiConsole.MarkupLine($"[yellow]⚔️  Running Direct FastCsv vs Sep Comparison[/] [grey](rows: {rows}, iterations: {iterations})[/]");
-        
+
         BenchmarkRunner.Run<DirectComparison>(CreateUnifiedConfig("DirectComparison", output));
     }
 
     private static void RunQuickPerformance(DirectoryInfo? output, bool verbose, int rows, int iterations)
     {
         if (verbose) AnsiConsole.MarkupLine($"[yellow]🏃 Running Quick Performance Analysis[/] [grey](rows: {rows}, iterations: {iterations})[/]");
-        
+
         QuickBenchmark.RunComparison();
     }
 
     private static void RunInternalBenchmarks(DirectoryInfo? output, bool verbose)
     {
         if (verbose) AnsiConsole.MarkupLine("[yellow]🧪 Running Internal FastCsv Benchmarks[/]");
-        
+
         BenchmarkRunner.Run<CsvParsingBenchmarks>(CreateUnifiedConfig("CsvParsingBenchmarks", output));
     }
 
@@ -220,11 +220,11 @@ public class Program
             .Border(TableBorder.Rounded)
             .AddColumn("[yellow]Command[/]")
             .AddColumn("[yellow]Description[/]");
-        
+
         typesTable.AddRow("[green]realdata[/]", "Real CSV files performance testing");
         typesTable.AddRow("[green]library[/]", "Compare with other CSV libraries");
         typesTable.AddRow("[green]perf[/]", "Performance analysis and profiling");
-        
+
         var typesPanel = new Panel(typesTable)
             .Header("[blue]🏆 Benchmark Types[/]")
             .Expand()
@@ -245,7 +245,7 @@ public class Program
             "[green]• Markdown[/] - Human-readable reports",
             "[green]• HTML[/] - Interactive web reports"
         );
-        
+
         var formatsPanel = new Panel(formatsGrid)
             .Header("[blue]📊 Export Formats[/]")
             .Expand()
@@ -262,25 +262,25 @@ public class Program
             if (Directory.Exists(testDataDir))
             {
                 var files = Directory.GetFiles(testDataDir, "*.csv").OrderBy(f => f);
-                
+
                 var table = new Table()
                     .Border(TableBorder.None)
                     .AddColumn("[cyan]File[/]")
                     .AddColumn(new TableColumn("[cyan]Size[/]").RightAligned());
-                
+
                 foreach (var file in files)
                 {
                     var fileName = Path.GetFileName(file);
                     var fileInfo = new FileInfo(file);
                     var size = FormatFileSize(fileInfo.Length);
-                    
+
                     var sizeColor = fileInfo.Length > 1_000_000 ? "red" :
                                    fileInfo.Length > 100_000 ? "yellow" :
                                    fileInfo.Length > 10_000 ? "green" : "grey";
-                    
+
                     table.AddRow($"{fileName}", $"[{sizeColor}]{size}[/]");
                 }
-                
+
                 return table;
             }
             else
@@ -297,7 +297,7 @@ public class Program
     private static IConfig CreateUnifiedConfig(string benchmarkType, DirectoryInfo? customOutput)
     {
         string outputDir;
-        
+
         if (customOutput != null)
         {
             outputDir = Path.Combine(customOutput.FullName, "BenchmarkDotNet", benchmarkType);
@@ -313,7 +313,7 @@ public class Program
     private static string? FindSolutionRoot()
     {
         var current = new DirectoryInfo(Directory.GetCurrentDirectory());
-        
+
         while (current != null)
         {
             if (current.GetFiles("*.sln").Length > 0)
@@ -322,7 +322,7 @@ public class Program
             }
             current = current.Parent;
         }
-        
+
         return null;
     }
 

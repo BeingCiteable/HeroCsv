@@ -15,7 +15,7 @@ public static class TestDataHelper
         // Get the directory where the test assembly is located
         var assemblyLocation = Assembly.GetExecutingAssembly().Location;
         var assemblyDirectory = Path.GetDirectoryName(assemblyLocation);
-        
+
         // Navigate to the TestData directory
         TestDataDirectory = Path.Combine(assemblyDirectory!, "..", "..", "..", "..", "TestData");
         TestDataDirectory = Path.GetFullPath(TestDataDirectory);

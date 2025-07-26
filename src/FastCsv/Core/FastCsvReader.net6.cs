@@ -3,8 +3,10 @@ using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using FastCsv.DataSources;
+using FastCsv.Parsing;
 
-namespace FastCsv;
+namespace FastCsv.Core;
 
 /// <summary>
 /// Async operations for FastCsvReader
@@ -24,30 +26,30 @@ public sealed partial class FastCsvReader
         if (_dataSource is IAsyncCsvDataSource asyncSource)
         {
             bool headerSkipped = !_options.HasHeader; // If no header, consider it already skipped
-            
+
             while (!cancellationToken.IsCancellationRequested)
             {
                 var result = await asyncSource.TryReadLineAsync(cancellationToken).ConfigureAwait(false);
                 if (!result.success) break;
-                
+
                 // Skip empty lines
                 if (string.IsNullOrEmpty(result.line)) continue;
-                
+
                 // Skip header if configured and not yet skipped
                 if (_options.HasHeader && !headerSkipped)
                 {
                     headerSkipped = true;
                     continue;
                 }
-                
+
                 var fields = CsvParser.ParseLine(result.line.AsSpan(), _options);
-                
+
                 // Perform validation if enabled
                 if (_validationHandler.IsEnabled || _errorHandler.IsEnabled)
                 {
                     _validationHandler.ValidateRecord(fields, result.lineNumber, _validationHandler.ExpectedFieldCount);
                 }
-                
+
                 _recordCount++;
                 yield return fields;
             }
@@ -62,4 +64,5 @@ public sealed partial class FastCsvReader
         }
     }
 }
+
 #endif

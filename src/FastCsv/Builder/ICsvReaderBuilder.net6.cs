@@ -1,7 +1,7 @@
 #if NET6_0_OR_GREATER
 using System;
 
-namespace FastCsv;
+namespace FastCsv.Builder;
 
 /// <summary>
 /// Optimization options for ICsvReaderBuilder
@@ -15,4 +15,5 @@ public partial interface ICsvReaderBuilder
     /// <returns>Configuration builder for additional options</returns>
     ICsvReaderBuilder WithHardwareAcceleration(bool enabled = true);
 }
+
 #endif

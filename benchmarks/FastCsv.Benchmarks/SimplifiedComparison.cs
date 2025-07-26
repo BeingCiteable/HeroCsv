@@ -3,6 +3,7 @@ using CsvHelper;
 using System.Globalization;
 using System.Text;
 using nietras.SeparatedValues;
+using FastCsv; // For Csv static class
 
 namespace FastCsv.Benchmarks;
 
@@ -31,17 +32,17 @@ public class SimplifiedComparison
     {
         var sb = new StringBuilder();
         sb.AppendLine("ID,Name,Email,Age,City,Country");
-        
+
         for (int i = 0; i < rows; i++)
         {
             sb.AppendLine($"{i},Person{i},person{i}@example.com,{25 + i % 50},City{i % 20},Country{i % 5}");
         }
-        
+
         return sb.ToString();
     }
 
     // ============= FastCsv (Our Implementation) =============
-    
+
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("FastCsv")]
     public int FastCsv_String()
@@ -73,14 +74,14 @@ public class SimplifiedComparison
     }
 
     // ============= CsvHelper (Most Popular) =============
-    
+
     [Benchmark]
     [BenchmarkCategory("CsvHelper")]
     public int CsvHelper_ReadAll()
     {
         using var reader = new StringReader(_testCsv);
         using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-        
+
         var count = 0;
         while (csv.Read())
         {
@@ -95,7 +96,7 @@ public class SimplifiedComparison
     {
         using var reader = new StringReader(_testCsv);
         using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-        
+
         var records = csv.GetRecords<dynamic>().ToList();
         return records.Count;
     }
@@ -108,7 +109,7 @@ public class SimplifiedComparison
     {
         using var reader = new StringReader(_testCsv);
         using var csv = Sylvan.Data.Csv.CsvDataReader.Create(reader);
-        
+
         var count = 0;
         while (csv.Read())
         {
@@ -124,7 +125,7 @@ public class SimplifiedComparison
     public int Sep_ReadAll()
     {
         using var reader = Sep.Reader().FromText(_testCsv);
-        
+
         var count = 0;
         foreach (var row in reader)
         {
@@ -138,7 +139,7 @@ public class SimplifiedComparison
     public int Sep_CountOnly()
     {
         using var reader = Sep.Reader().FromText(_testCsv);
-        
+
         var count = 0;
         foreach (var row in reader)
         {
@@ -155,7 +156,7 @@ public class SimplifiedComparison
     {
         using var reader = new StringReader(_testCsv);
         using var csv = new LumenWorks.Framework.IO.Csv.CsvReader(reader, true);
-        
+
         var count = 0;
         while (csv.ReadNextRecord())
         {

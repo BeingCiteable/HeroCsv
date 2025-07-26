@@ -1,12 +1,16 @@
+using FastCsv.Core;
+using FastCsv.Mapping;
+using FastCsv.Models;
+
 namespace FastCsv;
 
 /// <summary>
-/// Extension methods for ICsvRecord
+/// Extension methods for CSV record operations
 /// </summary>
 public static class ExtensionsToICsvRecord
 {
     /// <summary>
-    /// Convert CSV record to string array
+    /// Converts record to string array
     /// </summary>
     public static string[] ToArray(this ICsvRecord record)
     {
@@ -24,30 +28,23 @@ public static class ExtensionsToICsvRecord
     }
 
     /// <summary>
-    /// Convert CSV record to a dictionary using provided headers
+    /// Converts record to dictionary using headers as keys
     /// </summary>
-    /// <param name="record">CSV record to convert</param>
-    /// <param name="headers">Column headers to use as keys</param>
-    /// <returns>Dictionary mapping headers to field values</returns>
     public static Dictionary<string, string> ToDictionary(this ICsvRecord record, string[] headers)
     {
         var result = new Dictionary<string, string>(Math.Min(headers.Length, record.FieldCount));
-        
+
         for (int i = 0; i < Math.Min(headers.Length, record.FieldCount); i++)
         {
             result[headers[i]] = record.GetField(i).ToString();
         }
-        
+
         return result;
     }
 
     /// <summary>
-    /// Maps CSV record to the specified type using auto mapping
+    /// Maps record to object using auto mapping
     /// </summary>
-    /// <typeparam name="T">Type to map to</typeparam>
-    /// <param name="record">CSV record to map</param>
-    /// <param name="headers">Column headers for mapping</param>
-    /// <returns>Mapped object instance</returns>
     public static T MapTo<T>(this ICsvRecord record, string[] headers) where T : class, new()
     {
         var mapper = new CsvMapper<T>(CsvOptions.Default);
@@ -56,12 +53,8 @@ public static class ExtensionsToICsvRecord
     }
 
     /// <summary>
-    /// Maps CSV record to the specified type using custom mapping
+    /// Maps record to object using custom mapping
     /// </summary>
-    /// <typeparam name="T">Type to map to</typeparam>
-    /// <param name="record">CSV record to map</param>
-    /// <param name="mapping">Custom mapping configuration</param>
-    /// <returns>Mapped object instance</returns>
     public static T MapTo<T>(this ICsvRecord record, CsvMapping<T> mapping) where T : class, new()
     {
         var mapper = new CsvMapper<T>(mapping);
@@ -69,42 +62,33 @@ public static class ExtensionsToICsvRecord
     }
 
     /// <summary>
-    /// Gets a field value as a specific type
+    /// Gets field value as specific type
     /// </summary>
-    /// <typeparam name="T">Type to convert to</typeparam>
-    /// <param name="record">CSV record</param>
-    /// <param name="index">Field index</param>
-    /// <returns>Converted field value</returns>
     public static T GetField<T>(this ICsvRecord record, int index)
     {
         var field = record.GetField(index);
         var value = field.ToString();
-        
+
         if (typeof(T) == typeof(string))
         {
             return (T)(object)value;
         }
-        
+
         return (T)Convert.ChangeType(value, typeof(T));
     }
 
     /// <summary>
-    /// Tries to get a field value as a specific type
+    /// Attempts to get field value as specific type
     /// </summary>
-    /// <typeparam name="T">Type to convert to</typeparam>
-    /// <param name="record">CSV record</param>
-    /// <param name="index">Field index</param>
-    /// <param name="value">Output value</param>
-    /// <returns>True if conversion was successful</returns>
     public static bool TryGetField<T>(this ICsvRecord record, int index, out T? value)
     {
         value = default;
-        
+
         if (!record.TryGetField(index, out var field))
         {
             return false;
         }
-        
+
         try
         {
             var fieldValue = field.ToString();
@@ -113,7 +97,7 @@ public static class ExtensionsToICsvRecord
                 value = (T)(object)fieldValue;
                 return true;
             }
-            
+
             value = (T)Convert.ChangeType(fieldValue, typeof(T));
             return true;
         }
@@ -135,7 +119,7 @@ public static class ExtensionsToICsvRecord
         {
             return true;
         }
-        
+
         return field.IsEmpty || field.IsWhiteSpace();
     }
 
@@ -147,7 +131,7 @@ public static class ExtensionsToICsvRecord
     public static string[] GetNonEmptyFields(this ICsvRecord record)
     {
         var result = new List<string>();
-        
+
         for (int i = 0; i < record.FieldCount; i++)
         {
             if (!record.IsFieldEmpty(i))
@@ -155,7 +139,7 @@ public static class ExtensionsToICsvRecord
                 result.Add(record.GetField(i).ToString());
             }
         }
-        
+
         return [.. result];
     }
 

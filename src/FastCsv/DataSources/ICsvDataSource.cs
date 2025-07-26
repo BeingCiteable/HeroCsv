@@ -1,6 +1,7 @@
 using System.Text;
+using FastCsv.Parsing;
 
-namespace FastCsv;
+namespace FastCsv.DataSources;
 
 /// <summary>
 /// Provides abstraction for CSV data sources (string, span, stream) without allocations

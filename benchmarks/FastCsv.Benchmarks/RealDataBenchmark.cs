@@ -3,6 +3,8 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using Spectre.Console;
+using FastCsv; // For Csv static class
+using FastCsv.Models; // For CsvOptions
 
 namespace FastCsv.Benchmarks;
 
@@ -24,7 +26,7 @@ public class RealDataBenchmark
         AnsiConsole.Clear();
         AnsiConsole.Write(new Rule("[yellow]FastCsv Real Data Performance Analysis[/]").RuleStyle(Style.Parse("yellow")));
         AnsiConsole.WriteLine();
-        
+
         var resultSet = new BenchmarkResultSet
         {
             BenchmarkSuite = "FastCsv Real Data Performance",
@@ -44,7 +46,7 @@ public class RealDataBenchmark
         foreach (var (fileName, description) in testFiles)
         {
             var filePath = Path.Combine(TestDataDirectory, fileName);
-            
+
             if (!File.Exists(filePath))
             {
                 AnsiConsole.MarkupLine($"[yellow]⚠️  Skipping {fileName} - file not found[/]");
@@ -53,10 +55,10 @@ public class RealDataBenchmark
 
             AnsiConsole.MarkupLine($"[cyan]📄 {description}[/]");
             AnsiConsole.MarkupLine($"[grey]File:[/] {fileName}");
-            
+
             var fileInfo = new FileInfo(filePath);
             AnsiConsole.MarkupLine($"[grey]Size:[/] {FormatFileSize(fileInfo.Length)}");
-            
+
             BenchmarkFile(filePath, fileName, description, resultSet);
             AnsiConsole.WriteLine();
         }
@@ -69,7 +71,7 @@ public class RealDataBenchmark
             AnsiConsole.Write(new Rule("[red]🚀 EXTREME PERFORMANCE TEST[/]").RuleStyle(Style.Parse("red")));
             BenchmarkLargeFile(hugeFile, resultSet);
         }
-        
+
         // Export results in all formats to consistent directory
         var outputDir = BenchmarkExporter.GetBenchmarkOutputDirectory("RealData");
         BenchmarkExporter.ExportAll(resultSet, outputDir);
@@ -77,7 +79,7 @@ public class RealDataBenchmark
 
     private static void BenchmarkFile(string filePath, string fileName, string description, BenchmarkResultSet resultSet)
     {
-        var options = new global::FastCsv.CsvOptions(hasHeader: true);
+        var options = new CsvOptions(hasHeader: true);
         int iterations = fileName.Contains("large") ? 5 : 20; // Fewer iterations for large files
 
         var fileInfo = new FileInfo(filePath);
@@ -153,8 +155,8 @@ public class RealDataBenchmark
     {
         var fileInfo = new FileInfo(filePath);
         AnsiConsole.MarkupLine($"[grey]File:[/] huge_dataset.csv ([cyan]{FormatFileSize(fileInfo.Length)}[/])");
-        
-        var options = new global::FastCsv.CsvOptions(hasHeader: true);
+
+        var options = new CsvOptions(hasHeader: true);
 
         // Ultra-fast count only
         var countTime = BenchmarkAction(() =>

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using FastCsv.Models;
 using Xunit;
 
 namespace FastCsv.Tests;

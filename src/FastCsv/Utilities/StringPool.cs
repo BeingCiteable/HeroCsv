@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
-namespace FastCsv;
+namespace FastCsv.Utilities;
 
 /// <summary>
 /// Provides string deduplication to reduce memory usage when reading CSV files with repeated values

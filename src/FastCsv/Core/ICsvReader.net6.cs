@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace FastCsv;
+namespace FastCsv.Core;
 
 /// <summary>
 /// IAsyncEnumerable operations for ICsvReader (.NET 6.0+)
@@ -18,4 +18,5 @@ public partial interface ICsvReader
     /// <returns>Async enumerable of CSV records as string arrays</returns>
     IAsyncEnumerable<string[]> ReadRecordsAsync(CancellationToken cancellationToken = default);
 }
+
 #endif

@@ -1,4 +1,4 @@
-namespace FastCsv;
+namespace FastCsv.Core;
 
 /// <summary>
 /// Represents a single CSV record with field access

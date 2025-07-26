@@ -1,4 +1,4 @@
-namespace FastCsv;
+namespace FastCsv.Models;
 
 /// <summary>
 /// Contains the results of a CSV read operation including records and validation information

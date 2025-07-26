@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace FastCsv;
+namespace FastCsv.Parsing;
 
 /// <summary>
 /// Enumerates CSV fields from a line without allocating memory

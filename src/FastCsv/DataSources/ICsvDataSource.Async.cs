@@ -1,7 +1,7 @@
 #if NET6_0_OR_GREATER
 using System.Runtime.CompilerServices;
 
-namespace FastCsv;
+namespace FastCsv.DataSources;
 
 /// <summary>
 /// Async operations for CSV data sources
@@ -48,4 +48,5 @@ internal static class CsvDataSourceAsyncExtensions
         return new ValueTask<int>(source.CountLinesDirectly());
     }
 }
+
 #endif

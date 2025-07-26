@@ -1,11 +1,10 @@
-namespace FastCsv;
+using FastCsv.Utilities;
+
+namespace FastCsv.Models;
 
 /// <summary>
 /// Configuration for CSV parsing and writing operations
 /// </summary>
-/// <remarks>
-/// Creates a new CsvOptions instance with the specified settings
-/// </remarks>
 public readonly struct CsvOptions(
     char delimiter = ',',
     char quote = '"',
@@ -16,42 +15,42 @@ public readonly struct CsvOptions(
     StringPool? stringPool = null)
 {
     /// <summary>
-    /// The delimiter character (e.g., comma, semicolon, tab)
+    /// Field delimiter character
     /// </summary>
     public readonly char Delimiter = delimiter;
 
     /// <summary>
-    /// The quote character for escaping fields
+    /// Quote character for field escaping
     /// </summary>
     public readonly char Quote = quote;
 
     /// <summary>
-    /// Whether the CSV has a header row
+    /// Indicates if first row contains headers
     /// </summary>
     public readonly bool HasHeader = hasHeader;
 
     /// <summary>
-    /// Whether to trim whitespace from fields
+    /// Trim leading and trailing whitespace from fields
     /// </summary>
     public readonly bool TrimWhitespace = trimWhitespace;
 
     /// <summary>
-    /// Whether to skip empty fields during mapping
+    /// Skip empty fields during object mapping
     /// </summary>
     public readonly bool SkipEmptyFields = skipEmptyFields;
 
     /// <summary>
-    /// The newline string to use when writing
+    /// Line terminator for CSV writing
     /// </summary>
     public readonly string NewLine = newLine ?? Environment.NewLine;
-    
+
     /// <summary>
-    /// Optional string pool for deduplicating repeated string values
+    /// String pool for memory optimization with repeated values
     /// </summary>
     public readonly StringPool? StringPool = stringPool;
 
     /// <summary>
-    /// Default CSV options (comma-separated, quoted, with header)
+    /// Default CSV configuration
     /// </summary>
     public static CsvOptions Default => new(',', '"', true);
 }

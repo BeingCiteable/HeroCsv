@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using FastCsv.Models;
 using Xunit;
 
 namespace FastCsv.Tests;
@@ -52,10 +53,10 @@ public class RealDataTests
 
         // Assert
         Assert.Equal(10, records.Count);
-        
+
         // Check quoted field with comma inside
         Assert.Equal("Electronics, Computers", records[0][2]); // Category
-        
+
         // Check quoted field with escaped quotes
         Assert.Equal("High-performance laptop with \"cutting-edge\" technology", records[0][5]); // Description
     }
@@ -152,7 +153,7 @@ public class RealDataTests
 
         // Assert
         Assert.Equal(1000, records.Count);
-        
+
         // Verify structure
         Assert.Equal(10, records[0].Length); // Should have 10 columns
         Assert.Contains("@company.com", records[0][3]); // Email format
@@ -204,7 +205,7 @@ public class RealDataTests
 
         // Assert
         Assert.Equal(syncRecords.Count, asyncRecords.Count);
-        
+
         for (int i = 0; i < syncRecords.Count; i++)
         {
             Assert.Equal(syncRecords[i].Length, asyncRecords[i].Length);
@@ -233,7 +234,7 @@ public class RealDataTests
         await foreach (var record in Csv.ReadFileAsyncEnumerable(filePath, options, null, CancellationToken.None))
         {
             records.Add(record);
-            
+
             // Only process first 100 records for test speed
             if (records.Count >= 100)
                 break;
@@ -253,7 +254,7 @@ public class RealDataTests
 
         // Assert
         Assert.True(files.Length >= 10); // Should have at least our basic test files
-        
+
         // Verify some key files exist
         Assert.True(TestDataHelper.TestFileExists(TestDataHelper.Files.Simple));
         Assert.True(TestDataHelper.TestFileExists(TestDataHelper.Files.Employees));
@@ -268,7 +269,7 @@ public class RealDataTests
 
         // Assert
         Assert.Equal(0, size); // Empty file should be 0 bytes
-        
+
         // Check non-empty file has positive size
         var employeesSize = TestDataHelper.GetTestFileSize(TestDataHelper.Files.Employees);
         Assert.True(employeesSize > 0);
@@ -282,9 +283,9 @@ public class RealDataTests
 
         // Act & Assert - Should not throw, but may have inconsistent field counts
         var records = Csv.ReadAllRecords(TestDataHelper.ReadTestFile(TestDataHelper.Files.Malformed), options);
-        
+
         Assert.True(records.Count > 0); // Should still read some records
-        
+
         // First record should have correct number of fields
         Assert.Equal(4, records[0].Length);
     }

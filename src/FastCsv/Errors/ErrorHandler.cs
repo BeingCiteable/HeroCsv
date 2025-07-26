@@ -1,3 +1,5 @@
+using FastCsv.Models;
+
 namespace FastCsv.Errors;
 
 /// <summary>
@@ -15,7 +17,7 @@ internal class ErrorHandler(bool isEnabled) : IErrorHandler
     {
         if (!isEnabled)
             return;
-        
+
         _validationResult.AddError(error);
         ErrorOccurred?.Invoke(error);
     }

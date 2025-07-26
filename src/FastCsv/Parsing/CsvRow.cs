@@ -3,8 +3,9 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 #endif
 using System.Collections.Generic;
+using FastCsv.Models;
 
-namespace FastCsv;
+namespace FastCsv.Parsing;
 
 /// <summary>
 /// Zero-allocation CSV row with lazy field position caching for optimal performance
@@ -40,12 +41,12 @@ public ref struct CsvRow
 
         // Pre-allocate for typical CSV files
         var positions = new List<int>(32);
-        var pos = 0;
+        var position = 0;
 
-        while (pos < line.Length)
+        while (position < line.Length)
         {
             // Use SearchValues for fast delimiter search
-            var remaining = line.Slice(pos);
+            var remaining = line.Slice(position);
             var nextDelim = remaining.IndexOfAny(delimiter, quote);
 
             if (nextDelim < 0)
@@ -53,23 +54,21 @@ public ref struct CsvRow
 
             if (remaining[nextDelim] == delimiter)
             {
-                // Found delimiter - mark position
-                positions.Add(pos + nextDelim);
-                pos += nextDelim + 1;
+                positions.Add(position + nextDelim);
+                position += nextDelim + 1;
             }
             else if (remaining[nextDelim] == quote)
             {
-                // Skip quoted section
-                pos += nextDelim + 1;
-                while (pos < line.Length)
+                position += nextDelim + 1;
+                while (position < line.Length)
                 {
-                    var quotePos = line.Slice(pos).IndexOf(quote);
+                    var quotePos = line.Slice(position).IndexOf(quote);
                     if (quotePos < 0) break;
 
-                    pos += quotePos + 1;
-                    if (pos >= line.Length || line[pos] != quote)
+                    position += quotePos + 1;
+                    if (position >= line.Length || line[position] != quote)
                         break;
-                    pos++; // Skip escaped quote
+                    position++;
                 }
             }
         }
@@ -140,9 +139,9 @@ public ref struct CsvRow
 
         for (int i = 0; i < line.Length; i++)
         {
-            var ch = line[i];
+            var currentChar = line[i];
 
-            if (ch == _options.Quote)
+            if (currentChar == _options.Quote)
             {
                 if (inQuotes && i + 1 < line.Length && line[i + 1] == _options.Quote)
                 {
@@ -153,7 +152,7 @@ public ref struct CsvRow
                     inQuotes = !inQuotes;
                 }
             }
-            else if (ch == _options.Delimiter && !inQuotes)
+            else if (currentChar == _options.Delimiter && !inQuotes)
             {
                 positions.Add(i);
             }

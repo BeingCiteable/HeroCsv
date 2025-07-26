@@ -7,7 +7,12 @@
       "Bash(cmd.exe /c \"move ICsvReaderBuilder.cs Builder\\\")",
       "Bash(mv:*)",
       "Bash(dotnet build:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(dotnet --version)",
+      "Bash(powershell:*)",
+      "Bash(dotnet test:*)"
     ],
     "deny": []
   }

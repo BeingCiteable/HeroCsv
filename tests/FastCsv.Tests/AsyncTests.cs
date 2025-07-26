@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Threading;
+using FastCsv.Models;
 using Xunit;
 
 namespace FastCsv.Tests;
@@ -403,4 +404,5 @@ public class AsyncTests
         Assert.False(stream.CanRead); // Stream should be disposed
     }
 }
+
 #endif

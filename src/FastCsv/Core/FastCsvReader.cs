@@ -1,9 +1,12 @@
+using FastCsv.DataSources;
 using FastCsv.Errors;
+using FastCsv.Models;
+using FastCsv.Parsing;
 using FastCsv.Validation;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace FastCsv;
+namespace FastCsv.Core;
 
 /// <summary>
 /// High-performance CSV reader implementation optimized for zero allocations
@@ -15,7 +18,6 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     private int _recordCount = 0;
     private bool _disposed = false;
 
-    // Validation and error tracking handlers
     private readonly IValidationHandler _validationHandler;
     private readonly IErrorHandler _errorHandler;
 
@@ -33,7 +35,6 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         _dataSource = new StringDataSource(content);
         _options = options;
 
-        // Initialize handlers
         _errorHandler = trackErrors ? new ErrorHandler(true) : new NullErrorHandler();
         if (errorCallback != null && _errorHandler is ErrorHandler handler)
         {
@@ -55,7 +56,6 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
         _options = options;
 
-        // Initialize handlers
         _errorHandler = trackErrors ? new ErrorHandler(true) : new NullErrorHandler();
         if (errorCallback != null && _errorHandler is ErrorHandler handler)
         {
@@ -80,7 +80,6 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         _dataSource = new StreamDataSource(stream, encoding, leaveOpen);
         _options = options;
 
-        // Initialize handlers
         _errorHandler = trackErrors ? new ErrorHandler(true) : new NullErrorHandler();
         if (errorCallback != null && _errorHandler is ErrorHandler handler)
         {
@@ -95,7 +94,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     public int LineNumber { get; private set; } = 1;
 
     /// <summary>
-    /// Whether there is more data to read
+    /// Indicates whether more data is available to read
     /// </summary>
     public bool HasMoreData => _dataSource.HasMoreData;
 
@@ -115,30 +114,12 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     /// </summary>
     public CsvValidationResult ValidationResult => _errorHandler.GetValidationResult();
 
-    
-    
-    /// <summary>
-    /// Internal method to get the next line position
-    /// </summary>
-    internal bool TryGetNextLine(out int lineStart, out int lineLength, out int lineNumber)
-    {
-        if (_dataSource.TryGetLinePosition(out lineStart, out lineLength, out lineNumber))
-        {
-            _recordCount++;
-            return true;
-        }
-        
-        lineStart = 0;
-        lineLength = 0;
-        lineNumber = 0;
-        return false;
-    }
-    
+
     /// <summary>
     /// Get the buffer for zero-copy access
     /// </summary>
     internal ReadOnlySpan<char> GetBuffer() => _dataSource.GetBuffer();
-    
+
     /// <summary>
     /// Check if we can use the optimized parsing path
     /// </summary>
@@ -146,8 +127,8 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     {
         return _dataSource is StringDataSource || _dataSource is MemoryDataSource;
     }
-    
-    
+
+
     /// <summary>
     /// Get zero-allocation row enumerator for processing rows as spans
     /// </summary>
@@ -169,7 +150,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
             throw new NotSupportedException("Maximum performance enumeration is only supported for string and memory data sources");
         }
     }
-    
+
     /// <summary>
     /// Provides high-performance field iteration without allocations
     /// </summary>
@@ -247,7 +228,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     public void SkipRecord()
     {
         if (!HasMoreData) return;
-        
+
         _dataSource.TryReadLine(out _, out var lineNumber);
         LineNumber = lineNumber;
     }
@@ -311,27 +292,27 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     public IReadOnlyList<string[]> ReadAllRecords()
     {
         Reset();
-        
+
         // Automatically select optimal parsing strategy based on data source
         if (_dataSource is StringDataSource stringSource)
         {
             var buffer = stringSource.GetBuffer();
-            
+
             // Pre-allocate list capacity for better performance
             var estimatedRows = EstimateRowCount(buffer);
             var records = new List<string[]>(estimatedRows);
-            
+
             ParseBufferDirectly(buffer, records);
             return records;
         }
         else if (_dataSource is MemoryDataSource memorySource)
         {
             var buffer = memorySource.GetBuffer();
-            
+
             // Pre-allocate list capacity for better performance
             var estimatedRows = EstimateRowCount(buffer);
             var records = new List<string[]>(estimatedRows);
-            
+
             ParseBufferDirectly(buffer, records);
             return records;
         }
@@ -346,7 +327,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
             return records;
         }
     }
-    
+
     /// <summary>
     /// Estimates row count for pre-allocation to reduce list resizing overhead
     /// </summary>
@@ -354,20 +335,20 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     private int EstimateRowCount(ReadOnlySpan<char> buffer)
     {
         if (buffer.IsEmpty) return 0;
-        
+
         // Quick estimation: count newlines for rough row count
         var newlineCount = 0;
         for (int i = 0; i < Math.Min(buffer.Length, 1000); i++)
         {
             if (buffer[i] == '\n') newlineCount++;
         }
-        
+
         // Extrapolate if we only sampled part of the buffer
         if (buffer.Length > 1000)
         {
             newlineCount = (int)((long)newlineCount * buffer.Length / 1000);
         }
-        
+
         return Math.Max(16, newlineCount + 1);
     }
 
@@ -379,7 +360,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         // For maximum performance, work directly with the buffer like Sep/Sylvan
         var position = 0;
         var length = buffer.Length;
-        
+
         // Skip header row if configured
         if (_options.HasHeader && length > 0)
         {
@@ -390,29 +371,29 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
             if (position < length && buffer[position] == '\r') position++;
             if (position < length && buffer[position] == '\n') position++;
         }
-        
+
         // Process all data rows with optimized parsing
         fixed (char* bufferPtr = buffer)
         {
             while (position < length)
             {
                 var lineStart = position;
-                
+
                 // Find end of current line
                 while (position < length && buffer[position] != '\r' && buffer[position] != '\n')
                     position++;
-                
+
                 var lineLength = position - lineStart;
                 if (lineLength > 0)
                 {
                     // Create span for current line without allocation
                     var lineSpan = buffer.Slice(lineStart, lineLength);
-                    
+
                     // Parse line with optimized parser (SIMD-enabled for common cases)
                     var fields = CsvParser.ParseLine(lineSpan, _options);
                     records.Add(fields);
                 }
-                
+
                 // Skip newline sequence (\r, \n, or \r\n)
                 if (position < length && buffer[position] == '\r') position++;
                 if (position < length && buffer[position] == '\n') position++;
@@ -424,7 +405,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     public IEnumerable<string[]> GetRecords()
     {
         Reset();
-        
+
         // Can't use optimized path with yield due to ref struct limitations
         // Users who want optimized performance should use ReadAllRecords() or EnumerateRows() directly
         while (TryReadRecord(out var record))
@@ -437,7 +418,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     public int CountRecords()
     {
         Reset();
-        
+
         // Use ultra-fast counting when validation is disabled
         if (!_validationHandler.IsEnabled && !_errorHandler.IsEnabled)
         {
@@ -447,43 +428,43 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
                 var buffer = GetBuffer();
                 var newlineCount = _dataSource.CountLinesDirectly();
                 var totalLines = newlineCount;
-                
+
                 // Check if last character is not a newline (indicates one more line)
                 if (buffer.Length > 0 && buffer[buffer.Length - 1] != '\n' && buffer[buffer.Length - 1] != '\r')
                 {
                     totalLines++; // Add one for the final line without newline
                 }
-                
+
                 // Account for header if present
                 if (_options.HasHeader && totalLines > 0)
                 {
                     return totalLines - 1;
                 }
-                
+
                 return totalLines;
             }
             else
             {
                 // For stream-based sources, use CountLinesDirectly as-is
                 var totalLines = _dataSource.CountLinesDirectly();
-                
+
                 // Account for header if present
                 if (_options.HasHeader && totalLines > 0)
                 {
                     return totalLines - 1;
                 }
-                
+
                 return totalLines;
             }
         }
-        
+
         // Fall back to record-by-record counting when validation is needed
         var count = 0;
         while (TryReadRecord(out _))
         {
             count++;
         }
-        
+
         return count;
     }
 
@@ -496,40 +477,40 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         {
             Reset();
         }
-        
+
         // Use async data source if available
         if (_dataSource is IAsyncCsvDataSource asyncSource)
         {
             var records = new List<string[]>();
             bool headerSkipped = !_options.HasHeader; // If no header, consider it already skipped
-            
+
             while (!cancellationToken.IsCancellationRequested)
             {
                 var result = await asyncSource.TryReadLineAsync(cancellationToken).ConfigureAwait(false);
                 if (!result.success) break;
-                
+
                 // Skip empty lines
                 if (string.IsNullOrEmpty(result.line)) continue;
-                
+
                 // Skip header if configured and not yet skipped
                 if (_options.HasHeader && !headerSkipped)
                 {
                     headerSkipped = true;
                     continue;
                 }
-                
+
                 var fields = CsvParser.ParseLine(result.line.AsSpan(), _options);
-                
+
                 // Perform validation if enabled
                 if (_validationHandler.IsEnabled || _errorHandler.IsEnabled)
                 {
                     _validationHandler.ValidateRecord(fields, result.lineNumber, _validationHandler.ExpectedFieldCount);
                 }
-                
+
                 records.Add(fields);
                 _recordCount++;
             }
-            
+
             return records;
         }
 #endif
