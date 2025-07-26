@@ -3,6 +3,7 @@ using System.Text;
 using CsvHelper;
 using System.Globalization;
 using nietras.SeparatedValues;
+using Spectre.Console;
 
 namespace FastCsv.Benchmarks;
 
@@ -10,16 +11,16 @@ public class QuickBenchmark
 {
     public static void RunComparison()
     {
-        Console.WriteLine("FastCsv Competitive Performance Analysis");
-        Console.WriteLine("========================================");
-        Console.WriteLine();
+        AnsiConsole.Clear();
+        AnsiConsole.Write(new Rule("[yellow]FastCsv Competitive Performance Analysis[/]").RuleStyle(Style.Parse("yellow")));
+        AnsiConsole.WriteLine();
         
         var testData = GenerateTestCsv(1000);
         var testMemory = testData.AsMemory();
         const int iterations = 100;
         
-        Console.WriteLine($"Dataset: {testData.Split('\n').Length - 1} rows, {iterations} iterations");
-        Console.WriteLine();
+        AnsiConsole.MarkupLine($"[grey]Dataset:[/] [cyan]{testData.Split('\n').Length - 1} rows[/], [cyan]{iterations} iterations[/]");
+        AnsiConsole.WriteLine();
         
         var results = new Dictionary<string, Dictionary<string, double>>();
         
@@ -31,8 +32,7 @@ public class QuickBenchmark
         }
         
         // Feature 1: Read All Records (String Input)
-        Console.WriteLine("🔍 FEATURE: Read All Records (String Input)");
-        Console.WriteLine("=" + new string('=', 47));
+        AnsiConsole.Write(new Rule("[blue]🔍 FEATURE: Read All Records (String Input)[/]").RuleStyle(Style.Parse("blue dim")));
         
         results["FastCsv"]["ReadAll_String"] = BenchmarkAction(() =>
         {
@@ -137,11 +137,10 @@ public class QuickBenchmark
             return count;
         }, iterations, "LumenWorks");
         
-        Console.WriteLine();
+        AnsiConsole.WriteLine();
         
         // Feature 2: Read All Records (Memory Input - Zero Allocation)
-        Console.WriteLine("🚀 FEATURE: Read All Records (Memory Input - Zero Allocation)");
-        Console.WriteLine("=" + new string('=', 63));
+        AnsiConsole.Write(new Rule("[green]🚀 FEATURE: Read All Records (Memory Input - Zero Allocation)[/]").RuleStyle(Style.Parse("green dim")));
         
         results["FastCsv"]["ReadAll_Memory"] = BenchmarkAction(() =>
         {
@@ -158,21 +157,20 @@ public class QuickBenchmark
         }, iterations, "FastCsv");
         
         // Other libraries don't support ReadOnlyMemory<char> input
-        Console.WriteLine("CsvHelper        : N/A (no Memory<char> support)");
-        Console.WriteLine("LumenWorks       : N/A (no Memory<char> support)");
-        Console.WriteLine("Sep              : N/A (no Memory<char> support)");
-        Console.WriteLine("Sylvan.Data.Csv  : N/A (no Memory<char> support)");
+        AnsiConsole.MarkupLine("[grey]CsvHelper        : N/A (no Memory<char> support)[/]");
+        AnsiConsole.MarkupLine("[grey]LumenWorks       : N/A (no Memory<char> support)[/]");
+        AnsiConsole.MarkupLine("[grey]Sep              : N/A (no Memory<char> support)[/]");
+        AnsiConsole.MarkupLine("[grey]Sylvan.Data.Csv  : N/A (no Memory<char> support)[/]");
         
         results["CsvHelper"]["ReadAll_Memory"] = -1; // N/A
         results["LumenWorks"]["ReadAll_Memory"] = -1; // N/A  
         results["Sep"]["ReadAll_Memory"] = -1; // N/A
         results["Sylvan"]["ReadAll_Memory"] = -1; // N/A
         
-        Console.WriteLine();
+        AnsiConsole.WriteLine();
         
         // Feature 3: Count Records Only
-        Console.WriteLine("⚡ FEATURE: Count Records Only (No String Allocation)");
-        Console.WriteLine("=" + new string('=', 55));
+        AnsiConsole.Write(new Rule("[yellow]⚡ FEATURE: Count Records Only (No String Allocation)[/]").RuleStyle(Style.Parse("yellow dim")));
         
         results["FastCsv"]["CountOnly"] = BenchmarkAction(() =>
         {
@@ -197,17 +195,16 @@ public class QuickBenchmark
         }, iterations, "Sep (same as ReadAll)");
         
         // Other libraries don't have count-only optimization
-        Console.WriteLine("LumenWorks       : N/A (no count-only optimization)");
-        Console.WriteLine("Sylvan.Data.Csv  : N/A (no count-only optimization)");
+        AnsiConsole.MarkupLine("[grey]LumenWorks       : N/A (no count-only optimization)[/]");
+        AnsiConsole.MarkupLine("[grey]Sylvan.Data.Csv  : N/A (no count-only optimization)[/]");
         
         results["LumenWorks"]["CountOnly"] = -1; // N/A
         results["Sylvan"]["CountOnly"] = -1; // N/A
         
-        Console.WriteLine();
+        AnsiConsole.WriteLine();
         
         // Feature 4: Zero-Allocation Row Enumeration (FastCsv Advanced)
-        Console.WriteLine("🚀 FEATURE: Zero-Allocation Row Enumeration (FastCsv Advanced)");
-        Console.WriteLine("=" + new string('=', 65));
+        AnsiConsole.Write(new Rule("[cyan]🚀 FEATURE: Zero-Allocation Row Enumeration (FastCsv Advanced)[/]").RuleStyle(Style.Parse("cyan dim")));
         
         results["FastCsv"]["ZeroAlloc"] = BenchmarkAction(() =>
         {
@@ -226,21 +223,20 @@ public class QuickBenchmark
             return count;
         }, iterations, "FastCsv (Zero-Alloc)");
         
-        Console.WriteLine("CsvHelper        : N/A (no zero-allocation mode)");
-        Console.WriteLine("LumenWorks       : N/A (no zero-allocation mode)");
-        Console.WriteLine("Sep              : Uses spans (similar capability)");
-        Console.WriteLine("Sylvan.Data.Csv  : Uses spans (similar capability)");
+        AnsiConsole.MarkupLine("[grey]CsvHelper        : N/A (no zero-allocation mode)[/]");
+        AnsiConsole.MarkupLine("[grey]LumenWorks       : N/A (no zero-allocation mode)[/]");
+        AnsiConsole.MarkupLine("[grey]Sep              : Uses spans (similar capability)[/]");
+        AnsiConsole.MarkupLine("[grey]Sylvan.Data.Csv  : Uses spans (similar capability)[/]");
         
         results["CsvHelper"]["ZeroAlloc"] = -1; // N/A
         results["LumenWorks"]["ZeroAlloc"] = -1; // N/A
         results["Sep"]["ZeroAlloc"] = -1; // N/A
         results["Sylvan"]["ZeroAlloc"] = -1; // N/A
         
-        Console.WriteLine();
+        AnsiConsole.WriteLine();
         
         // Feature 5: Direct Field Iteration (Direct Buffer Access)
-        Console.WriteLine("🔥 FEATURE: Direct Field Iteration (Direct Buffer Access)");
-        Console.WriteLine("=" + new string('=', 63));
+        AnsiConsole.Write(new Rule("[red]🔥 FEATURE: Direct Field Iteration (Direct Buffer Access)[/]").RuleStyle(Style.Parse("red dim")));
         
         results["FastCsv"]["DirectFieldIteration"] = BenchmarkAction(() =>
         {
@@ -258,21 +254,20 @@ public class QuickBenchmark
         }, iterations, "FastCsv (Direct)");
         
         // Other libraries don't have this approach
-        Console.WriteLine("CsvHelper        : N/A (no direct field iteration)");
-        Console.WriteLine("LumenWorks       : N/A (no direct field iteration)");
-        Console.WriteLine("Sep              : N/A (no direct field iteration)");
-        Console.WriteLine("Sylvan.Data.Csv  : N/A (no direct field iteration)");
+        AnsiConsole.MarkupLine("[grey]CsvHelper        : N/A (no direct field iteration)[/]");
+        AnsiConsole.MarkupLine("[grey]LumenWorks       : N/A (no direct field iteration)[/]");
+        AnsiConsole.MarkupLine("[grey]Sep              : N/A (no direct field iteration)[/]");
+        AnsiConsole.MarkupLine("[grey]Sylvan.Data.Csv  : N/A (no direct field iteration)[/]");
         
         results["CsvHelper"]["DirectFieldIteration"] = -1; // N/A
         results["LumenWorks"]["DirectFieldIteration"] = -1; // N/A  
         results["Sep"]["DirectFieldIteration"] = -1; // N/A
         results["Sylvan"]["DirectFieldIteration"] = -1; // N/A
         
-        Console.WriteLine();
+        AnsiConsole.WriteLine();
         
         // Feature 6: Async vs Sync Performance (File I/O)
-        Console.WriteLine("⚡ FEATURE: Async vs Sync Performance (File I/O)");
-        Console.WriteLine("=" + new string('=', 49));
+        AnsiConsole.Write(new Rule("[magenta]⚡ FEATURE: Async vs Sync Performance (File I/O)[/]").RuleStyle(Style.Parse("magenta dim")));
         
         // Create test file
         var testFilePath = Path.GetTempFileName();
@@ -354,7 +349,7 @@ public class QuickBenchmark
                 return count;
             }, 10, "FastCsv (Async Enumerable)");
 #else
-            Console.WriteLine("FastCsv (Async)      : N/A (requires .NET 7+)");
+            AnsiConsole.MarkupLine("[grey]FastCsv (Async)      : N/A (requires .NET 7+)[/]");
             results["FastCsv"]["Async_File"] = -1;
             results["FastCsv"]["Async_Stream"] = -1;
             results["FastCsv"]["Async_Enumerable"] = -1;
@@ -366,11 +361,10 @@ public class QuickBenchmark
                 File.Delete(testFilePath);
         }
         
-        Console.WriteLine();
+        AnsiConsole.WriteLine();
         
         // Feature 7: Data Source Comparison
-        Console.WriteLine("📊 FEATURE: Data Source Performance Comparison");
-        Console.WriteLine("=" + new string('=', 47));
+        AnsiConsole.Write(new Rule("[green]📊 FEATURE: Data Source Performance Comparison[/]").RuleStyle(Style.Parse("green dim")));
         
         results["FastCsv"]["String_Source"] = BenchmarkAction(() =>
         {
@@ -391,7 +385,7 @@ public class QuickBenchmark
             return reader.CountRecords();
         }, iterations, "FastCsv (Stream)");
         
-        Console.WriteLine();
+        AnsiConsole.WriteLine();
         
         // Summary Report
         PrintSummaryReport(results);
@@ -412,7 +406,7 @@ public class QuickBenchmark
         stopwatch.Stop();
         double msPerOp = stopwatch.ElapsedMilliseconds / (double)iterations;
         
-        Console.WriteLine($"{name,-16} : {stopwatch.ElapsedMilliseconds:N0} ms ({msPerOp:F2} ms/op)");
+        AnsiConsole.MarkupLine($"[cyan]{name,-16}[/] : [yellow]{stopwatch.ElapsedMilliseconds:N0} ms[/] ([green]{msPerOp:F2} ms/op[/])");
         
         return msPerOp;
     }
@@ -432,16 +426,15 @@ public class QuickBenchmark
         stopwatch.Stop();
         double msPerOp = stopwatch.ElapsedMilliseconds / (double)iterations;
         
-        Console.WriteLine($"{name,-20} : {stopwatch.ElapsedMilliseconds:N0} ms ({msPerOp:F2} ms/op)");
+        AnsiConsole.MarkupLine($"[cyan]{name,-20}[/] : [yellow]{stopwatch.ElapsedMilliseconds:N0} ms[/] ([green]{msPerOp:F2} ms/op[/])");
         
         return msPerOp;
     }
     
     private static void PrintSummaryReport(Dictionary<string, Dictionary<string, double>> results)
     {
-        Console.WriteLine("📊 PERFORMANCE SUMMARY REPORT");
-        Console.WriteLine("=" + new string('=', 31));
-        Console.WriteLine();
+        AnsiConsole.Write(new Rule("[yellow]📊 PERFORMANCE SUMMARY REPORT[/]").RuleStyle(Style.Parse("yellow")));
+        AnsiConsole.WriteLine();
         
         var features = new[]
         {
@@ -461,7 +454,7 @@ public class QuickBenchmark
         
         foreach (var (featureName, featureKey) in features)
         {
-            Console.WriteLine($"🔹 {featureName}:");
+            AnsiConsole.MarkupLine($"[blue]🔹 {featureName}:[/]");
             
             var libraryResults = results
                 .Where(kvp => kvp.Value.ContainsKey(featureKey) && kvp.Value[featureKey] > 0)
@@ -476,12 +469,13 @@ public class QuickBenchmark
                     var result = libraryResults[i];
                     var rank = i + 1;
                     var rankEmoji = rank == 1 ? "🥇" : rank == 2 ? "🥈" : rank == 3 ? "🥉" : "  ";
-                    Console.WriteLine($"   {rankEmoji} {rank}. {result.Library,-12} : {result.Time:F2} ms/op");
+                    var color = rank == 1 ? "green" : rank == 2 ? "yellow" : rank == 3 ? "darkorange" : "cyan";
+                    AnsiConsole.MarkupLine($"   {rankEmoji} [{color}]{rank}. {result.Library,-12} : {result.Time:F2} ms/op[/]");
                 }
             }
             else
             {
-                Console.WriteLine("   No libraries support this feature");
+                AnsiConsole.MarkupLine("[grey]   No libraries support this feature[/]");
             }
             
             // Show N/A libraries
@@ -492,16 +486,16 @@ public class QuickBenchmark
             
             if (naLibraries.Any())
             {
-                Console.WriteLine($"   ❌ Not supported: {string.Join(", ", naLibraries)}");
+                AnsiConsole.MarkupLine($"[grey]   ❌ Not supported: {string.Join(", ", naLibraries)}[/]");
             }
             
-            Console.WriteLine();
+            AnsiConsole.WriteLine();
         }
         
-        Console.WriteLine("🎯 KEY INSIGHTS:");
-        Console.WriteLine($"   • FastCsv Memory variant offers zero-allocation benefits");
-        Console.WriteLine($"   • Count-only operations show optimization potential");
-        Console.WriteLine($"   • Feature support varies significantly across libraries");
+        AnsiConsole.MarkupLine("[yellow]🎯 KEY INSIGHTS:[/]");
+        AnsiConsole.MarkupLine($"[green]   • FastCsv Memory variant offers zero-allocation benefits[/]");
+        AnsiConsole.MarkupLine($"[green]   • Count-only operations show optimization potential[/]");
+        AnsiConsole.MarkupLine($"[green]   • Feature support varies significantly across libraries[/]");
     }
     
     private static string GenerateTestCsv(int rows)

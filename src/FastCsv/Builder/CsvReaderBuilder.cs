@@ -139,4 +139,3 @@ internal sealed class CsvReaderBuilder : ICsvReaderBuilder
             _errorCallback);
     }
 }
-

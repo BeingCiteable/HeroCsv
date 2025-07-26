@@ -15,24 +15,24 @@ public static class CsvFieldIterator
     {
         return new CsvFieldCollection(data, options);
     }
-    
+
     /// <summary>
     /// Represents a collection of CSV fields that can be enumerated
     /// </summary>
-    public ref struct CsvFieldCollection
+    public readonly ref struct CsvFieldCollection
     {
         private readonly ReadOnlySpan<char> _data;
         private readonly CsvOptions _options;
-        
+
         internal CsvFieldCollection(ReadOnlySpan<char> data, CsvOptions options)
         {
             _data = data;
             _options = options;
         }
-        
+
         public CsvFieldReader GetEnumerator() => new CsvFieldReader(_data, _options);
     }
-    
+
     /// <summary>
     /// Reads CSV fields one by one with minimal overhead
     /// </summary>
@@ -46,7 +46,7 @@ public static class CsvFieldIterator
         private int _position;
         private int _rowIndex;
         private int _fieldIndex;
-        
+
         internal CsvFieldReader(ReadOnlySpan<char> data, CsvOptions options)
         {
             _data = data;
@@ -57,28 +57,28 @@ public static class CsvFieldIterator
             _position = 0;
             _rowIndex = -1;
             _fieldIndex = 0;
-            
+
             // Skip header if needed
             if (_hasHeader && _data.Length > 0)
             {
                 SkipLine();
             }
         }
-        
+
         public bool MoveNext()
         {
             if (_position >= _data.Length)
                 return false;
-                
+
             // New row
             if (_fieldIndex == 0)
             {
                 _rowIndex++;
             }
-            
+
             return true;
         }
-        
+
         public CsvField Current
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -86,7 +86,7 @@ public static class CsvFieldIterator
             {
                 var fieldStart = _position;
                 var inQuotes = false;
-                
+
                 // Handle quoted field
                 if (_position < _data.Length && _data[_position] == _quote)
                 {
@@ -94,12 +94,12 @@ public static class CsvFieldIterator
                     _position++;
                     fieldStart++;
                 }
-                
+
                 // Find field end
                 while (_position < _data.Length)
                 {
                     var ch = _data[_position];
-                    
+
                     if (inQuotes)
                     {
                         if (ch == _quote)
@@ -114,13 +114,13 @@ public static class CsvFieldIterator
                                 // End of quoted field
                                 var quotedField = _data.Slice(fieldStart, _position - fieldStart);
                                 _position++; // Skip closing quote
-                                
+
                                 // Skip to delimiter or line end
                                 while (_position < _data.Length && _data[_position] != _delimiter && _data[_position] != '\n' && _data[_position] != '\r')
                                 {
                                     _position++;
                                 }
-                                
+
                                 // Skip delimiter
                                 if (_position < _data.Length && _data[_position] == _delimiter)
                                 {
@@ -136,7 +136,7 @@ public static class CsvFieldIterator
                                 {
                                     _fieldIndex = 0; // End of data
                                 }
-                                
+
                                 return new CsvField(quotedField, _rowIndex, _fieldIndex - 1, _trimWhitespace);
                             }
                         }
@@ -168,7 +168,7 @@ public static class CsvFieldIterator
                         }
                     }
                 }
-                
+
                 // Last field
                 var lastField = _data.Slice(fieldStart, _position - fieldStart);
                 var lastFieldIndex = _fieldIndex;
@@ -176,7 +176,7 @@ public static class CsvFieldIterator
                 return new CsvField(lastField, _rowIndex, lastFieldIndex, _trimWhitespace);
             }
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SkipLine()
         {
@@ -186,7 +186,7 @@ public static class CsvFieldIterator
             }
             SkipLineEnding();
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SkipLineEnding()
         {
@@ -207,7 +207,7 @@ public static class CsvFieldIterator
             }
         }
     }
-    
+
     /// <summary>
     /// Represents a single CSV field with its position information
     /// </summary>
@@ -215,10 +215,10 @@ public static class CsvFieldIterator
     {
         private readonly ReadOnlySpan<char> _value;
         private readonly bool _trimWhitespace;
-        
+
         public readonly int RowIndex;
         public readonly int FieldIndex;
-        
+
         internal CsvField(ReadOnlySpan<char> value, int rowIndex, int fieldIndex, bool trimWhitespace)
         {
             _value = value;
@@ -226,9 +226,9 @@ public static class CsvFieldIterator
             FieldIndex = fieldIndex;
             _trimWhitespace = trimWhitespace;
         }
-        
+
         public ReadOnlySpan<char> Value => _trimWhitespace ? _value.Trim() : _value;
-        
+
         /// <summary>
         /// Indicates if this field is the first in a new row
         /// </summary>

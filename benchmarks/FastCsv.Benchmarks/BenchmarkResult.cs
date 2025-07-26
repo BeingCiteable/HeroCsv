@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Spectre.Console;
 
 namespace FastCsv.Benchmarks;
 
@@ -42,6 +43,7 @@ public class BenchmarkResultSet
 /// - CSV: Spreadsheet-compatible format for data analysis  
 /// - Markdown: Human-readable reports for documentation
 /// - HTML: Interactive web reports with styling and charts
+/// - Spectre: Rich console output with colored tables and charts
 /// </summary>
 public static class BenchmarkExporter
 {
@@ -58,7 +60,7 @@ public static class BenchmarkExporter
         
         var json = JsonSerializer.Serialize(resultSet, options);
         File.WriteAllText(filePath, json);
-        Console.WriteLine($"📄 Results exported to JSON: {filePath}");
+        AnsiConsole.MarkupLine($"[green]📄 Results exported to JSON:[/] [blue]{filePath}[/]");
     }
 
     /// <summary>
@@ -78,7 +80,7 @@ public static class BenchmarkExporter
         }
         
         File.WriteAllText(filePath, csv.ToString());
-        Console.WriteLine($"📊 Results exported to CSV: {filePath}");
+        AnsiConsole.MarkupLine($"[green]📊 Results exported to CSV:[/] [blue]{filePath}[/]");
     }
 
     /// <summary>
@@ -114,7 +116,7 @@ public static class BenchmarkExporter
         }
         
         File.WriteAllText(filePath, md.ToString());
-        Console.WriteLine($"📝 Results exported to Markdown: {filePath}");
+        AnsiConsole.MarkupLine($"[green]📝 Results exported to Markdown:[/] [blue]{filePath}[/]");
     }
 
     /// <summary>
@@ -263,13 +265,148 @@ public static class BenchmarkExporter
         html.AppendLine("</html>");
         
         File.WriteAllText(filePath, html.ToString());
-        Console.WriteLine($"🌐 Results exported to HTML: {filePath}");
+        AnsiConsole.MarkupLine($"[green]🌐 Results exported to HTML:[/] [blue]{filePath}[/]");
+    }
+
+    /// <summary>
+    /// Display results in console using Spectre.Console
+    /// </summary>
+    public static void DisplayInConsole(BenchmarkResultSet resultSet)
+    {
+        // Header
+        AnsiConsole.Clear();
+        var rule = new Rule($"[yellow]FastCsv Benchmark Results - {resultSet.BenchmarkSuite}[/]")
+            .RuleStyle(Style.Parse("yellow"))
+            .LeftJustified();
+        AnsiConsole.Write(rule);
+        
+        // System info panel
+        var infoGrid = new Grid();
+        infoGrid.AddColumn();
+        infoGrid.AddColumn();
+        infoGrid.AddRow(
+            $"[grey]Machine:[/] {resultSet.MachineName}",
+            $"[grey]Runtime:[/] .NET {resultSet.RuntimeVersion}"
+        );
+        infoGrid.AddRow(
+            $"[grey]Timestamp:[/] {resultSet.Timestamp:yyyy-MM-dd HH:mm:ss}",
+            $"[grey]Results:[/] {resultSet.Results.Count} benchmarks"
+        );
+        
+        var infoPanel = new Panel(infoGrid)
+            .Header("[blue]Environment[/]")
+            .Expand()
+            .RoundedBorder()
+            .BorderColor(Color.Blue);
+        AnsiConsole.Write(infoPanel);
+        AnsiConsole.WriteLine();
+        
+        // Group results by test case
+        var groupedResults = resultSet.Results.GroupBy(r => r.TestCase);
+        
+        foreach (var group in groupedResults)
+        {
+            AnsiConsole.Write(new Rule($"[cyan]{group.Key}[/]").RuleStyle(Style.Parse("cyan dim")));
+            
+            // Create table for this test case
+            var table = new Table()
+                .Border(TableBorder.Rounded)
+                .AddColumn("[yellow]Library[/]")
+                .AddColumn("[yellow]Method[/]")
+                .AddColumn(new TableColumn("[yellow]Mean (ms)[/]").RightAligned())
+                .AddColumn(new TableColumn("[yellow]Records[/]").RightAligned())
+                .AddColumn(new TableColumn("[yellow]Records/sec[/]").RightAligned())
+                .AddColumn(new TableColumn("[yellow]Performance[/]").Centered());
+            
+            var results = group.OrderBy(r => r.MeanTimeMs).ToList();
+            var fastest = results.First();
+            
+            foreach (var result in results)
+            {
+                var recordsPerSec = result.MeanTimeMs > 0 ? (result.RowCount / (result.MeanTimeMs / 1000.0)) : 0;
+                var performanceRatio = fastest.MeanTimeMs > 0 ? (result.MeanTimeMs / fastest.MeanTimeMs) : 1;
+                
+                // Color coding based on performance
+                var libraryColor = result == fastest ? "green" : 
+                                 performanceRatio <= 1.5 ? "yellow" : 
+                                 performanceRatio <= 3.0 ? "orange1" : "red";
+                
+                var performanceBar = "";
+                var barLength = (int)(20 * (fastest.MeanTimeMs / result.MeanTimeMs));
+                barLength = Math.Max(1, Math.Min(20, barLength));
+                performanceBar = new string('█', barLength);
+                
+                var performanceText = performanceRatio <= 1.1 ? "[green]Excellent[/]" : 
+                                    performanceRatio <= 2.0 ? "[yellow]Good[/]" : 
+                                    performanceRatio <= 5.0 ? "[orange1]Fair[/]" : "[red]Slow[/]";
+                
+                table.AddRow(
+                    $"[{libraryColor}]{result.Library}[/]",
+                    $"[{libraryColor}]{result.Method}[/]",
+                    $"[{libraryColor}]{result.MeanTimeMs:F3}[/]",
+                    $"[{libraryColor}]{result.RowCount:N0}[/]",
+                    $"[{libraryColor}]{recordsPerSec:N0}[/]",
+                    $"{performanceText} [{libraryColor}]{performanceBar}[/] ({performanceRatio:F1}x)"
+                );
+            }
+            
+            AnsiConsole.Write(table);
+            
+            // Performance chart
+            if (results.Count > 1)
+            {
+                AnsiConsole.WriteLine();
+                var chart = new BarChart()
+                    .Width(60)
+                    .Label("[yellow]Performance Comparison (ms)[/]")
+                    .CenterLabel();
+                
+                foreach (var result in results.Take(10)) // Limit to top 10 for readability
+                {
+                    var color = result == fastest ? Color.Green : Color.Blue;
+                    chart.AddItem(result.Library, result.MeanTimeMs, color);
+                }
+                
+                AnsiConsole.Write(chart);
+            }
+            
+            AnsiConsole.WriteLine();
+        }
+        
+        // Summary statistics
+        if (resultSet.Results.Count > 0)
+        {
+            var summaryTable = new Table()
+                .Border(TableBorder.Rounded)
+                .AddColumn("[yellow]Metric[/]")
+                .AddColumn(new TableColumn("[yellow]Value[/]").RightAligned());
+            
+            var totalTime = resultSet.Results.Sum(r => r.MeanTimeMs * r.Iterations);
+            var totalRecords = resultSet.Results.Sum(r => r.RowCount * r.Iterations);
+            var avgTimePerRecord = totalRecords > 0 ? totalTime / totalRecords : 0;
+            
+            summaryTable.AddRow("Total Benchmarks", $"{resultSet.Results.Count:N0}");
+            summaryTable.AddRow("Total Time (ms)", $"{totalTime:N0}");
+            summaryTable.AddRow("Total Records Processed", $"{totalRecords:N0}");
+            summaryTable.AddRow("Avg Time per Record (µs)", $"{avgTimePerRecord * 1000:F2}");
+            
+            var summaryPanel = new Panel(summaryTable)
+                .Header("[green]Summary Statistics[/]")
+                .Expand()
+                .RoundedBorder()
+                .BorderColor(Color.Green);
+            
+            AnsiConsole.Write(summaryPanel);
+        }
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule("[grey]End of Report[/]").RuleStyle(Style.Parse("grey dim")));
     }
 
     /// <summary>
     /// Export all formats to a directory
     /// </summary>
-    public static void ExportAll(BenchmarkResultSet resultSet, string? outputDirectory = null)
+    public static void ExportAll(BenchmarkResultSet resultSet, string? outputDirectory = null, bool showInConsole = true)
     {
         outputDirectory ??= GetBenchmarkOutputDirectory();
         Directory.CreateDirectory(outputDirectory);
@@ -277,12 +414,20 @@ public static class BenchmarkExporter
         var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
         var baseName = $"{resultSet.BenchmarkSuite.Replace(" ", "")}-{timestamp}";
         
+        // Display in console first if requested
+        if (showInConsole)
+        {
+            DisplayInConsole(resultSet);
+            AnsiConsole.WriteLine();
+        }
+        
+        // Export to files
         ExportToJson(resultSet, Path.Combine(outputDirectory, $"{baseName}.json"));
         ExportToCsv(resultSet, Path.Combine(outputDirectory, $"{baseName}.csv"));
         ExportToMarkdown(resultSet, Path.Combine(outputDirectory, $"{baseName}.md"));
         ExportToHtml(resultSet, Path.Combine(outputDirectory, $"{baseName}.html"));
         
-        Console.WriteLine($"✅ All formats exported to: {Path.GetFullPath(outputDirectory)}");
+        AnsiConsole.MarkupLine($"[green]✅ All formats exported to:[/] [blue]{Path.GetFullPath(outputDirectory)}[/]");
     }
 
     /// <summary>

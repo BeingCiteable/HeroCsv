@@ -76,7 +76,7 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     /// Gets optimal batch size for current hardware configuration
     /// </summary>
     /// <returns>Recommended batch size for mapping operations</returns>
-    public int GetOptimalBatchSize()
+    public static int GetOptimalBatchSize()
     {
         return Vector.IsHardwareAccelerated ? 1024 : 256;
     }

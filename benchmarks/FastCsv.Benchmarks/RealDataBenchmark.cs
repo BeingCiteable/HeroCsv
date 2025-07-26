@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using Spectre.Console;
 
 namespace FastCsv.Benchmarks;
 
@@ -20,9 +21,9 @@ public class RealDataBenchmark
 
     public static void RunRealDataComparison()
     {
-        Console.WriteLine("FastCsv Real Data Performance Analysis");
-        Console.WriteLine("=====================================");
-        Console.WriteLine();
+        AnsiConsole.Clear();
+        AnsiConsole.Write(new Rule("[yellow]FastCsv Real Data Performance Analysis[/]").RuleStyle(Style.Parse("yellow")));
+        AnsiConsole.WriteLine();
         
         var resultSet = new BenchmarkResultSet
         {
@@ -46,26 +47,26 @@ public class RealDataBenchmark
             
             if (!File.Exists(filePath))
             {
-                Console.WriteLine($"⚠️  Skipping {fileName} - file not found");
+                AnsiConsole.MarkupLine($"[yellow]⚠️  Skipping {fileName} - file not found[/]");
                 continue;
             }
 
-            Console.WriteLine($"📄 {description}");
-            Console.WriteLine($"File: {fileName}");
+            AnsiConsole.MarkupLine($"[cyan]📄 {description}[/]");
+            AnsiConsole.MarkupLine($"[grey]File:[/] {fileName}");
             
             var fileInfo = new FileInfo(filePath);
-            Console.WriteLine($"Size: {FormatFileSize(fileInfo.Length)}");
+            AnsiConsole.MarkupLine($"[grey]Size:[/] {FormatFileSize(fileInfo.Length)}");
             
             BenchmarkFile(filePath, fileName, description, resultSet);
-            Console.WriteLine();
+            AnsiConsole.WriteLine();
         }
 
         // Special performance test with huge dataset if available
         var hugeFile = Path.Combine(TestDataDirectory, "huge_dataset.csv");
         if (File.Exists(hugeFile))
         {
-            Console.WriteLine("🚀 EXTREME PERFORMANCE TEST");
-            Console.WriteLine("===========================");
+            AnsiConsole.WriteLine();
+            AnsiConsole.Write(new Rule("[red]🚀 EXTREME PERFORMANCE TEST[/]").RuleStyle(Style.Parse("red")));
             BenchmarkLargeFile(hugeFile, resultSet);
         }
         
@@ -132,24 +133,26 @@ public class RealDataBenchmark
 #endif
 
             // Performance comparison (console output)
-            Console.WriteLine("Performance Summary:");
-            Console.WriteLine($"  🏃 Fastest: {countResult.Method} ({countResult.MeanTimeMs:F2} ms/op)");
-            Console.WriteLine($"  📊 Best for processing: {(syncResult.MeanTimeMs < streamResult.MeanTimeMs ? syncResult.Method : streamResult.Method)} ({Math.Min(syncResult.MeanTimeMs, streamResult.MeanTimeMs):F2} ms/op)");
+            AnsiConsole.MarkupLine("[yellow]Performance Summary:[/]");
+            AnsiConsole.MarkupLine($"  [green]🏃 Fastest:[/] {countResult.Method} ([cyan]{countResult.MeanTimeMs:F2} ms/op[/])");
+            AnsiConsole.MarkupLine($"  [green]📊 Best for processing:[/] {(syncResult.MeanTimeMs < streamResult.MeanTimeMs ? syncResult.Method : streamResult.Method)} ([cyan]{Math.Min(syncResult.MeanTimeMs, streamResult.MeanTimeMs):F2} ms/op[/])");
 
 #if NET7_0_OR_GREATER
-            Console.WriteLine($"  ⚡ Async benefit: {(syncResult.MeanTimeMs > asyncResult.MeanTimeMs ? "YES" : "MINIMAL")} ({(syncResult.MeanTimeMs - asyncResult.MeanTimeMs) / syncResult.MeanTimeMs * 100:F0}% faster)");
+            var asyncBenefit = (syncResult.MeanTimeMs > asyncResult.MeanTimeMs ? "YES" : "MINIMAL");
+            var asyncColor = asyncBenefit == "YES" ? "green" : "yellow";
+            AnsiConsole.MarkupLine($"  [green]⚡ Async benefit:[/] [{asyncColor}]{asyncBenefit}[/] ([cyan]{(syncResult.MeanTimeMs - asyncResult.MeanTimeMs) / syncResult.MeanTimeMs * 100:F0}% faster[/])");
 #endif
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error benchmarking {fileName}: {ex.Message}");
+            AnsiConsole.MarkupLine($"[red]❌ Error benchmarking {fileName}: {ex.Message}[/]");
         }
     }
 
     private static void BenchmarkLargeFile(string filePath, BenchmarkResultSet resultSet)
     {
         var fileInfo = new FileInfo(filePath);
-        Console.WriteLine($"File: huge_dataset.csv ({FormatFileSize(fileInfo.Length)})");
+        AnsiConsole.MarkupLine($"[grey]File:[/] huge_dataset.csv ([cyan]{FormatFileSize(fileInfo.Length)}[/])");
         
         var options = new global::FastCsv.CsvOptions(hasHeader: true);
 
@@ -182,11 +185,11 @@ public class RealDataBenchmark
             return count;
         }, 2, "Async Streaming");
 
-        Console.WriteLine($"🎯 Best for huge files: Async Streaming ({asyncStreamTime:F2} ms/op)");
+        AnsiConsole.MarkupLine($"[green]🎯 Best for huge files:[/] Async Streaming ([cyan]{asyncStreamTime:F2} ms/op[/])");
 #endif
 
-        Console.WriteLine($"💡 Memory usage: Stream/Async methods use constant memory");
-        Console.WriteLine($"📈 Throughput: ~{fileInfo.Length / 1024.0 / 1024.0 / Math.Min(countTime, streamTime) * 1000:F1} MB/sec");
+        AnsiConsole.MarkupLine($"[yellow]💡 Memory usage:[/] Stream/Async methods use constant memory");
+        AnsiConsole.MarkupLine($"[yellow]📈 Throughput:[/] ~[cyan]{fileInfo.Length / 1024.0 / 1024.0 / Math.Min(countTime, streamTime) * 1000:F1} MB/sec[/]");
     }
 
     private static double BenchmarkAction(Func<int> action, int iterations, string name)
@@ -206,7 +209,7 @@ public class RealDataBenchmark
         stopwatch.Stop();
         double msPerOp = stopwatch.ElapsedMilliseconds / (double)iterations;
 
-        Console.WriteLine($"  {name,-20} : {stopwatch.ElapsedMilliseconds:N0} ms ({msPerOp:F2} ms/op, {totalCount / iterations:N0} records)");
+        AnsiConsole.MarkupLine($"  [grey]{name,-20}[/] : [green]{stopwatch.ElapsedMilliseconds:N0} ms[/] ([cyan]{msPerOp:F2} ms/op[/], [grey]{totalCount / iterations:N0} records[/])");
 
         return msPerOp;
     }
@@ -229,7 +232,7 @@ public class RealDataBenchmark
         stopwatch.Stop();
         double msPerOp = stopwatch.ElapsedMilliseconds / (double)iterations;
 
-        Console.WriteLine($"  {name,-20} : {stopwatch.ElapsedMilliseconds:N0} ms ({msPerOp:F2} ms/op, {totalCount / iterations:N0} records)");
+        AnsiConsole.MarkupLine($"  [grey]{name,-20}[/] : [green]{stopwatch.ElapsedMilliseconds:N0} ms[/] ([cyan]{msPerOp:F2} ms/op[/], [grey]{totalCount / iterations:N0} records[/])");
 
         return msPerOp;
     }

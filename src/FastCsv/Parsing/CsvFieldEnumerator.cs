@@ -12,7 +12,7 @@ public ref struct CsvFieldEnumerator
     private readonly char _quote;
     private int _position;
     private int _fieldIndex;
-    
+
     internal CsvFieldEnumerator(ReadOnlySpan<char> line, char delimiter, char quote)
     {
         _line = line;
@@ -21,7 +21,7 @@ public ref struct CsvFieldEnumerator
         _position = 0;
         _fieldIndex = 0;
     }
-    
+
     /// <summary>
     /// Gets the next field without allocation
     /// </summary>
@@ -33,7 +33,7 @@ public ref struct CsvFieldEnumerator
             field = default;
             return false;
         }
-        
+
         // Fast path for unquoted fields
         if (_position == 0 || _line[_position - 1] != _quote)
         {
@@ -42,22 +42,22 @@ public ref struct CsvFieldEnumerator
             {
                 _position++;
             }
-            
+
             field = _line.Slice(start, _position - start);
             _position++; // Skip delimiter
             _fieldIndex++;
             return true;
         }
-        
+
         // Quoted field - rare path
         return TryGetQuotedField(out field);
     }
-    
+
     private bool TryGetQuotedField(out ReadOnlySpan<char> field)
     {
         var start = _position;
         _position++; // Skip opening quote
-        
+
         while (_position < _line.Length)
         {
             if (_line[_position] == _quote)
@@ -72,7 +72,7 @@ public ref struct CsvFieldEnumerator
                     // End of quoted field
                     field = _line.Slice(start + 1, _position - start - 1);
                     _position++; // Skip closing quote
-                    
+
                     // Skip to next delimiter
                     while (_position < _line.Length && _line[_position] != _delimiter)
                     {
@@ -88,21 +88,21 @@ public ref struct CsvFieldEnumerator
                 _position++;
             }
         }
-        
+
         // Unterminated quoted field
         field = _line.Slice(start);
         _fieldIndex++;
         return true;
     }
-    
+
     /// <summary>
     /// Gets field by index (slower - requires parsing from start)
     /// </summary>
-    public ReadOnlySpan<char> GetFieldByIndex(int index)
+    public readonly ReadOnlySpan<char> GetFieldByIndex(int index)
     {
         var enumerator = new CsvFieldEnumerator(_line, _delimiter, _quote);
         ReadOnlySpan<char> field = default;
-        
+
         for (int i = 0; i <= index; i++)
         {
             if (!enumerator.TryGetNextField(out field))
@@ -110,23 +110,23 @@ public ref struct CsvFieldEnumerator
                 return default;
             }
         }
-        
+
         return field;
     }
-    
+
     /// <summary>
     /// Count total fields
     /// </summary>
-    public int CountTotalFields()
+    public readonly int CountTotalFields()
     {
         var count = 0;
         var enumerator = new CsvFieldEnumerator(_line, _delimiter, _quote);
-        
+
         while (enumerator.TryGetNextField(out _))
         {
             count++;
         }
-        
+
         return count;
     }
 }

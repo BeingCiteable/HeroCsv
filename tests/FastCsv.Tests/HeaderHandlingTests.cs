@@ -45,7 +45,7 @@ public class HeaderHandlingTests
         // Arrange
         var csvWithHeader = "Name,Age,City\nJohn,30,NYC\nJane,25,LA";
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, csvWithHeader);
+        await File.WriteAllTextAsync(tempFile, csvWithHeader, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
@@ -76,7 +76,7 @@ public class HeaderHandlingTests
             // Test async reader directly
             await using var stream2 = File.OpenRead(tempFile);
             using var reader = Csv.CreateAsyncReader(stream2, options);
-            var records4 = await reader.ReadAllRecordsAsync();
+            var records4 = await reader.ReadAllRecordsAsync(TestContext.Current.CancellationToken);
             Assert.Equal(2, records4.Count);
             Assert.Equal("John", records4[0][0]);
             Assert.Equal("Jane", records4[1][0]);
@@ -85,7 +85,7 @@ public class HeaderHandlingTests
             await using var stream3 = File.OpenRead(tempFile);
             using var reader2 = Csv.CreateAsyncReader(stream3, options);
             var records5 = new List<string[]>();
-            await foreach (var record in reader2.ReadRecordsAsync())
+            await foreach (var record in reader2.ReadRecordsAsync(TestContext.Current.CancellationToken))
             {
                 records5.Add(record);
             }
@@ -106,7 +106,7 @@ public class HeaderHandlingTests
         // Arrange
         var csvWithoutHeader = "John,30,NYC\nJane,25,LA";
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, csvWithoutHeader);
+        await File.WriteAllTextAsync(tempFile, csvWithoutHeader, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: false);
 
         try
@@ -140,7 +140,7 @@ public class HeaderHandlingTests
         // Arrange
         var headerOnly = "Name,Age,City";
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, headerOnly);
+        await File.WriteAllTextAsync(tempFile, headerOnly, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
@@ -175,7 +175,7 @@ public class HeaderHandlingTests
         // Arrange
         var csvContent = "Name,Age,City\nJohn,30,NYC\nJane,25,LA\nBob,35,SF";
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, csvContent);
+        await File.WriteAllTextAsync(tempFile, csvContent, TestContext.Current.CancellationToken);
 
         try
         {
@@ -186,7 +186,7 @@ public class HeaderHandlingTests
 
             Assert.Equal(syncWithHeader.Count, asyncWithHeader.Count);
             Assert.Equal(3, syncWithHeader.Count); // 3 data rows
-            
+
             for (int i = 0; i < syncWithHeader.Count; i++)
             {
                 Assert.Equal(syncWithHeader[i][0], asyncWithHeader[i][0]);
@@ -222,7 +222,7 @@ public class HeaderHandlingTests
         // Arrange
         var csvWithEmptyLines = "Name,Age,City\n\nJohn,30,NYC\n\nJane,25,LA\n\n";
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, csvWithEmptyLines);
+        await File.WriteAllTextAsync(tempFile, csvWithEmptyLines, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try

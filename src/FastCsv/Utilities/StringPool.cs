@@ -6,21 +6,15 @@ namespace FastCsv;
 /// <summary>
 /// Provides string deduplication to reduce memory usage when reading CSV files with repeated values
 /// </summary>
-public sealed class StringPool
+/// <remarks>
+/// Creates a new string pool for deduplicating repeated string values
+/// </remarks>
+/// <param name="maxStringLength">Maximum length of strings to pool (longer strings won't be pooled)</param>
+public sealed class StringPool(int maxStringLength = 100)
 {
-    private readonly ConcurrentDictionary<string, string> _pool;
-    private readonly int _maxStringLength;
-    
-    /// <summary>
-    /// Creates a new string pool for deduplicating repeated string values
-    /// </summary>
-    /// <param name="maxStringLength">Maximum length of strings to pool (longer strings won't be pooled)</param>
-    public StringPool(int maxStringLength = 100)
-    {
-        _pool = new ConcurrentDictionary<string, string>(StringComparer.Ordinal);
-        _maxStringLength = maxStringLength;
-    }
-    
+    private readonly ConcurrentDictionary<string, string> _pool = new(StringComparer.Ordinal);
+    private readonly int _maxStringLength = maxStringLength;
+
     /// <summary>
     /// Gets or adds a string to the pool, returning the pooled instance
     /// </summary>
@@ -29,10 +23,10 @@ public sealed class StringPool
     {
         if (string.IsNullOrEmpty(value) || value.Length > _maxStringLength)
             return value;
-            
+
         return _pool.GetOrAdd(value, value);
     }
-    
+
     /// <summary>
     /// Gets or adds a string to the pool from a character span
     /// </summary>
@@ -48,17 +42,17 @@ public sealed class StringPool
                 return new string(ptr, 0, span.Length);
             }
         }
-        
+
         // For pooling, we need to create the string first
         string value;
         fixed (char* ptr = span)
         {
             value = new string(ptr, 0, span.Length);
         }
-        
+
         return _pool.GetOrAdd(value, value);
     }
-    
+
     /// <summary>
     /// Clears all entries from the pool
     /// </summary>
@@ -66,7 +60,7 @@ public sealed class StringPool
     {
         _pool.Clear();
     }
-    
+
     /// <summary>
     /// Gets the current number of unique strings in the pool
     /// </summary>

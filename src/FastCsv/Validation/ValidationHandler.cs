@@ -5,19 +5,12 @@ namespace FastCsv.Validation;
 /// <summary>
 /// Default implementation of CSV validation handler
 /// </summary>
-internal class ValidationHandler : IValidationHandler
+internal class ValidationHandler(CsvOptions options, IErrorHandler errorHandler, bool isEnabled) : IValidationHandler
 {
-    private readonly CsvOptions _options;
-    private readonly IErrorHandler _errorHandler;
-    private readonly bool _isEnabled;
+    private readonly CsvOptions _options = options;
+    private readonly IErrorHandler _errorHandler = errorHandler;
+    private readonly bool _isEnabled = isEnabled;
     private int? _expectedFieldCount;
-
-    public ValidationHandler(CsvOptions options, IErrorHandler errorHandler, bool isEnabled)
-    {
-        _options = options;
-        _errorHandler = errorHandler;
-        _isEnabled = isEnabled;
-    }
 
     public bool IsEnabled => _isEnabled;
 

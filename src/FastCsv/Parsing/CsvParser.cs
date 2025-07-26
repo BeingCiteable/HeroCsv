@@ -271,7 +271,7 @@ public static class CsvParser
         return fieldArray;
     }
 #endif
-    
+
     /// <summary>
     /// Creates string without unnecessary allocations
     /// </summary>
@@ -280,13 +280,13 @@ public static class CsvParser
     {
         if (span.IsEmpty) return string.Empty;
         if (span.Length == 1) return span[0].ToString();
-        
+
         fixed (char* ptr = span)
         {
             return new string(ptr, 0, span.Length);
         }
     }
-    
+
     /// <summary>
     /// Creates string with optional pooling for deduplication
     /// </summary>
@@ -297,7 +297,7 @@ public static class CsvParser
         {
             return pool.GetString(span);
         }
-        
+
         return CreateString(span);
     }
 
@@ -401,45 +401,45 @@ public static class CsvParser
     {
         return new WholeBufferCsvEnumerable(data, options);
     }
-    
+
     public readonly ref struct WholeBufferCsvEnumerable
     {
         private readonly ReadOnlySpan<char> _data;
         private readonly CsvOptions _options;
-        
+
         internal WholeBufferCsvEnumerable(ReadOnlySpan<char> data, CsvOptions options)
         {
             _data = data;
             _options = options;
         }
-        
+
         public Enumerator GetEnumerator() => new Enumerator(_data, _options);
-        
+
         public ref struct Enumerator
         {
             private readonly ReadOnlySpan<char> _data;
             private readonly CsvOptions _options;
             private int _position;
             private CsvRow _current;
-            
+
 #if NET8_0_OR_GREATER
             private readonly SearchValues<char> _newlineSearchValues;
             private int[] _lineBreaks;
             private int _lineBreakCount;
             private int _currentLine;
 #else
-            private int[] _lineBreaks = null!;
+            private int[] _lineBreaks;
             private int _lineBreakCount;
             private int _currentLine;
 #endif
-            
+
             internal Enumerator(ReadOnlySpan<char> data, CsvOptions options)
             {
                 _data = data;
                 _options = options;
                 _position = 0;
                 _current = default;
-                
+
 #if NET8_0_OR_GREATER
                 _newlineSearchValues = SearchValues.Create(['\r', '\n']);
                 
@@ -455,7 +455,7 @@ public static class CsvParser
                 _lineBreakCount = 0;
                 _currentLine = 0;
 #endif
-                
+
                 // Skip header row if present
                 if (options.HasHeader && data.Length > 0)
                 {
@@ -469,7 +469,7 @@ public static class CsvParser
 #endif
                 }
             }
-            
+
 #if NET8_0_OR_GREATER
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void ScanAllLineBreaks(ReadOnlySpan<char> data)
@@ -493,17 +493,17 @@ public static class CsvParser
                 }
             }
 #endif
-            
-            public CsvRow Current => _current;
-            
+
+            public readonly CsvRow Current => _current;
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
             {
                 if (_position >= _data.Length) return false;
-                
+
                 var lineStart = _position;
                 int lineEnd;
-                
+
 #if NET8_0_OR_GREATER
                 // Use pre-computed line breaks for maximum performance
                 if (_currentLine < _lineBreakCount)
@@ -519,19 +519,19 @@ public static class CsvParser
 #else
                 lineEnd = FindNextLineEnd();
 #endif
-                
+
                 if (lineEnd <= lineStart) return false;
-                
+
                 // Create row with pre-computed field positions for fast access
                 _current = new CsvRow(_data, lineStart, lineEnd - lineStart, _options);
-                
+
                 // Move to start of next line
                 _position = lineEnd;
                 SkipLineEndingCharacters();
-                
+
                 return true;
             }
-            
+
 #if NET8_0_OR_GREATER
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private int FindNextLineEndFallback()
@@ -541,9 +541,9 @@ public static class CsvParser
                 return index < 0 ? _data.Length : _position + index;
             }
 #endif
-            
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private int FindNextLineEnd()
+            private readonly int FindNextLineEnd()
             {
 #if NET8_0_OR_GREATER
                 var remaining = _data.Slice(_position);
@@ -560,7 +560,7 @@ public static class CsvParser
                 return pos;
 #endif
             }
-            
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void SkipCurrentLine()
             {
@@ -568,8 +568,8 @@ public static class CsvParser
                     _position++;
                 SkipLineEndingCharacters();
             }
-            
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]  
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void SkipLineEndingCharacters()
             {
                 while (_position < _data.Length)

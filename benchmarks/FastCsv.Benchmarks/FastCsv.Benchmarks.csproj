@@ -10,6 +10,8 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.15.2" />
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.2" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta6.25358.103" />
+    <PackageReference Include="Spectre.Console" Version="0.50.0" />
     
     <!-- Popular CSV Libraries for Comparison -->
     <PackageReference Include="CsvHelper" Version="33.1.0" />

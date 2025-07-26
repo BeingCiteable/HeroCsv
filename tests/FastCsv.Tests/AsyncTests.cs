@@ -16,7 +16,7 @@ public class AsyncTests
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, TestCsvWithHeader);
+        await File.WriteAllTextAsync(tempFile, TestCsvWithHeader, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
@@ -44,7 +44,7 @@ public class AsyncTests
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, TestCsvNoHeader);
+        await File.WriteAllTextAsync(tempFile, TestCsvNoHeader, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: false);
 
         try
@@ -88,7 +88,7 @@ public class AsyncTests
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, TestCsvWithHeader);
+        await File.WriteAllTextAsync(tempFile, TestCsvWithHeader, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
@@ -123,7 +123,7 @@ public class AsyncTests
 
         // Act
         using var reader = Csv.CreateAsyncReader(stream, options);
-        var records = await reader.ReadAllRecordsAsync();
+        var records = await reader.ReadAllRecordsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, records.Count);
@@ -137,14 +137,14 @@ public class AsyncTests
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, TestCsvWithHeader);
+        await File.WriteAllTextAsync(tempFile, TestCsvWithHeader, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
         {
             // Act
             using var reader = Csv.CreateAsyncReaderFromFile(tempFile, options);
-            var records = await reader.ReadAllRecordsAsync();
+            var records = await reader.ReadAllRecordsAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(3, records.Count);
@@ -165,7 +165,7 @@ public class AsyncTests
         // Arrange
         var largeCsv = "Name,Age\n" + string.Join("\n", Enumerable.Range(1, 10000).Select(i => $"Person{i},{i}"));
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, largeCsv);
+        await File.WriteAllTextAsync(tempFile, largeCsv, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
@@ -173,7 +173,7 @@ public class AsyncTests
             // Act & Assert
             using var reader = Csv.CreateAsyncReaderFromFile(tempFile, options);
             using var cts = new CancellationTokenSource();
-            
+
             var recordCount = 0;
             await foreach (var record in reader.ReadRecordsAsync(cts.Token))
             {
@@ -198,7 +198,7 @@ public class AsyncTests
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, "");
+        await File.WriteAllTextAsync(tempFile, "", TestContext.Current.CancellationToken);
 
         try
         {
@@ -229,7 +229,7 @@ public class AsyncTests
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, "Name,Age,City");
+        await File.WriteAllTextAsync(tempFile, "Name,Age,City", TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
@@ -261,14 +261,14 @@ public class AsyncTests
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, TestCsvWithHeader);
+        await File.WriteAllTextAsync(tempFile, TestCsvWithHeader, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
         {
             // Act
             var asyncRecords = await Csv.ReadFileAsync(tempFile, options, null, CancellationToken.None);
-            
+
             var syncRecords = Csv.ReadAllRecords(TestCsvWithHeader, options);
 
             // Assert
@@ -295,7 +295,7 @@ public class AsyncTests
         // Arrange
         var csvContent = "Name,Age\nJohñ,30\nJané,25"; // With accented characters
         var tempFile = Path.GetTempFileName();
-        await File.WriteAllTextAsync(tempFile, csvContent, Encoding.UTF8);
+        await File.WriteAllTextAsync(tempFile, csvContent, Encoding.UTF8, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
@@ -321,7 +321,7 @@ public class AsyncTests
         // Arrange
         var tempFile = Path.GetTempFileName();
         var largeCsv = "Name,Age\n" + string.Join("\n", Enumerable.Range(1, 1000).Select(i => $"Person{i},{20 + i % 50}"));
-        await File.WriteAllTextAsync(tempFile, largeCsv);
+        await File.WriteAllTextAsync(tempFile, largeCsv, TestContext.Current.CancellationToken);
         var options = new CsvOptions(hasHeader: true);
 
         try
@@ -353,8 +353,8 @@ public class AsyncTests
         // Act
         using var reader = Csv.CreateAsyncReader(stream, options);
         var records = new List<string[]>();
-        
-        await foreach (var record in reader.ReadRecordsAsync())
+
+        await foreach (var record in reader.ReadRecordsAsync(TestContext.Current.CancellationToken))
         {
             records.Add(record);
         }
@@ -377,7 +377,7 @@ public class AsyncTests
         // Act
         using (var reader = Csv.CreateAsyncReader(stream, options, leaveOpen: true))
         {
-            await reader.ReadAllRecordsAsync();
+            await reader.ReadAllRecordsAsync(TestContext.Current.CancellationToken);
         } // Reader disposed here
 
         // Assert
@@ -396,7 +396,7 @@ public class AsyncTests
         // Act
         using (var reader = Csv.CreateAsyncReader(stream, options, leaveOpen: false))
         {
-            await reader.ReadAllRecordsAsync();
+            await reader.ReadAllRecordsAsync(TestContext.Current.CancellationToken);
         } // Reader and stream disposed here
 
         // Assert

@@ -24,8 +24,8 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     {
         _options = options;
         _propertyMap = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
-        _indexMap = new Dictionary<int, PropertyInfo>();
-        _converters = new Dictionary<int, Func<string, object?>>();
+        _indexMap = [];
+        _converters = [];
         InitializeAutoMapping();
     }
 
@@ -38,8 +38,8 @@ internal sealed partial class CsvMapper<T> where T : class, new()
         _mapping = mapping;
         _options = mapping.Options;
         _propertyMap = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
-        _indexMap = new Dictionary<int, PropertyInfo>();
-        _converters = new Dictionary<int, Func<string, object?>>();
+        _indexMap = [];
+        _converters = [];
 
         // Initialize mixed mapping - auto mapping first, then manual overrides
         if (mapping.UseMixedMapping)
