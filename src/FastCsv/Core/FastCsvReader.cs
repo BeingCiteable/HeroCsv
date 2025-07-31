@@ -210,6 +210,12 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
 
         var fields = CsvParser.ParseLine(lineSpan, _options);
 
+        // Skip empty records (empty line parsed as empty array or single empty field)
+        if (fields.Length == 0 || (fields.Length == 1 && string.IsNullOrEmpty(fields[0])))
+        {
+            return TryReadRecord(out record);
+        }
+
         // Perform validation if enabled
         if (_validationHandler.IsEnabled || _errorHandler.IsEnabled)
         {
@@ -230,7 +236,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         if (!HasMoreData) return;
 
         _dataSource.TryReadLine(out _, out var lineNumber);
-        LineNumber = lineNumber;
+        LineNumber = lineNumber + 1; // Increment to reflect the next line to be read
     }
 
     /// <summary>
@@ -320,6 +326,13 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
         {
             // Stream-based sources require incremental parsing
             var records = new List<string[]>();
+            
+            // Skip header if configured
+            if (_options.HasHeader && HasMoreData)
+            {
+                SkipRecord();
+            }
+            
             while (TryReadRecord(out var record))
             {
                 records.Add(record.ToArray());
@@ -406,6 +419,12 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
     {
         Reset();
 
+        // Skip header if configured
+        if (_options.HasHeader && HasMoreData)
+        {
+            SkipRecord();
+        }
+
         // Can't use optimized path with yield due to ref struct limitations
         // Users who want optimized performance should use ReadAllRecords() or EnumerateRows() directly
         while (TryReadRecord(out var record))
@@ -425,15 +444,7 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
             // Only use buffer optimization for data sources that support it
             if (_dataSource is StringDataSource || _dataSource is MemoryDataSource)
             {
-                var buffer = GetBuffer();
-                var newlineCount = _dataSource.CountLinesDirectly();
-                var totalLines = newlineCount;
-
-                // Check if last character is not a newline (indicates one more line)
-                if (buffer.Length > 0 && buffer[buffer.Length - 1] != '\n' && buffer[buffer.Length - 1] != '\r')
-                {
-                    totalLines++; // Add one for the final line without newline
-                }
+                var totalLines = _dataSource.CountLinesDirectly();
 
                 // Account for header if present
                 if (_options.HasHeader && totalLines > 0)
@@ -460,6 +471,13 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
 
         // Fall back to record-by-record counting when validation is needed
         var count = 0;
+        
+        // Skip header on first read if configured
+        if (_options.HasHeader && HasMoreData)
+        {
+            _dataSource.TryReadLine(out _, out _); // Skip header line
+        }
+        
         while (TryReadRecord(out _))
         {
             count++;
@@ -514,6 +532,12 @@ public sealed partial class FastCsvReader : ICsvReader, IDisposable
             return records;
         }
 #endif
+        // Check for cancellation before starting work
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return new List<string[]>(); // Return empty results when cancelled
+        }
+        
         // Fallback to sync method wrapped in Task.Run for non-async sources
         return await Task.Run(() => ReadAllRecords(), cancellationToken).ConfigureAwait(false);
     }

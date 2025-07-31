@@ -104,7 +104,7 @@ public static class CsvParser
         /// </summary>
         public static string[] ParseLine(ReadOnlySpan<char> line, CsvOptions options)
         {
-            if (line.IsEmpty) return [];
+            if (line.IsEmpty) return [""];
 
             if (options.Delimiter == ',' && !options.TrimWhitespace && line.IndexOf('"') < 0)
             {
@@ -320,6 +320,7 @@ public static class CsvParser
             var inQuotes = false;
             var fieldBuilder = new StringBuilder();
             var i = 0;
+            var fieldStart = true; // Track if we're at the start of a field
 
             while (i < line.Length)
             {
@@ -327,20 +328,28 @@ public static class CsvParser
 
                 if (ch == options.Quote)
                 {
-                    if (!inQuotes)
+                    if (!inQuotes && fieldStart)
                     {
+                        // Only start quoted field if quote is at field start
                         inQuotes = true;
-                        fieldBuilder.Clear();
+                        fieldStart = false;
                     }
-                    else if (i + 1 < line.Length && line[i + 1] == options.Quote)
+                    else if (inQuotes && i + 1 < line.Length && line[i + 1] == options.Quote)
                     {
-                        // Escaped quote
+                        // Escaped quote within quoted field
                         fieldBuilder.Append(options.Quote);
                         i++; // Skip next quote
                     }
+                    else if (inQuotes)
+                    {
+                        // End of quoted field
+                        inQuotes = false;
+                    }
                     else
                     {
-                        inQuotes = false;
+                        // Quote in middle of unquoted field - treat as literal
+                        fieldBuilder.Append(ch);
+                        fieldStart = false;
                     }
                 }
                 else if (ch == options.Delimiter && !inQuotes)
@@ -348,10 +357,12 @@ public static class CsvParser
                     var field = fieldBuilder.ToString();
                     fieldList.Add(options.TrimWhitespace ? field.Trim() : field);
                     fieldBuilder.Clear();
+                    fieldStart = true; // Next character starts a new field
                 }
                 else
                 {
                     fieldBuilder.Append(ch);
+                    fieldStart = false;
                 }
 
                 i++;
@@ -487,7 +498,8 @@ public static class CsvParser
                     lineEnd = FindNextLineEnd();
 #endif
 
-                    if (lineEnd <= lineStart) return false;
+                    // Allow empty lines (lineEnd == lineStart)
+                    if (lineEnd < lineStart) return false;
 
                     // Create row with pre-computed field positions for fast access
                     _current = new CsvRow(_data, lineStart, lineEnd - lineStart, _options);

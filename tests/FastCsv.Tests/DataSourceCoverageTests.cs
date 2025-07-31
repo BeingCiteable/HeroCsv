@@ -57,7 +57,7 @@ public class DataSourceCoverageTests
     {
         using var source = new StringDataSource("line1\nline2\nline3");
         var count = source.CountLinesDirectly();
-        Assert.Equal(2, count); // 2 newlines
+        Assert.Equal(3, count); // 3 lines
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public class DataSourceCoverageTests
         var content = "line1\nline2\nline3".AsMemory();
         using var source = new MemoryDataSource(content);
         var count = source.CountLinesDirectly();
-        Assert.Equal(2, count);
+        Assert.Equal(3, count);
     }
 
     [Fact]

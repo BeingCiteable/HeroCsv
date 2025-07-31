@@ -58,8 +58,11 @@ public class MinimalTests
         var content = "A,B\n1,2\n3,4";
         var records = Csv.ReadAllRecords(content);
         
+        // Now properly uses CsvOptions.Default with hasHeader:true
         Assert.Equal(2, records.Count);
+        Assert.Equal(2, records[0].Length);
         Assert.Equal("1", records[0][0]);
+        Assert.Equal("2", records[0][1]);
     }
 
     [Fact]
@@ -110,9 +113,17 @@ public class MinimalTests
     {
         using var reader = Csv.CreateReader("A,B\n1,2");
         
+        // First record is the header when using default options (hasHeader:true)
+        var header = reader.ReadRecord();
+        Assert.NotNull(header);
+        Assert.Equal("A", header.GetField(0).ToString());
+        
+        // Second record is the data
         var record = reader.ReadRecord();
         Assert.NotNull(record);
+        Assert.Equal("1", record.GetField(0).ToString());
         
+        // No more records
         Assert.False(reader.TryReadRecord(out var record2));
         Assert.Null(record2);
     }

@@ -10,7 +10,7 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class FinalPushCoverageTests
+public class TypeConversionTests
 {
     #region CsvFieldEnumerator Deep Coverage
 
@@ -143,14 +143,14 @@ public class FinalPushCoverageTests
                 var _ = row[-1];
                 Assert.Fail("Should throw");
             }
-            catch (ArgumentOutOfRangeException) { }
+            catch (IndexOutOfRangeException) { }
             
             try
             {
                 var _ = row[row.FieldCount];
                 Assert.Fail("Should throw");
             }
-            catch (ArgumentOutOfRangeException) { }
+            catch (IndexOutOfRangeException) { }
         }
     }
 

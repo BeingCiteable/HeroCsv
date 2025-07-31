@@ -28,6 +28,7 @@ public static partial class Csv
         /// <returns>Number of records found</returns>
         public static int CountRecords(ReadOnlySpan<char> content, CsvOptions options = default)
         {
+            options = GetValidOptions(options);
             return CountRecords(content.ToString(), options);
         }
 
@@ -39,6 +40,7 @@ public static partial class Csv
         /// <returns>Number of records found</returns>
         public static int CountRecords(ReadOnlyMemory<char> content, CsvOptions options = default)
         {
+            options = GetValidOptions(options);
             if (options.Quote == '"' && !ContainsQuote(content.Span, '"'))
             {
                 return CountRecordsFast(content.Span, options);
@@ -137,6 +139,7 @@ public static partial class Csv
         /// <returns>Each CSV row as an array of field values</returns>
         public static IEnumerable<string[]> ReadFile(string filePath, CsvOptions options = default)
         {
+            options = GetValidOptions(options);
             var content = File.ReadAllText(filePath);
             return ReadContent(content, options);
         }
@@ -161,6 +164,7 @@ public static partial class Csv
         /// <returns>All parsed records</returns>
         public static IReadOnlyList<string[]> ReadAllRecords(ReadOnlyMemory<char> content, CsvOptions options = default)
         {
+            options = GetValidOptions(options);
             var dataSource = new MemoryDataSource(content);
             using var reader = new FastCsvReader(dataSource, options);
             return reader.ReadAllRecords();
@@ -174,6 +178,7 @@ public static partial class Csv
         /// <returns>All parsed records</returns>
         public static IReadOnlyList<string[]> ReadAllRecords(string content, CsvOptions options = default)
         {
+            options = GetValidOptions(options);
             using var reader = CreateReader(content, options);
             return reader.ReadAllRecords();
         }
@@ -186,6 +191,7 @@ public static partial class Csv
         /// <returns>CSV reader instance</returns>
         public static ICsvReader CreateReader(ReadOnlyMemory<char> content, CsvOptions options = default)
         {
+            options = GetValidOptions(options);
             var dataSource = new MemoryDataSource(content);
             return new FastCsvReader(dataSource, options);
         }
@@ -227,6 +233,7 @@ public static partial class Csv
         /// <returns>CSV reader instance</returns>
         public static ICsvReader CreateReader(Stream stream, CsvOptions options = default, Encoding? encoding = null, bool leaveOpen = false)
         {
+            options = GetValidOptions(options);
             return new FastCsvReader(stream, options, encoding, leaveOpen);
         }
 
@@ -428,6 +435,14 @@ public static partial class Csv
         private static IEnumerable<T> ReadWithMapper<T>(string content, CsvOptions options, CsvMapper<T> mapper) where T : class, new()
         {
             using var reader = CreateReader(content, options);
+            
+            // If the CSV has headers, read them first and set on mapper
+            if (options.HasHeader && reader.TryReadRecord(out var headerRecord))
+            {
+                mapper.SetHeaders(headerRecord.ToArray());
+            }
+            
+            // Now read the data records
             var records = reader.GetRecords();
             using var enumerator = records.GetEnumerator();
 

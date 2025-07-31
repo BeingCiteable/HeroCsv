@@ -35,7 +35,7 @@ public ref struct CsvFieldEnumerator
         }
 
         // Fast path for unquoted fields
-        if (_position == 0 || _line[_position - 1] != _quote)
+        if (_position < _line.Length && _line[_position] != _quote)
         {
             var start = _position;
             while (_position < _line.Length && _line[_position] != _delimiter)
@@ -69,8 +69,8 @@ public ref struct CsvFieldEnumerator
                 }
                 else
                 {
-                    // End of quoted field
-                    field = _line.Slice(start + 1, _position - start - 1);
+                    // End of quoted field - include the quotes
+                    field = _line.Slice(start, _position - start + 1);
                     _position++; // Skip closing quote
 
                     // Skip to next delimiter
@@ -89,7 +89,7 @@ public ref struct CsvFieldEnumerator
             }
         }
 
-        // Unterminated quoted field
+        // Unterminated quoted field - return as is
         field = _line.Slice(start);
         _fieldIndex++;
         return true;

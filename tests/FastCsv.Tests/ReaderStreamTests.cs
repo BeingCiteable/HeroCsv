@@ -13,7 +13,7 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class MaxCoverageTestsFixed
+public class ReaderStreamTests
 {
     #region FastCsvReader Additional Coverage
 
@@ -96,7 +96,7 @@ public class MaxCoverageTestsFixed
     [Fact]
     public void FastCsvReader_Properties()
     {
-        var options = new CsvOptions(delimiter: '|');
+        var options = new CsvOptions(delimiter: '|', hasHeader: false);
         using var reader = new FastCsvReader("A|B\n1|2", options, validateData: false, trackErrors: false);
         
         Assert.Equal(options, reader.Options);
@@ -104,7 +104,7 @@ public class MaxCoverageTestsFixed
         Assert.Equal(0, reader.RecordCount);
         
         reader.TryReadRecord(out _);
-        Assert.Equal(2, reader.LineNumber);
+        Assert.Equal(1, reader.LineNumber);
         Assert.Equal(1, reader.RecordCount);
     }
 
@@ -207,14 +207,14 @@ public class MaxCoverageTestsFixed
     public void FastCsvReader_StreamDataSource_NonSeekable()
     {
         using var stream = new NonSeekableMemoryStream(Encoding.UTF8.GetBytes("A,B\n1,2"));
-        using var reader = new FastCsvReader(stream, CsvOptions.Default);
+        using var reader = new FastCsvReader(stream, new CsvOptions(hasHeader: false));
         
         // Cannot reset non-seekable stream
         Assert.Throws<NotSupportedException>(() => reader.Reset());
         
         Assert.True(reader.TryReadRecord(out var record));
         Assert.Equal(2, record.FieldCount);
-        Assert.Equal("1", record.ToArray()[0]);
+        Assert.Equal("A", record.ToArray()[0]); // First record should be "A,B"
     }
 
     [Fact]
@@ -242,7 +242,7 @@ public class MaxCoverageTestsFixed
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
         
         var records = Csv.ReadStream(stream).ToList();
-        Assert.Equal(3, records.Count); // Including header
+        Assert.Equal(2, records.Count); // Data records only, header excluded
     }
 
     [Fact]
@@ -344,7 +344,7 @@ public class MaxCoverageTestsFixed
     {
         // Empty CSV
         var fieldCount = 0;
-        foreach (var field in CsvFieldIterator.IterateFields("", CsvOptions.Default))
+        foreach (var field in CsvFieldIterator.IterateFields("", new CsvOptions(hasHeader: false)))
         {
             fieldCount++;
         }
@@ -353,7 +353,7 @@ public class MaxCoverageTestsFixed
         // Single field
         fieldCount = 0;
         string? firstFieldValue = null;
-        foreach (var field in CsvFieldIterator.IterateFields("single", CsvOptions.Default))
+        foreach (var field in CsvFieldIterator.IterateFields("single", new CsvOptions(hasHeader: false)))
         {
             if (fieldCount == 0)
                 firstFieldValue = field.Value.ToString();
@@ -364,7 +364,7 @@ public class MaxCoverageTestsFixed
         
         // Multiple empty lines
         fieldCount = 0;
-        foreach (var field in CsvFieldIterator.IterateFields("\n\n\n", CsvOptions.Default))
+        foreach (var field in CsvFieldIterator.IterateFields("\n\n\n", new CsvOptions(hasHeader: false)))
         {
             fieldCount++;
         }
@@ -375,7 +375,7 @@ public class MaxCoverageTestsFixed
     public void FastCsvReader_EnumerateRows_Test()
     {
         // Test with FastCsvReader directly
-        var reader = new FastCsvReader("A,B\n1,2", CsvOptions.Default);
+        var reader = new FastCsvReader("A,B\n1,2", new CsvOptions(hasHeader: false));
         
         // EnumerateRows is a method on FastCsvReader, not ICsvReader
         if (reader is FastCsvReader fastReader)

@@ -62,7 +62,17 @@ internal sealed class StringDataSource(string content) : ICsvDataSource
     /// </summary>
     public int CountLinesDirectly()
     {
-        return CsvParser.CountLines(_content.AsSpan());
+        if (string.IsNullOrEmpty(_content)) return 0;
+        
+        var newlineCount = CsvParser.CountLines(_content.AsSpan());
+        
+        // If content doesn't end with newline, there's one more line
+        if (_content.Length > 0 && _content[_content.Length - 1] != '\n' && _content[_content.Length - 1] != '\r')
+        {
+            return newlineCount + 1;
+        }
+        
+        return newlineCount;
     }
 
     public bool TryReadLine(out ReadOnlySpan<char> line, out int lineNumber)
@@ -152,7 +162,18 @@ internal sealed class MemoryDataSource(ReadOnlyMemory<char> memory) : ICsvDataSo
     /// </summary>
     public int CountLinesDirectly()
     {
-        return CsvParser.CountLines(_memory.Span);
+        if (_memory.IsEmpty) return 0;
+        
+        var span = _memory.Span;
+        var newlineCount = CsvParser.CountLines(span);
+        
+        // If content doesn't end with newline, there's one more line
+        if (span.Length > 0 && span[span.Length - 1] != '\n' && span[span.Length - 1] != '\r')
+        {
+            return newlineCount + 1;
+        }
+        
+        return newlineCount;
     }
 
     public bool TryReadLine(out ReadOnlySpan<char> line, out int lineNumber)
@@ -262,7 +283,17 @@ internal sealed class StreamDataSource(Stream stream, Encoding? encoding = null,
         try
         {
             var content = _reader.ReadToEnd();
-            return CsvParser.CountLines(content.AsSpan());
+            if (string.IsNullOrEmpty(content)) return 0;
+            
+            var newlineCount = CsvParser.CountLines(content.AsSpan());
+            
+            // If content doesn't end with newline, there's one more line
+            if (content.Length > 0 && content[content.Length - 1] != '\n' && content[content.Length - 1] != '\r')
+            {
+                return newlineCount + 1;
+            }
+            
+            return newlineCount;
         }
         finally
         {

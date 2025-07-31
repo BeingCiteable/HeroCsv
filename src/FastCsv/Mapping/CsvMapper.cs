@@ -141,8 +141,8 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     {
         if (_headers == null) return;
 
-        // For auto mapping, map headers to properties
-        if (_mapping == null)
+        // For auto mapping or mixed mapping, map headers to properties
+        if (_mapping == null || _mapping.UseMixedMapping)
         {
             _indexMap.Clear();
             for (int i = 0; i < _headers.Length; i++)
@@ -154,9 +154,11 @@ internal sealed partial class CsvMapper<T> where T : class, new()
                 }
             }
         }
-        else
+        
+        // For manual or mixed mapping, apply manual mappings (overrides auto mappings)
+        if (_mapping != null)
         {
-            // For manual mapping, update column name mappings to use indices
+            // Update column name mappings to use indices
             foreach (var mapping in _mapping.PropertyMappings)
             {
                 if (!string.IsNullOrEmpty(mapping.ColumnName) && !mapping.ColumnIndex.HasValue)
@@ -204,21 +206,53 @@ internal sealed partial class CsvMapper<T> where T : class, new()
             targetType = underlyingType;
         }
 
+        // Check for unsupported array types
+        if (targetType.IsArray)
+        {
+            return null; // Arrays are not supported, return null
+        }
+
         // Common type conversions
         return targetType.Name switch
         {
             nameof(String) => value,
             nameof(Byte) => byte.Parse(value),
+            nameof(SByte) => sbyte.Parse(value),
+            nameof(Int16) => short.Parse(value),
+            nameof(UInt16) => ushort.Parse(value),
             nameof(Int32) => int.Parse(value),
+            nameof(UInt32) => uint.Parse(value),
             nameof(Int64) => long.Parse(value),
+            nameof(UInt64) => ulong.Parse(value),
+            nameof(Single) => float.Parse(value),
             nameof(Double) => double.Parse(value),
             nameof(Decimal) => decimal.Parse(value),
             nameof(Boolean) => bool.Parse(value),
+            nameof(Char) => value.Length > 0 ? value[0] : '\0',
             nameof(DateTime) => DateTime.Parse(value),
             nameof(DateTimeOffset) => DateTimeOffset.Parse(value),
             nameof(Guid) => Guid.Parse(value),
-            _ => Convert.ChangeType(value, targetType)
+            nameof(TimeSpan) => TimeSpan.Parse(value),
+            _ => targetType.IsEnum ? 
+                ParseEnum(targetType, value) 
+                : Convert.ChangeType(value, targetType)
         };
+    }
+
+    /// <summary>
+    /// Parse enum with error handling for invalid values
+    /// </summary>
+    private static object ParseEnum(Type enumType, string value)
+    {
+        try
+        {
+            return Enum.Parse(enumType, value, true); // ignoreCase = true
+        }
+        catch (ArgumentException)
+        {
+            // Return default value for invalid enum values
+            return Activator.CreateInstance(enumType)!;
+        }
     }
 }
 
