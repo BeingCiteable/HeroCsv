@@ -38,7 +38,8 @@ artifacts/
 bin/
 obj/
 out/
-TestResults*/
+[Tt]est[Rr]esults*/
+[Cc]overage[Rr]eport*/
 *.tmp
 *.tmp_proj
 *.log
