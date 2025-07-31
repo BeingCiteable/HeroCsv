@@ -1,0 +1,1 @@
+// This file was replaced by SimpleMappingTests.cs

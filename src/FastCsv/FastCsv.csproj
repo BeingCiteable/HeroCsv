@@ -29,6 +29,11 @@
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
 
+	<!-- Allow test project to access internals -->
+	<ItemGroup>
+		<InternalsVisibleTo Include="FastCsv.Tests" />
+	</ItemGroup>
+
 	<!-- Framework-specific configurations -->
 	<PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
 		<DefineConstants>$(DefineConstants);NETSTANDARD2_0</DefineConstants>

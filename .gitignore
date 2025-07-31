@@ -38,7 +38,7 @@ artifacts/
 bin/
 obj/
 out/
-TestResults/
+TestResults*/
 *.tmp
 *.tmp_proj
 *.log
@@ -172,3 +172,4 @@ NUL
 
 ## Claude
 .claude
+*.local.json
