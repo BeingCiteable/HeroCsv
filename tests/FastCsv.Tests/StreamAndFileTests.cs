@@ -6,7 +6,10 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class DataSourceTests
+/// <summary>
+/// Tests for reading CSV from various data sources (files, streams, TextReader, etc.)
+/// </summary>
+public class StreamAndFileTests
 {
     [Fact]
     public void StringDataSource_SupportsReset()

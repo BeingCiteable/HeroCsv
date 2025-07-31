@@ -275,6 +275,20 @@ public static partial class Csv
         }
 
         /// <summary>
+        /// Reads CSV content and maps each record to the specified type using a fluent mapping builder
+        /// </summary>
+        /// <typeparam name="T">Type to map CSV records to</typeparam>
+        /// <param name="content">Raw CSV text to parse</param>
+        /// <param name="buildMapping">Function to configure the mapping using fluent API</param>
+        /// <returns>Enumerable of mapped objects</returns>
+        public static IEnumerable<T> Read<T>(string content, Func<CsvMappingBuilder<T>, CsvMapping<T>> buildMapping) where T : class, new()
+        {
+            var builder = new CsvMappingBuilder<T>();
+            var mapping = buildMapping(builder);
+            return Read(content, mapping);
+        }
+
+        /// <summary>
         /// Reads CSV file and maps each record to the specified type using auto mapping
         /// </summary>
         /// <typeparam name="T">Type to map CSV records to</typeparam>
@@ -308,48 +322,62 @@ public static partial class Csv
         public static IEnumerable<T> ReadFile<T>(string filePath, CsvMapping<T> mapping) where T : class, new()
         {
             var content = File.ReadAllText(filePath);
-            return Read(content, mapping);
+            return Read<T>(content, mapping);
         }
 
         /// <summary>
-        /// Reads CSV content and maps each record to the specified type using mixed mapping (auto + manual overrides)
+        /// Reads CSV file and maps each record to the specified type using a fluent mapping builder
+        /// </summary>
+        /// <typeparam name="T">Type to map CSV records to</typeparam>
+        /// <param name="filePath">Full or relative path to the CSV file</param>
+        /// <param name="buildMapping">Function to configure the mapping using fluent API</param>
+        /// <returns>Enumerable of mapped objects</returns>
+        public static IEnumerable<T> ReadFile<T>(string filePath, Func<CsvMappingBuilder<T>, CsvMapping<T>> buildMapping) where T : class, new()
+        {
+            var content = File.ReadAllText(filePath);
+            return Read<T>(content, buildMapping);
+        }
+
+
+        /// <summary>
+        /// Reads CSV content and maps each record to the specified type using auto mapping with manual overrides
         /// </summary>
         /// <typeparam name="T">Type to map CSV records to</typeparam>
         /// <param name="content">Raw CSV text to parse</param>
         /// <param name="configureMapping">Action to configure manual mapping overrides</param>
         /// <returns>Enumerable of mapped objects</returns>
-        public static IEnumerable<T> ReadMixed<T>(string content, Action<CsvMapping<T>> configureMapping) where T : class, new()
+        public static IEnumerable<T> ReadAutoMapWithOverrides<T>(string content, Action<CsvMapping<T>> configureMapping) where T : class, new()
         {
-            return ReadMixed(content, CsvOptions.Default, configureMapping);
+            return ReadAutoMapWithOverrides(content, CsvOptions.Default, configureMapping);
         }
 
         /// <summary>
-        /// Reads CSV content and maps each record to the specified type using mixed mapping with custom options
+        /// Reads CSV content and maps each record to the specified type using auto mapping with manual overrides and custom options
         /// </summary>
         /// <typeparam name="T">Type to map CSV records to</typeparam>
         /// <param name="content">Raw CSV text to parse</param>
         /// <param name="options">Parsing configuration for delimiter, quotes, headers, etc.</param>
         /// <param name="configureMapping">Action to configure manual mapping overrides</param>
         /// <returns>Enumerable of mapped objects</returns>
-        public static IEnumerable<T> ReadMixed<T>(string content, CsvOptions options, Action<CsvMapping<T>> configureMapping) where T : class, new()
+        public static IEnumerable<T> ReadAutoMapWithOverrides<T>(string content, CsvOptions options, Action<CsvMapping<T>> configureMapping) where T : class, new()
         {
-            var mapping = CsvMapping<T>.CreateMixed();
+            var mapping = CsvMapping<T>.CreateAutoMapWithOverrides();
             mapping.Options = options;
             configureMapping(mapping);
             return Read<T>(content, mapping);
         }
 
         /// <summary>
-        /// Reads CSV file and maps each record to the specified type using mixed mapping (auto + manual overrides)
+        /// Reads CSV file and maps each record to the specified type using auto mapping with manual overrides
         /// </summary>
         /// <typeparam name="T">Type to map CSV records to</typeparam>
         /// <param name="filePath">Full or relative path to the CSV file</param>
         /// <param name="configureMapping">Action to configure manual mapping overrides</param>
         /// <returns>Enumerable of mapped objects</returns>
-        public static IEnumerable<T> ReadFileMixed<T>(string filePath, Action<CsvMapping<T>> configureMapping) where T : class, new()
+        public static IEnumerable<T> ReadFileAutoMapWithOverrides<T>(string filePath, Action<CsvMapping<T>> configureMapping) where T : class, new()
         {
             var content = File.ReadAllText(filePath);
-            return ReadMixed<T>(content, configureMapping);
+            return ReadAutoMapWithOverrides<T>(content, configureMapping);
         }
 
         /// <summary>
@@ -416,17 +444,17 @@ public static partial class Csv
         }
 
         /// <summary>
-        /// Reads CSV data from a stream and maps each record to the specified type using mixed mapping (auto + manual overrides)
+        /// Reads CSV data from a stream and maps each record to the specified type using auto mapping with manual overrides
         /// </summary>
         /// <typeparam name="T">Type to map CSV records to</typeparam>
         /// <param name="stream">Stream containing CSV data</param>
         /// <param name="configureMapping">Action to configure manual mapping overrides</param>
         /// <returns>Enumerable of mapped objects</returns>
-        public static IEnumerable<T> ReadStreamMixed<T>(Stream stream, Action<CsvMapping<T>> configureMapping) where T : class, new()
+        public static IEnumerable<T> ReadStreamAutoMapWithOverrides<T>(Stream stream, Action<CsvMapping<T>> configureMapping) where T : class, new()
         {
             using var reader = new StreamReader(stream);
             var content = reader.ReadToEnd();
-            return ReadMixed<T>(content, configureMapping);
+            return ReadAutoMapWithOverrides<T>(content, configureMapping);
         }
 
         /// <summary>

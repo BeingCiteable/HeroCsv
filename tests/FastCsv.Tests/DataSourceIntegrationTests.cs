@@ -8,7 +8,10 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class DataSourceCoverageTests
+/// <summary>
+/// Integration tests for data source functionality across different .NET versions
+/// </summary>
+public class DataSourceIntegrationTests
 {
     #region StringDataSource Tests
 

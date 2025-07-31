@@ -10,7 +10,10 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class ParsingEdgeCasesTests
+/// <summary>
+/// Tests for parsing boundary conditions and edge cases (empty data, special characters, limits)
+/// </summary>
+public class ParsingBoundaryTests
 {
     [Fact]
     public void CsvParser_ParseLine_WithQuotesAndDelimiters()

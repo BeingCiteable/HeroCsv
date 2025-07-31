@@ -52,7 +52,7 @@ The library implements the partial class pattern for key components:
 
 ### Key Features (Current Implementation)
 - **Generic Object Mapping**: Comprehensive `CsvMapper<T>` with automatic property mapping, manual column mapping, and custom converters
-- **Three Mapping Modes**: Auto (by property names), Manual (by column index), and Mixed (combination of both)
+- **Three Mapping Modes**: Auto (by property names), Manual (by column index), and Auto with Overrides (combination of both)
 - **Rich Extension Methods**: `ExtensionsToICsvRecord` provides type conversion, field validation, and direct object mapping
 - **Comprehensive Error Handling**: Detailed error types with `CsvValidationResult` and `CsvValidationError` for specific error tracking
 - **Async Operations**: Full async support for file and stream operations (.NET 7+)
@@ -459,5 +459,5 @@ private ICsvReader CreateReader(string content)
 - [ ] Are extension methods properly organized in `ExtensionsToXXX` classes?
 - [ ] Is the naming framework-agnostic and consistent?
 - [ ] Are ReadOnlySpan<char> overloads provided for performance?
-- [ ] Does object mapping support all three modes (Auto, Manual, Mixed)?
+- [ ] Does object mapping support all three modes (Auto, Manual, Auto with Overrides)?
 - [ ] Are validation errors properly typed and detailed?

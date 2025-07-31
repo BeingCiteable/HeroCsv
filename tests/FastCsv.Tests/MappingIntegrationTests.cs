@@ -14,7 +14,10 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class ComprehensiveMappingAndDataSourceTests
+/// <summary>
+/// Integration tests for mapping functionality combined with various data sources
+/// </summary>
+public class MappingIntegrationTests
 {
     public class Person
     {
@@ -46,16 +49,16 @@ public class ComprehensiveMappingAndDataSourceTests
         
         Assert.NotNull(mapping);
         Assert.Empty(mapping.PropertyMappings);
-        Assert.False(mapping.UseMixedMapping);
+        Assert.False(mapping.UseAutoMapWithOverrides);
     }
 
     [Fact]
-    public void CsvMapping_CreateMixed()
+    public void CsvMapping_CreateAutoMapWithOverrides()
     {
-        var mapping = CsvMapping<Person>.CreateMixed();
+        var mapping = CsvMapping<Person>.CreateAutoMapWithOverrides();
         
         Assert.NotNull(mapping);
-        Assert.True(mapping.UseMixedMapping);
+        Assert.True(mapping.UseAutoMapWithOverrides);
     }
 
     [Fact]
@@ -113,13 +116,13 @@ public class ComprehensiveMappingAndDataSourceTests
     }
 
     [Fact]
-    public void CsvMapping_UseMixed()
+    public void CsvMapping_UseAutoMapWithOverrides()
     {
         var mapping = CsvMapping<Person>.Create()
-            .UseMixed()
+            .EnableAutoMapWithOverrides()
             .MapProperty("FirstName", 0);
         
-        Assert.True(mapping.UseMixedMapping);
+        Assert.True(mapping.UseAutoMapWithOverrides);
         Assert.Single(mapping.PropertyMappings);
     }
 
@@ -173,9 +176,9 @@ public class ComprehensiveMappingAndDataSourceTests
     }
 
     [Fact]
-    public void CsvMapper_MixedMapping()
+    public void CsvMapper_AutoMapWithOverrides()
     {
-        var mapping = CsvMapping<Person>.CreateMixed()
+        var mapping = CsvMapping<Person>.CreateAutoMapWithOverrides()
             .MapProperty("Age", 2); // Override age to different position
         
         var mapper = new CsvMapper<Person>(mapping);
@@ -184,7 +187,7 @@ public class ComprehensiveMappingAndDataSourceTests
         var record = new[] { "John", "Doe", "30" };
         var person = mapper.MapRecord(record);
         
-        // Mixed mapping might not work as expected
+        // Auto mapping with overrides might not work as expected
         // Just verify we got a person object
         Assert.NotNull(person);
         Assert.Equal(30, person.Age); // Should be mapped to index 2

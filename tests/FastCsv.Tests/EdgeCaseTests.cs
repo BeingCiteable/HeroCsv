@@ -270,7 +270,7 @@ public class EdgeCaseTests
     [Fact]
     public void CsvMapper_ManualMapping_MixedMode()
     {
-        var mapping = CsvMapping<TestModel>.CreateMixed();
+        var mapping = CsvMapping<TestModel>.CreateAutoMapWithOverrides();
         mapping.MapProperty("IntValue", 1, v => int.Parse(v) * 100);
         
         var mapper = new CsvMapper<TestModel>(mapping);

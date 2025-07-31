@@ -97,8 +97,8 @@ var employeesManual = Csv.ReadWithMapping<Employee>(csvData, mapping =>
            .Map(e => e.Salary, 3)
            .Map(e => e.HireDate, 4));
 
-// Mixed mapping (some auto, some manual)
-var employeesMixed = Csv.ReadWithMapping<Employee>(csvData, mapping =>
+// Auto mapping with manual overrides
+var employeesWithOverrides = Csv.ReadWithMapping<Employee>(csvData, mapping =>
     mapping.AutoMap()  // Auto-map by header names
            .Map(e => e.Salary, col => decimal.Parse(col) * 1.1m)); // Custom converter
 ```

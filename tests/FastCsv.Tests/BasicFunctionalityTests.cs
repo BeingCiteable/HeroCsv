@@ -10,7 +10,10 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class MinimalTests
+/// <summary>
+/// Tests to verify basic CSV reading and writing functionality
+/// </summary>
+public class BasicFunctionalityTests
 {
     [Fact]
     public void Csv_ReadContent_Basic()

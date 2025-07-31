@@ -7,9 +7,9 @@ using Xunit;
 namespace FastCsv.Tests;
 
 /// <summary>
-/// Simplified allocation verification tests
+/// Tests to verify memory allocation behavior and ensure zero-allocation scenarios work correctly
 /// </summary>
-public class AllocationVerificationTests
+public class MemoryAllocationTests
 {
     [Fact]
     public void VerifyParseLineBehavior()

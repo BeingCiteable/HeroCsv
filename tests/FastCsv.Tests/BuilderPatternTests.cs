@@ -11,7 +11,10 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class BuilderTests
+/// <summary>
+/// Tests for the fluent builder pattern and configuration options
+/// </summary>
+public class BuilderPatternTests
 {
     [Fact]
     public void CsvReaderBuilder_WithContent_Basic()

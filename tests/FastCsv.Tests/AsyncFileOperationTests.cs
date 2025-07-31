@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class AsyncTests
+public class AsyncFileOperationTests
 {
     private const string TestCsvWithHeader = "Name,Age,City\nJohn,30,NYC\nJane,25,LA\nBob,35,SF";
     private const string TestCsvNoHeader = "John,30,NYC\nJane,25,LA\nBob,35,SF";

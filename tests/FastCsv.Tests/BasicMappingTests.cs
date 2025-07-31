@@ -7,7 +7,10 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class SimpleMappingTests
+/// <summary>
+/// Tests for basic object mapping functionality without attributes or fluent configuration
+/// </summary>
+public class BasicMappingTests
 {
     public class TestPerson
     {

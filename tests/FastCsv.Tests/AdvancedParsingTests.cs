@@ -14,7 +14,10 @@ using Xunit;
 
 namespace FastCsv.Tests;
 
-public class ParsingAndDataSourceTests
+/// <summary>
+/// Tests for advanced parsing scenarios including complex delimiters, escaping, and large data
+/// </summary>
+public class AdvancedParsingTests
 {
     #region CsvFieldEnumerator Tests
     
