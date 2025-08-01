@@ -9,19 +9,10 @@ internal sealed partial class CsvRecord(string[] fields, int lineNumber) : ICsvR
 {
         private readonly string[] _fields = fields ?? throw new ArgumentNullException(nameof(fields));
 
-        /// <summary>
-        /// Line number of this record (1-based)
-        /// </summary>
         public int LineNumber => lineNumber;
 
-        /// <summary>
-        /// Number of fields in this record
-        /// </summary>
         public int FieldCount => _fields.Length;
 
-        /// <summary>
-        /// Gets field by index
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<char> GetField(int index)
         {

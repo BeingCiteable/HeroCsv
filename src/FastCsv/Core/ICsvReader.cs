@@ -11,25 +11,13 @@ public partial interface ICsvReader : IDisposable, IAsyncDisposable
 public partial interface ICsvReader : IDisposable
 #endif
 {
-    /// <summary>
-    /// Current line number (1-based)
-    /// </summary>
     int LineNumber { get; }
 
-    /// <summary>
-    /// Indicates whether more data is available to read
-    /// </summary>
     bool HasMoreData { get; }
 
-    /// <summary>
-    /// Total number of records processed so far
-    /// </summary>
     int RecordCount { get; }
 
 
-    /// <summary>
-    /// Read the next CSV record
-    /// </summary>
     ICsvRecord ReadRecord();
 
     /// <summary>
@@ -37,14 +25,8 @@ public partial interface ICsvReader : IDisposable
     /// </summary>
     bool TryReadRecord(out ICsvRecord record);
 
-    /// <summary>
-    /// Skip the next record without parsing it
-    /// </summary>
     void SkipRecord();
 
-    /// <summary>
-    /// Skip multiple records
-    /// </summary>
     void SkipRecords(int count);
 
     /// <summary>

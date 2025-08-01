@@ -41,13 +41,6 @@ public class MappingEdgeCasesTests
         public bool Active { get; set; }
     }
     
-    public class CircularReferenceModel
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public CircularReferenceModel? Parent { get; set; } // Complex type
-    }
-    
     public class ReadOnlyPropertyModel
     {
         public int Id { get; set; }
@@ -62,21 +55,6 @@ public class MappingEdgeCasesTests
         public string Name { get; private set; } = "";
         public string ProtectedProp { get; protected set; } = "";
         public string InternalProp { get; internal set; } = "";
-    }
-    
-    public class SpecialCharacterModel
-    {
-        [CsvColumn("Column With Spaces")]
-        public string SpacedColumn { get; set; } = "";
-        
-        [CsvColumn("Column,With,Commas")]
-        public string CommaColumn { get; set; } = "";
-        
-        [CsvColumn("Column\"With\"Quotes")]
-        public string QuoteColumn { get; set; } = "";
-        
-        [CsvColumn("Column\nWith\nNewlines")]
-        public string NewlineColumn { get; set; } = "";
     }
     
     public class EmptyModel

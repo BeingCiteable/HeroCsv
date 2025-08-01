@@ -9,9 +9,6 @@ namespace FastCsv;
 /// </summary>
 public static class ExtensionsToICsvRecord
 {
-    /// <summary>
-    /// Converts record to string array
-    /// </summary>
     public static string[] ToArray(this ICsvRecord record)
     {
         if (record is CsvRecord fastRecord)
@@ -27,9 +24,6 @@ public static class ExtensionsToICsvRecord
         return result;
     }
 
-    /// <summary>
-    /// Converts record to dictionary using headers as keys
-    /// </summary>
     public static Dictionary<string, string> ToDictionary(this ICsvRecord record, string[] headers)
     {
         var result = new Dictionary<string, string>(Math.Min(headers.Length, record.FieldCount));

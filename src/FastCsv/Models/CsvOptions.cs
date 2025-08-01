@@ -14,19 +14,10 @@ public readonly struct CsvOptions(
     string? newLine = null,
     StringPool? stringPool = null)
 {
-    /// <summary>
-    /// Field delimiter character
-    /// </summary>
     public readonly char Delimiter = delimiter;
 
-    /// <summary>
-    /// Quote character for field escaping
-    /// </summary>
     public readonly char Quote = quote;
 
-    /// <summary>
-    /// Indicates if first row contains headers
-    /// </summary>
     public readonly bool HasHeader = hasHeader;
 
     /// <summary>

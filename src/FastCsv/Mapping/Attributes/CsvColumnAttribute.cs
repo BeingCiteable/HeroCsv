@@ -8,19 +8,10 @@ namespace FastCsv.Mapping.Attributes;
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 public sealed class CsvColumnAttribute : Attribute
 {
-    /// <summary>
-    /// Gets the column name
-    /// </summary>
     public string? Name { get; }
 
-    /// <summary>
-    /// Gets or sets the column index (0-based)
-    /// </summary>
     public int Index { get; set; }
 
-    /// <summary>
-    /// Gets whether the index was explicitly set
-    /// </summary>
     public bool HasIndex { get; }
 
     /// <summary>
@@ -38,10 +29,6 @@ public sealed class CsvColumnAttribute : Attribute
     /// </summary>
     public bool Ignore { get; set; }
 
-    /// <summary>
-    /// Maps property to a column by name
-    /// </summary>
-    /// <param name="name">The CSV column name</param>
     public CsvColumnAttribute(string name)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -49,10 +36,6 @@ public sealed class CsvColumnAttribute : Attribute
         HasIndex = false;
     }
 
-    /// <summary>
-    /// Maps property to a column by index
-    /// </summary>
-    /// <param name="index">The CSV column index (0-based)</param>
     public CsvColumnAttribute(int index)
     {
         if (index < 0)
