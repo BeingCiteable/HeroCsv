@@ -32,8 +32,6 @@ jobs:
           7.0.x
           8.0.x
           9.0.x
-        # Include prerelease to handle any preview versions
-        include-prerelease: true
 
     - name: Verify .NET installations
       shell: pwsh
@@ -112,7 +110,6 @@ jobs:
           7.0.x
           8.0.x
           9.0.x
-        include-prerelease: true
 
     - name: Verify .NET installations
       shell: pwsh
