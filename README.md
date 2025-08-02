@@ -1,5 +1,10 @@
 # FastCsv
 
+[![CI Build](https://github.com/BeingCiteable/FastCsv/actions/workflows/ci.yml/badge.svg)](https://github.com/BeingCiteable/FastCsv/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/FastCsv.svg)](https://www.nuget.org/packages/FastCsv/)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/FastCsv.svg)](https://www.nuget.org/packages/FastCsv/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 An **ultra-fast and low memory usage** CSV parsing library for .NET focused on **reading operations only**. Built with zero-allocation parsing using ReadOnlySpan<char> and progressive framework-specific optimizations.
 
 ## Features

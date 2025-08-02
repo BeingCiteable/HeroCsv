@@ -9,7 +9,7 @@
 
 		<!-- Package properties -->
 		<PackageId>FastCsv</PackageId>
-		<PackageVersion>1.0.0</PackageVersion>
+		<PackageVersion>$(Version)</PackageVersion>
 		<Authors>FastCsv Contributors</Authors>
 		<Company>BeingCiteable</Company>
 		<Product>FastCsv</Product>
