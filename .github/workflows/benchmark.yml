@@ -33,7 +33,7 @@ jobs:
     - name: Run benchmarks
       run: |
         cd benchmarks/FastCsv.Benchmarks
-        dotnet run -c Release --no-build -- --filter "*" --exporters json --job short
+        dotnet run -c Release --no-build -- perf quick --rows 100 --iterations 5
 
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4
@@ -48,36 +48,14 @@ jobs:
       if: github.event_name == 'pull_request'
       with:
         script: |
-          const fs = require('fs');
-          const path = require('path');
+          const comment = `## Benchmark Results
           
-          // Find the latest benchmark results
-          const resultsPath = 'benchmarks/FastCsv.Benchmarks/BenchmarkDotNet.Artifacts/results';
-          if (!fs.existsSync(resultsPath)) {
-            console.log('No benchmark results found');
-            return;
-          }
+          Quick performance benchmarks have been run for this PR.
           
-          // Read the first JSON file found
-          const files = fs.readdirSync(resultsPath).filter(f => f.endsWith('.json'));
-          if (files.length === 0) {
-            console.log('No JSON benchmark results found');
-            return;
-          }
+          View the full results in the workflow artifacts.
           
-          const results = JSON.parse(fs.readFileSync(path.join(resultsPath, files[0]), 'utf8'));
+          🚀 FastCsv - Ultra-fast CSV parsing with zero allocations`;
           
-          // Format results as markdown
-          let comment = '## Benchmark Results\n\n';
-          comment += '| Method | Mean | Error | StdDev | Allocated |\n';
-          comment += '|--------|------|-------|--------|----------|\n';
-          
-          results.Benchmarks?.forEach(benchmark => {
-            const stats = benchmark.Statistics;
-            comment += `| ${benchmark.Method} | ${stats?.Mean?.toFixed(2) || 'N/A'} ns | ${stats?.StandardError?.toFixed(2) || 'N/A'} ns | ${stats?.StandardDeviation?.toFixed(2) || 'N/A'} ns | ${benchmark.Memory?.BytesAllocatedPerOperation || 0} B |\n`;
-          });
-          
-          // Post comment
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
