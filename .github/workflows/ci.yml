@@ -32,8 +32,11 @@ jobs:
           7.0.x
           8.0.x
           9.0.x
-        # Use preview versions if stable not available
+        # Use preview/rc versions if stable not available
         include-prerelease: true
+
+    - name: Check .NET versions
+      run: dotnet --list-sdks
 
     - name: Restore dependencies
       run: dotnet restore
@@ -85,6 +88,9 @@ jobs:
           8.0.x
           9.0.x
         include-prerelease: true
+
+    - name: Check .NET versions
+      run: dotnet --list-sdks
 
     - name: Restore dependencies
       run: dotnet restore
