@@ -21,7 +21,6 @@
     
     <!-- SDK versions required for CI/CD -->
     <RequiredDotNetSdks>6.0.x;7.0.x;8.0.x;9.0.x</RequiredDotNetSdks>
-    <DotNetSdksRequiringPrerelease>9.0.x</DotNetSdksRequiringPrerelease>
   </PropertyGroup>
 
   <PropertyGroup>

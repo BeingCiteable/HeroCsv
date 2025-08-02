@@ -24,60 +24,15 @@ jobs:
       with:
         fetch-depth: 0 # Full history for versioning
 
-    - name: Extract SDK Requirements
-      id: sdk-requirements
-      shell: pwsh
-      run: |
-        # Read Directory.Build.props
-        $xml = [xml](Get-Content "Directory.Build.props")
-        
-        # Extract required SDKs
-        $requiredSdks = $xml.Project.PropertyGroup.RequiredDotNetSdks -split ';' | Where-Object { $_ }
-        $prereleaseSdks = $xml.Project.PropertyGroup.DotNetSdksRequiringPrerelease -split ';' | Where-Object { $_ }
-        
-        Write-Host "Required SDKs: $($requiredSdks -join ', ')"
-        Write-Host "Prerelease SDKs: $($prereleaseSdks -join ', ')"
-        
-        # Output as JSON for GitHub Actions
-        $sdksJson = $requiredSdks | ConvertTo-Json -Compress
-        echo "required-sdks=$sdksJson" >> $env:GITHUB_OUTPUT
-        
-        # Create a matrix-friendly JSON
-        $matrixItems = @()
-        foreach ($sdk in $requiredSdks) {
-          $item = @{
-            version = $sdk
-            includePrerelease = $prereleaseSdks -contains $sdk
-          }
-          $matrixItems += $item
-        }
-        $matrixJson = $matrixItems | ConvertTo-Json -Compress
-        echo "sdk-matrix=$matrixJson" >> $env:GITHUB_OUTPUT
-
     - name: Setup .NET SDKs
-      shell: pwsh
-      run: |
-        $sdkMatrix = '${{ steps.sdk-requirements.outputs.sdk-matrix }}' | ConvertFrom-Json
-        
-        foreach ($sdk in $sdkMatrix) {
-          Write-Host "Installing .NET SDK $($sdk.version)"
-          
-          # We'll have to install them one by one since we can't use matrix here
-          # In real implementation, we'd call setup-dotnet action for each
-        }
-
-    - name: Setup .NET from Directory.Build.props
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
           6.0.x
           7.0.x
           8.0.x
-        
-    - name: Setup .NET 9 with prerelease
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 9.0.x
+          9.0.x
+        # Include prerelease to handle any preview versions
         include-prerelease: true
 
     - name: Verify .NET installations
@@ -156,11 +111,7 @@ jobs:
           6.0.x
           7.0.x
           8.0.x
-        
-    - name: Setup .NET 9 with prerelease
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 9.0.x
+          9.0.x
         include-prerelease: true
 
     - name: Verify .NET installations
