@@ -3,9 +3,9 @@
     <Copyright>Copyright (c) 2025 FastCsv Contributors</Copyright>
     <Product>FastCsv</Product>
     <Company>FastCsv</Company>
-    <Version>0.0.1</Version>
-    <FileVersion>0.0.1.0</FileVersion>
-    <AssemblyVersion>0.0.1.0</AssemblyVersion>
+    <Version>1.0.0-prerelease</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <RepositoryUrl>https://github.com/BeingCiteable/FastCsv</RepositoryUrl>
     <RepositoryBranch>master</RepositoryBranch>
     <RepositoryCommit>HEAD</RepositoryCommit>
