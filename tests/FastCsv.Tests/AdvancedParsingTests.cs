@@ -255,7 +255,7 @@ public class AdvancedParsingTests
         try
         {
             var _ = row[-1];
-            Assert.True(false, "Should have thrown IndexOutOfRangeException");
+            Assert.Fail("Should have thrown IndexOutOfRangeException");
         }
         catch (IndexOutOfRangeException)
         {
@@ -265,7 +265,7 @@ public class AdvancedParsingTests
         try
         {
             var _ = row[3];
-            Assert.True(false, "Should have thrown IndexOutOfRangeException");
+            Assert.Fail("Should have thrown IndexOutOfRangeException");
         }
         catch (IndexOutOfRangeException)
         {

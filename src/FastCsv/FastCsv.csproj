@@ -11,13 +11,24 @@
 		<PackageId>FastCsv</PackageId>
 		<PackageVersion>1.0.0</PackageVersion>
 		<Authors>FastCsv Contributors</Authors>
-		<Description>High-performance, zero-allocation CSV parsing and writing library for .NET with multi-framework support and SIMD optimizations.</Description>
-		<PackageTags>csv;parser;performance;zero-allocation;simd;high-performance</PackageTags>
-		<PackageProjectUrl>https://github.com/yourusername/FastCsv</PackageProjectUrl>
+		<Company>BeingCiteable</Company>
+		<Product>FastCsv</Product>
+		<Description>Ultra-fast, low memory usage CSV reading library for .NET. Features
+			zero-allocation parsing using ReadOnlySpan&lt;char&gt;, SIMD optimizations, async
+			operations, and multi-framework support (.NET 6-9). Simple API for basic use cases with
+			advanced configuration options for complex scenarios.</Description>
+		<PackageTags>
+			csv;parser;reader;performance;zero-allocation;simd;span;readonlyspan;high-performance;async;net6;net7;net8;net9</PackageTags>
+		<PackageProjectUrl>https://github.com/BeingCiteable/FastCsv</PackageProjectUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<RepositoryUrl>https://github.com/yourusername/FastCsv</RepositoryUrl>
+		<RepositoryUrl>https://github.com/BeingCiteable/FastCsv</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<Copyright>Copyright (c) 2025 FastCsv Contributors</Copyright>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);CS1591</NoWarn>
 
 		<!-- Strong naming -->
 		<SignAssembly>false</SignAssembly>
@@ -57,8 +68,10 @@
 
 	<!-- Package references for older frameworks -->
 	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0" PrivateAssets="all" />
-		<PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0"
+			PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0"
+			PrivateAssets="all" />
 		<PackageReference Include="System.Memory" Version="4.6.3" />
 		<PackageReference Include="System.Buffers" Version="4.6.1" />
 		<PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
@@ -70,9 +83,10 @@
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
 	</ItemGroup>
 
-	<!-- Include README in package -->
+	<!-- Include README and LICENSE in package -->
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+		<None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 </Project>

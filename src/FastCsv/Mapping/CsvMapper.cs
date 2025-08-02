@@ -154,13 +154,13 @@ internal sealed partial class CsvMapper<T> where T : class, new()
                 }
             }
             // If attribute specifies name, use that name
-            else if (!string.IsNullOrEmpty(attribute?.Name))
+            else if (attribute?.Name is { } attributeName && !string.IsNullOrEmpty(attributeName))
             {
-                if (!_propertyMap.ContainsKey(attribute.Name))
+                if (!_propertyMap.ContainsKey(attributeName))
                 {
-                    _propertyMap[attribute.Name] = new List<PropertyInfo>();
+                    _propertyMap[attributeName] = new List<PropertyInfo>();
                 }
-                _propertyMap[attribute.Name].Add(property);
+                _propertyMap[attributeName].Add(property);
             }
             // Otherwise use property name
             else

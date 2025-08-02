@@ -37,7 +37,7 @@ Bob,35,Paris
 """;
 
 // Read all records
-foreach (var record in Csv.Read(csvData))
+foreach (var record in Csv.ReadContent(csvData))
 {
     Console.WriteLine(string.Join(" | ", record));
 }
@@ -48,15 +48,16 @@ foreach (var record in Csv.Read(csvData))
 // Bob | 35 | Paris
 
 // Read with custom delimiter
-foreach (var record in Csv.Read("Name;Age;City\nJohn;25;New York", ';'))
+foreach (var record in Csv.ReadContent("Name;Age;City\nJohn;25;New York", ';'))
 {
     Console.WriteLine(string.Join(" | ", record));
 }
 
-// Read with headers as dictionary
-foreach (var record in Csv.ReadWithHeaders(csvData))
+// Read with options
+var options = new CsvOptions { Delimiter = ',', HasHeaders = true };
+foreach (var record in Csv.ReadContent(csvData, options))
 {
-    Console.WriteLine($"Name: {record["Name"]}, Age: {record["Age"]}, City: {record["City"]}");
+    Console.WriteLine(string.Join(" | ", record));
 }
 ```
 
@@ -90,7 +91,7 @@ foreach (var emp in employees)
 }
 
 // Manual column mapping
-var employeesManual = Csv.ReadWithMapping<Employee>(csvData, mapping =>
+var employeesManual = Csv.Read<Employee>(csvData, mapping =>
     mapping.Map(e => e.FirstName, 0)
            .Map(e => e.LastName, 1)
            .Map(e => e.Department, 2)
@@ -98,16 +99,18 @@ var employeesManual = Csv.ReadWithMapping<Employee>(csvData, mapping =>
            .Map(e => e.HireDate, 4));
 
 // Auto mapping with manual overrides
-var employeesWithOverrides = Csv.ReadWithMapping<Employee>(csvData, mapping =>
-    mapping.AutoMap()  // Auto-map by header names
-           .Map(e => e.Salary, col => decimal.Parse(col) * 1.1m)); // Custom converter
+var employeesWithOverrides = Csv.ReadAutoMapWithOverrides<Employee>(csvData, mapping =>
+{
+    mapping.AutoMap();  // Auto-map by header names
+    mapping.Map(e => e.Salary, col => decimal.Parse(col) * 1.1m); // Custom converter
+});
 ```
 
 ### Type Conversion and Field Access
 
 ```csharp
 // Using extension methods for type conversion
-foreach (var record in Csv.Read(csvData))
+foreach (var record in Csv.ReadContent(csvData))
 {
     var name = record.GetField<string>(0);
     var age = record.GetField<int>(1);
@@ -128,7 +131,7 @@ foreach (var record in Csv.Read(csvData))
 }
 ```
 
-### File Operations
+### File and Stream Operations
 
 ```csharp
 using FastCsv;
@@ -139,17 +142,31 @@ foreach (var record in Csv.ReadFile("data.csv"))
     Console.WriteLine($"Record: {string.Join(", ", record)}");
 }
 
+// Read from stream
+using var stream = File.OpenRead("data.csv");
+foreach (var record in Csv.ReadStream(stream))
+{
+    Console.WriteLine($"Record: {string.Join(", ", record)}");
+}
+
 // Async file reading (.NET 7+)
+#if NET7_0_OR_GREATER
 await foreach (var record in Csv.ReadFileAsync("data.csv"))
 {
     Console.WriteLine($"Record: {string.Join(", ", record)}");
 }
 
+// Read entire file async
+var allRecords = await Csv.ReadFileAsync("data.csv", CsvOptions.Default);
+#endif
+
 // Auto-detect format (.NET 8+)
+#if NET8_0_OR_GREATER
 foreach (var record in Csv.ReadFileAutoDetect("unknown_format.csv"))
 {
     Console.WriteLine($"Record: {string.Join(", ", record)}");
 }
+#endif
 ```
 
 ### Advanced Configuration
@@ -166,20 +183,28 @@ var options = new CsvOptions
     SkipEmptyLines = true
 };
 
-// Read with validation
-var result = Csv.Configure()
+// Read with builder configuration
+var builder = Csv.Configure()
     .WithContent(csvData)
     .WithOptions(options)
     .WithValidation(true)
-    .Read();
+    .WithErrorHandler(new ErrorHandler());
 
-Console.WriteLine($"Processed {result.Records.Count()} records");
-Console.WriteLine($"Valid: {result.IsValid}");
+var reader = builder.Build();
+var records = new List<string[]>();
+var isValid = true;
 
-if (!result.IsValid)
+foreach (var record in reader)
+{
+    records.Add(record);
+}
+
+// Check validation results
+var validationResult = reader.GetValidationResult();
+if (validationResult != null && !validationResult.IsValid)
 {
     Console.WriteLine("Validation errors:");
-    foreach (var error in result.ValidationResult.Errors)
+    foreach (var error in validationResult.Errors)
     {
         Console.WriteLine($"- Line {error.LineNumber}: {error.ErrorType} - {error.Message}");
     }
@@ -193,7 +218,8 @@ if (!result.IsValid)
 ```csharp
 // ReadOnlySpan<char> overloads for maximum performance
 ReadOnlySpan<char> csvSpan = csvData.AsSpan();
-foreach (var record in Csv.Read(csvSpan))
+var records = Csv.ReadAllRecords(csvSpan);
+foreach (var record in records)
 {
     // Zero-allocation parsing
     Console.WriteLine($"Record: {string.Join(", ", record)}");
@@ -203,24 +229,37 @@ foreach (var record in Csv.Read(csvSpan))
 ### Hardware Acceleration (.NET 6+)
 
 ```csharp
-// Vector operations for large datasets
-var fieldCount = Csv.CountFields(csvLine.AsSpan(), ',');
-var isAccelerated = Csv.IsHardwareAccelerated;
-var optimalSize = Csv.GetOptimalBufferSize();
+// Hardware acceleration is automatically used internally when available
+// Check if your system supports hardware acceleration:
+var isAccelerated = System.Numerics.Vector.IsHardwareAccelerated;
+
+// The library automatically optimizes buffer sizes and operations
+// based on available hardware acceleration
 ```
 
-### Advanced Vector Operations (.NET 9+)
+### Advanced Performance Features
 
 ```csharp
-// Vector512 operations for maximum performance
-var fieldCount = Csv.CountFieldsVector512(csvLine.AsSpan(), ',');
-var isSupported = Csv.IsVector512Supported;
-var optimalSize = Csv.GetOptimalVector512BufferSize();
+using FastCsv.Parsing;
 
-// Performance profiling
-var (records, metrics) = Csv.ReadWithProfiling(csvData.AsSpan(), options, enableProfiling: true);
-Console.WriteLine($"Processing time: {metrics["ProcessingTime"]}");
-Console.WriteLine($"Vector512 supported: {metrics["Vector512Supported"]}");
+// Ultra-fast field iteration without allocations
+foreach (var field in CsvFieldIterator.IterateFields(csvData, options))
+{
+    // Process field.Value (ReadOnlySpan<char>)
+    Console.WriteLine($"Row {field.RowIndex}, Field {field.FieldIndex}: {field.Value.ToString()}");
+}
+
+// Zero-allocation row enumeration using ICsvReader
+var reader = Csv.CreateReader(csvData, options);
+foreach (var record in reader)
+{
+    // Process record (string[])
+    Console.WriteLine(string.Join(", ", record));
+}
+
+// Direct span-based parsing for maximum performance
+var records = Csv.ReadAllRecords(csvData.AsSpan(), options);
+Console.WriteLine($"Parsed {records.Count} records with zero allocations");
 ```
 
 ## Real-World Examples
@@ -235,14 +274,15 @@ Jane,Smith,Marketing,65000,2019-06-20
 Bob,Johnson,Sales,55000,2021-03-10
 """;
 
-var employees = Csv.ReadWithHeaders(employeeData);
+// Using object mapping for strongly-typed access
+var employees = Csv.Read<Employee>(employeeData);
 var engineeringEmployees = employees
-    .Where(emp => emp["Department"] == "Engineering")
+    .Where(emp => emp.Department == "Engineering")
     .Select(emp => new 
     {
-        Name = $"{emp["FirstName"]} {emp["LastName"]}",
-        Salary = decimal.Parse(emp["Salary"]),
-        HireDate = DateTime.Parse(emp["HireDate"])
+        Name = $"{emp.FirstName} {emp.LastName}",
+        Salary = emp.Salary,
+        HireDate = emp.HireDate
     });
 
 foreach (var emp in engineeringEmployees)
@@ -254,25 +294,32 @@ foreach (var emp in engineeringEmployees)
 ### Error Handling and Validation
 
 ```csharp
-var result = Csv.Configure()
+var reader = Csv.Configure()
     .WithFile("potentially-malformed.csv")
     .WithValidation(true)
-    .WithErrorTracking(true)
-    .ReadAdvanced();
+    .WithErrorHandler(new ErrorHandler())
+    .Build();
 
-if (!result.IsValid)
+var records = new List<string[]>();
+foreach (var record in reader)
 {
-    Console.WriteLine($"Found {result.ValidationErrors.Count} validation errors:");
-    foreach (var error in result.ValidationErrors)
+    records.Add(record);
+}
+
+var validationResult = reader.GetValidationResult();
+if (validationResult != null && !validationResult.IsValid)
+{
+    Console.WriteLine($"Found {validationResult.Errors.Count} validation errors:");
+    foreach (var error in validationResult.Errors)
     {
-        Console.WriteLine($"- {error}");
+        Console.WriteLine($"- Line {error.LineNumber}: {error.ErrorType} - {error.Message}");
     }
 }
 else
 {
-    Console.WriteLine($"Successfully processed {result.TotalRecords} records");
+    Console.WriteLine($"Successfully processed {records.Count} records");
     // Process the valid records
-    foreach (var record in result.Records)
+    foreach (var record in records)
     {
         // Process each record
     }
@@ -283,10 +330,7 @@ else
 
 ```csharp
 // For very large files, process records in batches to avoid memory issues
-var largeFileRecords = Csv.Configure()
-    .WithFile("very-large-file.csv")
-    .WithHeaders(true)
-    .Read();
+var largeFileRecords = Csv.ReadFile("very-large-file.csv");
 
 var batchSize = 1000;
 var batch = new List<string[]>();
@@ -384,6 +428,8 @@ MIT License - see LICENSE file for details.
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
+
+Repository: https://github.com/BeingCiteable/FastCsv
 
 ## Design Principles
 
