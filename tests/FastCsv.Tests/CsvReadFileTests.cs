@@ -31,9 +31,9 @@ public class CsvReadFileTests : IDisposable
     public void ReadFile_SimpleData_ReadsCorrectly()
     {
         File.WriteAllText(_tempFile, "Name,Age\nJohn,25\nJane,30");
-        
+
         var records = Csv.ReadFile(_tempFile).ToList();
-        
+
         Assert.Equal(2, records.Count);
         Assert.Equal("John", records[0][0]);
         Assert.Equal("25", records[0][1]);
@@ -44,9 +44,9 @@ public class CsvReadFileTests : IDisposable
     {
         File.WriteAllText(_tempFile, "Name;Age;City\nJohn;25;NYC");
         var options = new CsvOptions(delimiter: ';');
-        
+
         var records = Csv.ReadFile(_tempFile, options).ToList();
-        
+
         Assert.Single(records);
         Assert.Equal("John", records[0][0]);
         Assert.Equal("NYC", records[0][2]);
@@ -56,9 +56,9 @@ public class CsvReadFileTests : IDisposable
     public void ReadFile_EmptyFile_ReturnsNoRecords()
     {
         File.WriteAllText(_tempFile, "");
-        
+
         var records = Csv.ReadFile(_tempFile).ToList();
-        
+
         Assert.Empty(records);
     }
 
@@ -66,9 +66,9 @@ public class CsvReadFileTests : IDisposable
     public void ReadFile_HeaderOnly_ReturnsNoRecords()
     {
         File.WriteAllText(_tempFile, "Name,Age,City");
-        
+
         var records = Csv.ReadFile(_tempFile).ToList();
-        
+
         Assert.Empty(records);
     }
 
@@ -82,9 +82,9 @@ public class CsvReadFileTests : IDisposable
             sb.AppendLine($"{i},Name{i},{i * 100}");
         }
         File.WriteAllText(_tempFile, sb.ToString());
-        
+
         var records = Csv.ReadFile(_tempFile).ToList();
-        
+
         Assert.Equal(1000, records.Count);
         Assert.Equal("500", records[499][0]);
         Assert.Equal("Name500", records[499][1]);
@@ -94,8 +94,8 @@ public class CsvReadFileTests : IDisposable
     public void ReadFile_NonExistentFile_ThrowsFileNotFoundException()
     {
         var nonExistentFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".csv");
-        
-        Assert.Throws<FileNotFoundException>(() => 
+
+        Assert.Throws<FileNotFoundException>(() =>
         {
             Csv.ReadFile(nonExistentFile).ToList();
         });
@@ -106,9 +106,9 @@ public class CsvReadFileTests : IDisposable
     {
         var content = "Name,City\nJosé,São Paulo\nFrançois,Paris";
         File.WriteAllText(_tempFile, content, Encoding.UTF8);
-        
+
         var records = Csv.ReadFile(_tempFile).ToList();
-        
+
         Assert.Equal(2, records.Count);
         Assert.Equal("José", records[0][0]);
         Assert.Equal("São Paulo", records[0][1]);
@@ -118,14 +118,14 @@ public class CsvReadFileTests : IDisposable
     [Fact]
     public async Task ReadFileAsync_SimpleData_ReadsCorrectly()
     {
-        await File.WriteAllTextAsync(_tempFile, "Name,Age\nJohn,25\nJane,30");
-        
+        await File.WriteAllTextAsync(_tempFile, "Name,Age\nJohn,25\nJane,30", TestContext.Current.CancellationToken);
+
         var records = new List<string[]>();
-        await foreach (var record in Csv.ReadFileAsync(_tempFile, CsvOptions.Default, default(CancellationToken)))
+        await foreach (var record in Csv.ReadFileAsync(_tempFile, CsvOptions.Default, TestContext.Current.CancellationToken))
         {
             records.Add(record);
         }
-        
+
         // ReadFileAsync includes the header row by design
         Assert.Equal(3, records.Count);
         Assert.Equal("Name", records[0][0]);
@@ -143,11 +143,11 @@ public class CsvReadFileTests : IDisposable
         {
             sb.AppendLine($"{i},Name{i}");
         }
-        await File.WriteAllTextAsync(_tempFile, sb.ToString());
-        
+        await File.WriteAllTextAsync(_tempFile, sb.ToString(), TestContext.Current.CancellationToken);
+
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(1); // Cancel almost immediately
-        
+
         var recordCount = 0;
         try
         {
@@ -160,7 +160,7 @@ public class CsvReadFileTests : IDisposable
         {
             // Expected
         }
-        
+
         // Should have been cancelled before reading all records (10000 data rows + 1 header = 10001)
         Assert.True(recordCount < 10001, $"Expected to be cancelled but read {recordCount} records");
     }

@@ -19,22 +19,22 @@ public class DataSourceIntegrationTests
     public void StringDataSource_Basic()
     {
         using var source = new StringDataSource("line1\nline2\nline3");
-        
+
         Assert.True(source.HasMoreData);
         Assert.True(source.SupportsReset);
-        
+
         Assert.True(source.TryReadLine(out var line, out var lineNum));
         Assert.Equal("line1", line.ToString());
         Assert.Equal(1, lineNum);
-        
+
         Assert.True(source.TryReadLine(out line, out lineNum));
         Assert.Equal("line2", line.ToString());
         Assert.Equal(2, lineNum);
-        
+
         Assert.True(source.TryReadLine(out line, out lineNum));
         Assert.Equal("line3", line.ToString());
         Assert.Equal(3, lineNum);
-        
+
         Assert.False(source.TryReadLine(out _, out _));
         Assert.False(source.HasMoreData);
     }
@@ -43,12 +43,12 @@ public class DataSourceIntegrationTests
     public void StringDataSource_Reset()
     {
         using var source = new StringDataSource("line1\nline2");
-        
+
         source.TryReadLine(out _, out _);
         source.TryReadLine(out _, out _);
-        
+
         source.Reset();
-        
+
         Assert.True(source.HasMoreData);
         Assert.True(source.TryReadLine(out var line, out var lineNum));
         Assert.Equal("line1", line.ToString());
@@ -96,13 +96,13 @@ public class DataSourceIntegrationTests
     public void StringDataSource_WindowsLineEndings()
     {
         using var source = new StringDataSource("line1\r\nline2\r\nline3");
-        
+
         Assert.True(source.TryReadLine(out var line, out _));
         Assert.Equal("line1", line.ToString());
-        
+
         Assert.True(source.TryReadLine(out line, out _));
         Assert.Equal("line2", line.ToString());
-        
+
         Assert.True(source.TryReadLine(out line, out _));
         Assert.Equal("line3", line.ToString());
     }
@@ -116,10 +116,10 @@ public class DataSourceIntegrationTests
     {
         var content = "line1\nline2\nline3".AsMemory();
         using var source = new MemoryDataSource(content);
-        
+
         Assert.True(source.HasMoreData);
         Assert.True(source.SupportsReset);
-        
+
         Assert.True(source.TryReadLine(out var line, out var lineNum));
         Assert.Equal("line1", line.ToString());
         Assert.Equal(1, lineNum);
@@ -130,12 +130,12 @@ public class DataSourceIntegrationTests
     {
         var content = "line1\nline2".AsMemory();
         using var source = new MemoryDataSource(content);
-        
+
         source.TryReadLine(out _, out _);
         source.TryReadLine(out _, out _);
-        
+
         source.Reset();
-        
+
         Assert.True(source.HasMoreData);
         Assert.True(source.TryReadLine(out var line, out _));
         Assert.Equal("line1", line.ToString());
@@ -178,10 +178,10 @@ public class DataSourceIntegrationTests
         var content = "line1\nline2\nline3";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new StreamDataSource(stream);
-        
+
         Assert.True(source.HasMoreData);
         Assert.True(source.SupportsReset);
-        
+
         Assert.True(source.TryReadLine(out var line, out var lineNum));
         Assert.Equal("line1", line.ToString());
         Assert.Equal(1, lineNum);
@@ -193,7 +193,7 @@ public class DataSourceIntegrationTests
         var content = "line1\nline2";
         using var stream = new MemoryStream(Encoding.UTF32.GetBytes(content));
         using var source = new StreamDataSource(stream, Encoding.UTF32);
-        
+
         Assert.True(source.TryReadLine(out var line, out _));
         Assert.Equal("line1", line.ToString());
     }
@@ -206,7 +206,7 @@ public class DataSourceIntegrationTests
         {
             source.TryReadLine(out _, out _);
         }
-        
+
         // Stream should still be open
         Assert.True(stream.CanRead);
         stream.Dispose();
@@ -217,7 +217,7 @@ public class DataSourceIntegrationTests
     {
         using var stream = new NonSeekableStream();
         using var source = new StreamDataSource(stream);
-        
+
         Assert.False(source.SupportsReset);
         Assert.Throws<NotSupportedException>(() => source.Reset());
     }
@@ -228,12 +228,12 @@ public class DataSourceIntegrationTests
         var content = "line1\nline2";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new StreamDataSource(stream);
-        
+
         source.TryReadLine(out _, out _);
         source.TryReadLine(out _, out _);
-        
+
         source.Reset();
-        
+
         Assert.True(source.HasMoreData);
         Assert.True(source.TryReadLine(out var line, out _));
         Assert.Equal("line1", line.ToString());
@@ -245,10 +245,10 @@ public class DataSourceIntegrationTests
         var content = "line1\nline2\nline3";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new StreamDataSource(stream);
-        
+
         var count = source.CountLinesDirectly();
         Assert.Equal(3, count); // Returns line count, not newline count
-        
+
         // Should still be able to read after counting
         Assert.True(source.TryReadLine(out var line, out _));
         Assert.Equal("line1", line.ToString());
@@ -259,7 +259,7 @@ public class DataSourceIntegrationTests
     {
         using var stream = new NonSeekableStream();
         using var source = new StreamDataSource(stream);
-        
+
         Assert.Throws<NotSupportedException>(() => source.CountLinesDirectly());
     }
 
@@ -268,7 +268,7 @@ public class DataSourceIntegrationTests
     {
         using var stream = new MemoryStream();
         using var source = new StreamDataSource(stream);
-        
+
         Assert.Throws<NotSupportedException>(() => source.GetBuffer());
     }
 
@@ -277,7 +277,7 @@ public class DataSourceIntegrationTests
     {
         using var stream = new MemoryStream();
         using var source = new StreamDataSource(stream);
-        
+
         Assert.False(source.HasMoreData);
         Assert.False(source.TryReadLine(out _, out _));
     }
@@ -286,17 +286,17 @@ public class DataSourceIntegrationTests
 
     #region AsyncStreamDataSource Tests
 
-    #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
     [Fact]
     public async Task AsyncStreamDataSource_Basic()
     {
         var content = "line1\nline2\nline3";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new AsyncStreamDataSource(stream);
-        
+
         Assert.True(source.HasMoreData);
-        
-        var result = await source.TryReadLineAsync();
+
+        var result = await source.TryReadLineAsync(TestContext.Current.CancellationToken);
         Assert.True(result.success);
         Assert.Equal("line1", result.line);
         Assert.Equal(1, result.lineNumber);
@@ -308,8 +308,8 @@ public class DataSourceIntegrationTests
         var content = "line1\nline2\nline3";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new AsyncStreamDataSource(stream);
-        
-        var count = await source.CountLinesDirectlyAsync();
+
+        var count = await source.CountLinesDirectlyAsync(TestContext.Current.CancellationToken);
         Assert.Equal(3, count);
     }
 
@@ -319,11 +319,11 @@ public class DataSourceIntegrationTests
         var content = "line1\nline2";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new AsyncStreamDataSource(stream);
-        
+
         Assert.True(source.TryReadLine(out var line, out var lineNum));
         Assert.Equal("line1", line.ToString());
         Assert.Equal(1, lineNum);
-        
+
         source.Reset();
         Assert.True(source.HasMoreData);
     }
@@ -333,7 +333,7 @@ public class DataSourceIntegrationTests
     {
         using var stream = new NonSeekableStream();
         using var source = new AsyncStreamDataSource(stream);
-        
+
         Assert.False(source.SupportsReset);
         Assert.Throws<NotSupportedException>(() => source.Reset());
     }
@@ -345,7 +345,7 @@ public class DataSourceIntegrationTests
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new AsyncStreamDataSource(stream);
         using var cts = new CancellationTokenSource();
-        
+
         var result = await source.TryReadLineAsync(cts.Token);
         Assert.True(result.success);
         Assert.Equal("line1", result.line);
@@ -359,32 +359,32 @@ public class DataSourceIntegrationTests
         {
             source.TryReadLine(out _, out _);
         }
-        
+
         Assert.True(stream.CanRead);
         stream.Dispose();
     }
-    #endif
+#endif
 
     #endregion
 
     #region AsyncMemoryDataSource Tests
 
-    #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
     [Fact]
     public async Task AsyncMemoryDataSource_Basic()
     {
         var innerSource = new StringDataSource("line1\nline2");
         using var source = new AsyncMemoryDataSource(innerSource);
-        
-        var result = await source.TryReadLineAsync();
+
+        var result = await source.TryReadLineAsync(TestContext.Current.CancellationToken);
         Assert.True(result.success);
         Assert.Equal("line1", result.line);
-        
-        result = await source.TryReadLineAsync();
+
+        result = await source.TryReadLineAsync(TestContext.Current.CancellationToken);
         Assert.True(result.success);
         Assert.Equal("line2", result.line);
-        
-        result = await source.TryReadLineAsync();
+
+        result = await source.TryReadLineAsync(TestContext.Current.CancellationToken);
         Assert.False(result.success);
     }
 
@@ -393,8 +393,8 @@ public class DataSourceIntegrationTests
     {
         var innerSource = new StringDataSource("line1\nline2\nline3");
         using var source = new AsyncMemoryDataSource(innerSource);
-        
-        var count = await source.CountLinesDirectlyAsync();
+
+        var count = await source.CountLinesDirectlyAsync(TestContext.Current.CancellationToken);
         Assert.Equal(3, count);
     }
 
@@ -403,7 +403,7 @@ public class DataSourceIntegrationTests
     {
         var innerSource = new StringDataSource("test content");
         using var source = new AsyncMemoryDataSource(innerSource);
-        
+
         var buffer = source.GetBuffer();
         Assert.Equal("test content", buffer.ToString());
     }
@@ -413,12 +413,12 @@ public class DataSourceIntegrationTests
     {
         var innerSource = new StringDataSource("line1\nline2");
         using var source = new AsyncMemoryDataSource(innerSource);
-        
+
         source.TryReadLine(out _, out _);
         source.TryReadLine(out _, out _);
-        
+
         source.Reset();
-        
+
         Assert.True(source.HasMoreData);
         Assert.True(source.TryReadLine(out var line, out _));
         Assert.Equal("line1", line.ToString());
@@ -429,12 +429,12 @@ public class DataSourceIntegrationTests
     {
         var innerSource = new MemoryDataSource("line1\nline2".AsMemory());
         using var source = new AsyncMemoryDataSource(innerSource);
-        
-        var result = await source.TryReadLineAsync();
+
+        var result = await source.TryReadLineAsync(TestContext.Current.CancellationToken);
         Assert.True(result.success);
         Assert.Equal("line1", result.line);
     }
-    #endif
+#endif
 
     #endregion
 
@@ -443,17 +443,17 @@ public class DataSourceIntegrationTests
     private class NonSeekableStream : Stream
     {
         private readonly MemoryStream _inner = new MemoryStream(Encoding.UTF8.GetBytes("test\ndata"));
-        
+
         public override bool CanRead => true;
         public override bool CanSeek => false;
         public override bool CanWrite => false;
         public override long Length => throw new NotSupportedException();
-        public override long Position 
-        { 
-            get => throw new NotSupportedException(); 
-            set => throw new NotSupportedException(); 
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
         }
-        
+
         public override void Flush() { }
         public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();

@@ -46,7 +46,7 @@ public class MappingIntegrationTests
     public void CsvMapping_Create_Basic()
     {
         var mapping = CsvMapping<Person>.Create();
-        
+
         Assert.NotNull(mapping);
         Assert.Empty(mapping.PropertyMappings);
         Assert.False(mapping.UseAutoMapWithOverrides);
@@ -56,7 +56,7 @@ public class MappingIntegrationTests
     public void CsvMapping_CreateAutoMapWithOverrides()
     {
         var mapping = CsvMapping<Person>.CreateAutoMapWithOverrides();
-        
+
         Assert.NotNull(mapping);
         Assert.True(mapping.UseAutoMapWithOverrides);
     }
@@ -67,7 +67,7 @@ public class MappingIntegrationTests
         var mapping = CsvMapping<Person>.Create()
             .MapProperty("FirstName", "first_name")
             .MapProperty("LastName", "last_name");
-        
+
         Assert.Equal(2, mapping.PropertyMappings.Count);
         Assert.Equal("FirstName", mapping.PropertyMappings[0].PropertyName);
         Assert.Equal("first_name", mapping.PropertyMappings[0].ColumnName);
@@ -80,7 +80,7 @@ public class MappingIntegrationTests
         var mapping = CsvMapping<Person>.Create()
             .MapProperty("FirstName", 0)
             .MapProperty("LastName", 1);
-        
+
         Assert.Equal(2, mapping.PropertyMappings.Count);
         Assert.Equal("FirstName", mapping.PropertyMappings[0].PropertyName);
         Assert.Equal(0, mapping.PropertyMappings[0].ColumnIndex);
@@ -92,10 +92,10 @@ public class MappingIntegrationTests
     {
         var mapping = CsvMapping<Person>.Create()
             .MapProperty("Age", "age", value => int.Parse(value) * 2);
-        
+
         Assert.Single(mapping.PropertyMappings);
         Assert.NotNull(mapping.PropertyMappings[0].Converter);
-        
+
         // Test the converter
         var result = mapping.PropertyMappings[0].Converter!("10");
         Assert.Equal(20, result);
@@ -106,10 +106,10 @@ public class MappingIntegrationTests
     {
         var mapping = CsvMapping<Person>.Create()
             .MapProperty("Age", 2, value => string.IsNullOrEmpty(value) ? 0 : int.Parse(value));
-        
+
         Assert.Single(mapping.PropertyMappings);
         Assert.NotNull(mapping.PropertyMappings[0].Converter);
-        
+
         // Test the converter with empty value
         var result = mapping.PropertyMappings[0].Converter!("");
         Assert.Equal(0, result);
@@ -121,7 +121,7 @@ public class MappingIntegrationTests
         var mapping = CsvMapping<Person>.Create()
             .EnableAutoMapWithOverrides()
             .MapProperty("FirstName", 0);
-        
+
         Assert.True(mapping.UseAutoMapWithOverrides);
         Assert.Single(mapping.PropertyMappings);
     }
@@ -132,7 +132,7 @@ public class MappingIntegrationTests
         var options = new CsvOptions(delimiter: '|');
         var mapping = CsvMapping<Person>.Create();
         mapping.Options = options;
-        
+
         Assert.Equal('|', mapping.Options.Delimiter);
     }
 
@@ -146,12 +146,12 @@ public class MappingIntegrationTests
         var mapping = CsvMapping<Person>.Create()
             .MapProperty("FirstName", 0)
             .MapProperty("Age", 1);
-        
+
         var mapper = new CsvMapper<Person>(mapping);
         var record = new[] { "John", "25", "ExtraField" };
-        
+
         var person = mapper.MapRecord(record);
-        
+
         Assert.Equal("John", person.FirstName);
         Assert.Equal(25, person.Age);
         Assert.Equal("", person.LastName); // Not mapped
@@ -164,12 +164,12 @@ public class MappingIntegrationTests
             .MapProperty("FirstName", 0)
             .MapProperty("Age", 1, value => int.Parse(value) * 10)
             .MapProperty("IsActive", 2, value => value == "Y");
-        
+
         var mapper = new CsvMapper<Person>(mapping);
         var record = new[] { "John", "3", "Y" };
-        
+
         var person = mapper.MapRecord(record);
-        
+
         Assert.Equal("John", person.FirstName);
         Assert.Equal(30, person.Age); // 3 * 10
         Assert.True(person.IsActive);
@@ -180,13 +180,13 @@ public class MappingIntegrationTests
     {
         var mapping = CsvMapping<Person>.CreateAutoMapWithOverrides()
             .MapProperty("Age", 2); // Override age to different position
-        
+
         var mapper = new CsvMapper<Person>(mapping);
         mapper.SetHeaders(new[] { "FirstName", "LastName", "Age" });
-        
+
         var record = new[] { "John", "Doe", "30" };
         var person = mapper.MapRecord(record);
-        
+
         // Auto mapping with overrides might not work as expected
         // Just verify we got a person object
         Assert.NotNull(person);
@@ -199,13 +199,13 @@ public class MappingIntegrationTests
         var mapping = CsvMapping<Person>.Create()
             .MapProperty("FirstName", "given_name")
             .MapProperty("LastName", "surname");
-        
+
         var mapper = new CsvMapper<Person>(mapping);
         mapper.SetHeaders(new[] { "given_name", "surname", "age" });
-        
+
         var record = new[] { "John", "Doe", "25" };
         var person = mapper.MapRecord(record);
-        
+
         Assert.Equal("John", person.FirstName);
         Assert.Equal("Doe", person.LastName);
         Assert.Equal(0, person.Age); // Not mapped
@@ -215,18 +215,18 @@ public class MappingIntegrationTests
     public void CsvMapper_AllTypeConversions()
     {
         var mapper = new CsvMapper<Person>(CsvOptions.Default);
-        mapper.SetHeaders(new[] { 
-            "FirstName", "LastName", "Age", "BirthDate", "IsActive", 
-            "Salary", "Id", "Status", "Points", "Rating", "LastLogin" 
+        mapper.SetHeaders(new[] {
+            "FirstName", "LastName", "Age", "BirthDate", "IsActive",
+            "Salary", "Id", "Status", "Points", "Rating", "LastLogin"
         });
-        
-        var record = new[] { 
-            "John", "Doe", "30", "1990-01-15", "true", 
+
+        var record = new[] {
+            "John", "Doe", "30", "1990-01-15", "true",
             "75000.50", "12345678-1234-1234-1234-123456789012", "5", "1000000", "4.5", "2025-01-01T10:00:00+00:00"
         };
-        
+
         var person = mapper.MapRecord(record);
-        
+
         Assert.Equal("John", person.FirstName);
         Assert.Equal("Doe", person.LastName);
         Assert.Equal(30, person.Age);
@@ -245,10 +245,10 @@ public class MappingIntegrationTests
     {
         var mapper = new CsvMapper<Person>(CsvOptions.Default);
         mapper.SetHeaders(new[] { "FirstName", "BirthDate", "Id", "LastLogin" });
-        
+
         var record = new[] { "John", "", "", "" };
         var person = mapper.MapRecord(record);
-        
+
         Assert.Equal("John", person.FirstName);
         Assert.Null(person.BirthDate);
         Assert.Null(person.Id);
@@ -261,12 +261,12 @@ public class MappingIntegrationTests
         var mapping = CsvMapping<Person>.Create()
             .MapProperty("FirstName", 0)
             .MapProperty("Age", 10); // Out of bounds
-        
+
         var mapper = new CsvMapper<Person>(mapping);
         var record = new[] { "John" };
-        
+
         var person = mapper.MapRecord(record);
-        
+
         Assert.Equal("John", person.FirstName);
         Assert.Equal(0, person.Age); // Default value
     }
@@ -277,10 +277,10 @@ public class MappingIntegrationTests
         var options = new CsvOptions(skipEmptyFields: true);
         var mapper = new CsvMapper<Person>(options);
         mapper.SetHeaders(new[] { "FirstName", "Age" });
-        
+
         var record = new[] { "John", "" };
         var person = mapper.MapRecord(record);
-        
+
         Assert.Equal("John", person.FirstName);
         Assert.Equal(0, person.Age); // Empty field skipped
     }
@@ -291,10 +291,10 @@ public class MappingIntegrationTests
         // Test the fallback Convert.ChangeType for types not in the switch
         var mapper = new CsvMapper<SimpleModel>(CsvOptions.Default);
         mapper.SetHeaders(new[] { "Name", "Value" });
-        
+
         var record = new[] { "Test", "42" };
         var model = mapper.MapRecord(record);
-        
+
         Assert.Equal("Test", model.Name);
         Assert.Equal(42, model.Value);
     }
@@ -303,23 +303,23 @@ public class MappingIntegrationTests
 
     #region AsyncStreamDataSource Tests
 
-    #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
     [Fact]
     public async Task AsyncStreamDataSource_ReadLines()
     {
         var content = "line1\nline2\nline3";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new AsyncStreamDataSource(stream);
-        
+
         var lines = new List<string>();
         while (true)
         {
-            var result = await source.TryReadLineAsync();
+            var result = await source.TryReadLineAsync(TestContext.Current.CancellationToken);
             if (!result.success)
                 break;
             lines.Add(result.line);
         }
-        
+
         Assert.Equal(3, lines.Count);
         Assert.Equal("line1", lines[0]);
         Assert.Equal("line2", lines[1]);
@@ -332,9 +332,9 @@ public class MappingIntegrationTests
         var content = "line1\nline2\nline3";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new AsyncStreamDataSource(stream);
-        
-        var count = await source.CountLinesDirectlyAsync();
-        
+
+        var count = await source.CountLinesDirectlyAsync(TestContext.Current.CancellationToken);
+
         Assert.Equal(3, count);
     }
 
@@ -344,13 +344,13 @@ public class MappingIntegrationTests
         var content = "line1\nline2";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new AsyncStreamDataSource(stream);
-        
+
         // Read first line
         source.TryReadLine(out _, out _);
-        
+
         // Reset
         source.Reset();
-        
+
         // Should be able to read from beginning again
         source.TryReadLine(out var line, out var lineNumber);
         Assert.Equal("line1", line.ToString());
@@ -362,7 +362,7 @@ public class MappingIntegrationTests
     {
         using var stream = new NonSeekableStream();
         using var source = new AsyncStreamDataSource(stream);
-        
+
         Assert.False(source.SupportsReset);
         Assert.Throws<NotSupportedException>(() => source.Reset());
     }
@@ -372,7 +372,7 @@ public class MappingIntegrationTests
     {
         using var stream = new MemoryStream();
         using var source = new AsyncStreamDataSource(stream);
-        
+
         Assert.Throws<NotSupportedException>(() => source.GetBuffer());
     }
 
@@ -384,7 +384,7 @@ public class MappingIntegrationTests
         {
             source.TryReadLine(out _, out _);
         }
-        
+
         // Stream should still be open
         Assert.True(stream.CanRead);
         stream.Dispose();
@@ -397,32 +397,32 @@ public class MappingIntegrationTests
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new AsyncStreamDataSource(stream);
         using var cts = new CancellationTokenSource();
-        
+
         var result = await source.TryReadLineAsync(cts.Token);
         Assert.True(result.success);
         Assert.Equal("line1", result.line);
     }
 
-    #endif
+#endif
 
     #region AsyncMemoryDataSource Tests
 
-    #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
     [Fact]
     public async Task AsyncMemoryDataSource_Basic()
     {
         var innerSource = new StringDataSource("line1\nline2");
         using var asyncSource = new AsyncMemoryDataSource(innerSource);
-        
-        var result1 = await asyncSource.TryReadLineAsync();
+
+        var result1 = await asyncSource.TryReadLineAsync(TestContext.Current.CancellationToken);
         Assert.True(result1.success);
         Assert.Equal("line1", result1.line);
-        
-        var result2 = await asyncSource.TryReadLineAsync();
+
+        var result2 = await asyncSource.TryReadLineAsync(TestContext.Current.CancellationToken);
         Assert.True(result2.success);
         Assert.Equal("line2", result2.line);
-        
-        var result3 = await asyncSource.TryReadLineAsync();
+
+        var result3 = await asyncSource.TryReadLineAsync(TestContext.Current.CancellationToken);
         Assert.False(result3.success);
     }
 
@@ -431,8 +431,8 @@ public class MappingIntegrationTests
     {
         var innerSource = new StringDataSource("line1\nline2\nline3");
         using var asyncSource = new AsyncMemoryDataSource(innerSource);
-        
-        var count = await asyncSource.CountLinesDirectlyAsync();
+
+        var count = await asyncSource.CountLinesDirectlyAsync(TestContext.Current.CancellationToken);
         Assert.True(count >= 2); // Implementation dependent
     }
 
@@ -441,11 +441,11 @@ public class MappingIntegrationTests
     {
         var innerSource = new StringDataSource("line1\nline2");
         using var asyncSource = new AsyncMemoryDataSource(innerSource);
-        
+
         Assert.True(asyncSource.TryReadLine(out var line, out var lineNumber));
         Assert.Equal("line1", line.ToString());
         Assert.Equal(1, lineNumber);
-        
+
         asyncSource.Reset();
         Assert.True(asyncSource.HasMoreData);
         Assert.True(asyncSource.SupportsReset);
@@ -456,12 +456,12 @@ public class MappingIntegrationTests
     {
         var innerSource = new StringDataSource("test content");
         using var asyncSource = new AsyncMemoryDataSource(innerSource);
-        
+
         var buffer = asyncSource.GetBuffer();
         Assert.Equal("test content", buffer.ToString());
     }
 
-    #endif
+#endif
 
     #endregion
 
@@ -472,26 +472,26 @@ public class MappingIntegrationTests
     {
         var options = new CsvOptions(delimiter: '|');
         using var reader = Csv.CreateReader("A|B|C", options);
-        
+
         reader.TryReadRecord(out var record);
         Assert.Equal(3, record.FieldCount);
     }
 
-    #if NET7_0_OR_GREATER
+#if NET7_0_OR_GREATER
     [Fact]
     public async Task Csv_ReadFileAsync_Integration()
     {
         var tempFile = Path.GetTempFileName();
         try
         {
-            await File.WriteAllTextAsync(tempFile, "Name,Value\nTest,123");
-            
+            await File.WriteAllTextAsync(tempFile, "Name,Value\nTest,123", TestContext.Current.CancellationToken);
+
             var records = new List<string[]>();
-            await foreach (var record in Csv.ReadFileAsync(tempFile, CsvOptions.Default, cancellationToken: default))
+            await foreach (var record in Csv.ReadFileAsync(tempFile, CsvOptions.Default, cancellationToken: TestContext.Current.CancellationToken))
             {
                 records.Add(record);
             }
-            
+
             // ReadFileAsync includes headers by default
             Assert.Equal(2, records.Count);
             Assert.Equal("Name", records[0][0]); // Header
@@ -509,14 +509,14 @@ public class MappingIntegrationTests
     {
         var content = "A,B\n1,2\n3,4";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
-        
-        var records = await Csv.ReadStreamAsync(stream, CsvOptions.Default);
-        
+
+        var records = await Csv.ReadStreamAsync(stream, CsvOptions.Default, cancellationToken: TestContext.Current.CancellationToken);
+
         Assert.Equal(2, records.Count);
         Assert.Equal("1", records[0][0]);
         Assert.Equal("3", records[1][0]);
     }
-    #endif
+#endif
 
     #endregion
 
@@ -527,7 +527,7 @@ public class MappingIntegrationTests
     {
         using var reader = Csv.CreateReader("A,B,C", new CsvOptions(hasHeader: false));
         reader.TryReadRecord(out var record);
-        
+
         Assert.False(record.TryGetField(5, out _));
     }
 
@@ -536,7 +536,7 @@ public class MappingIntegrationTests
     {
         using var reader = Csv.CreateReader("Field1,Field2", new CsvOptions(hasHeader: false));
         reader.TryReadRecord(out var record);
-        
+
         var span = record.GetField(0);
         Assert.Equal("Field1", span.ToString());
     }

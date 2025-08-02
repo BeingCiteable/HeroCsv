@@ -22,17 +22,17 @@ public class DataSourceBoundaryTests
             var count = source.CountLinesDirectly();
             Assert.Equal(4, count); // 4 lines: line1, line2, line3, line4
         }
-        
+
         // Test empty lines
         using (var source = new StringDataSource("\n\n\n"))
         {
             Assert.True(source.TryReadLine(out var line, out _));
             Assert.Equal("", line.ToString());
-            
+
             Assert.True(source.TryReadLine(out line, out _));
             Assert.Equal("", line.ToString());
         }
-        
+
         // Test line ending at buffer end
         using (var source = new StringDataSource("no newline at end"))
         {
@@ -52,42 +52,42 @@ public class DataSourceBoundaryTests
             Assert.True(source.TryReadLine(out var line, out var lineNum));
             Assert.Equal("line1", line.ToString());
             Assert.Equal(1, lineNum);
-            
+
             Assert.True(source.TryReadLine(out line, out lineNum));
             Assert.Equal("line2", line.ToString());
             Assert.Equal(2, lineNum);
         }
-        
+
         // Test reset functionality
         using (var source = new MemoryDataSource("test".AsMemory()))
         {
             source.TryReadLine(out _, out _);
             Assert.False(source.HasMoreData);
-            
+
             source.Reset();
             Assert.True(source.HasMoreData);
         }
     }
 
-    #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
     [Fact]
     public async Task AsyncStreamDataSource_AllPaths()
     {
         var content = "line1\nline2\nline3";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         using var source = new AsyncStreamDataSource(stream);
-        
+
         // Test counting
-        var count = await source.CountLinesDirectlyAsync();
+        var count = await source.CountLinesDirectlyAsync(TestContext.Current.CancellationToken);
         Assert.Equal(3, count);
-        
+
         // Reset and read
         source.Reset();
-        
+
         var result = await source.TryReadLineAsync(CancellationToken.None);
         Assert.True(result.success);
         Assert.Equal("line1", result.line);
-        
+
         // Test sync CountLinesDirectly
         source.Reset();
         count = source.CountLinesDirectly();
@@ -100,9 +100,9 @@ public class DataSourceBoundaryTests
         // Test with MemoryDataSource
         var memSource = new MemoryDataSource("test\ndata".AsMemory());
         using var asyncSource = new AsyncMemoryDataSource(memSource);
-        
-        var count = await asyncSource.CountLinesDirectlyAsync();
+
+        var count = await asyncSource.CountLinesDirectlyAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, count);
     }
-    #endif
+#endif
 }
