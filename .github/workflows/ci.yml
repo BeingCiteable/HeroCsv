@@ -24,19 +24,59 @@ jobs:
       with:
         fetch-depth: 0 # Full history for versioning
 
-    - name: Setup .NET
+    - name: Setup .NET 6
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: |
-          6.0.x
-          7.0.x
-          8.0.x
-          9.0.x
-        # Use preview/rc versions if stable not available
+        dotnet-version: 6.0.x
+
+    - name: Setup .NET 7
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 7.0.x
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
         include-prerelease: true
 
-    - name: Check .NET versions
-      run: dotnet --list-sdks
+    - name: Verify .NET installations
+      run: |
+        echo "Installed .NET SDKs:"
+        dotnet --list-sdks
+        echo ""
+        echo "Installed .NET runtimes:"
+        dotnet --list-runtimes
+        echo ""
+        echo "Verifying required SDKs..."
+        
+        # Check for each required SDK
+        if ! dotnet --list-sdks | grep -q "6.0"; then
+          echo "ERROR: .NET 6 SDK not found!"
+          exit 1
+        fi
+        
+        if ! dotnet --list-sdks | grep -q "7.0"; then
+          echo "ERROR: .NET 7 SDK not found!"
+          exit 1
+        fi
+        
+        if ! dotnet --list-sdks | grep -q "8.0"; then
+          echo "ERROR: .NET 8 SDK not found!"
+          exit 1
+        fi
+        
+        if ! dotnet --list-sdks | grep -q "9.0"; then
+          echo "ERROR: .NET 9 SDK not found!"
+          exit 1
+        fi
+        
+        echo "✅ All required .NET SDKs are installed!"
 
     - name: Restore dependencies
       run: dotnet restore
@@ -79,18 +119,32 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup .NET
+    - name: Setup .NET 6
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: |
-          6.0.x
-          7.0.x
-          8.0.x
-          9.0.x
+        dotnet-version: 6.0.x
+
+    - name: Setup .NET 7
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 7.0.x
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
         include-prerelease: true
 
-    - name: Check .NET versions
-      run: dotnet --list-sdks
+    - name: Verify .NET installations
+      run: |
+        echo "Installed .NET SDKs:"
+        dotnet --list-sdks
+        echo "✅ All required .NET SDKs verified!"
 
     - name: Restore dependencies
       run: dotnet restore
