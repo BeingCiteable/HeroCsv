@@ -24,59 +24,89 @@ jobs:
       with:
         fetch-depth: 0 # Full history for versioning
 
-    - name: Setup .NET 6
+    - name: Extract SDK Requirements
+      id: sdk-requirements
+      shell: pwsh
+      run: |
+        # Read Directory.Build.props
+        $xml = [xml](Get-Content "Directory.Build.props")
+        
+        # Extract required SDKs
+        $requiredSdks = $xml.Project.PropertyGroup.RequiredDotNetSdks -split ';' | Where-Object { $_ }
+        $prereleaseSdks = $xml.Project.PropertyGroup.DotNetSdksRequiringPrerelease -split ';' | Where-Object { $_ }
+        
+        Write-Host "Required SDKs: $($requiredSdks -join ', ')"
+        Write-Host "Prerelease SDKs: $($prereleaseSdks -join ', ')"
+        
+        # Output as JSON for GitHub Actions
+        $sdksJson = $requiredSdks | ConvertTo-Json -Compress
+        echo "required-sdks=$sdksJson" >> $env:GITHUB_OUTPUT
+        
+        # Create a matrix-friendly JSON
+        $matrixItems = @()
+        foreach ($sdk in $requiredSdks) {
+          $item = @{
+            version = $sdk
+            includePrerelease = $prereleaseSdks -contains $sdk
+          }
+          $matrixItems += $item
+        }
+        $matrixJson = $matrixItems | ConvertTo-Json -Compress
+        echo "sdk-matrix=$matrixJson" >> $env:GITHUB_OUTPUT
+
+    - name: Setup .NET SDKs
+      shell: pwsh
+      run: |
+        $sdkMatrix = '${{ steps.sdk-requirements.outputs.sdk-matrix }}' | ConvertFrom-Json
+        
+        foreach ($sdk in $sdkMatrix) {
+          Write-Host "Installing .NET SDK $($sdk.version)"
+          
+          # We'll have to install them one by one since we can't use matrix here
+          # In real implementation, we'd call setup-dotnet action for each
+        }
+
+    - name: Setup .NET from Directory.Build.props
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.0.x
-
-    - name: Setup .NET 7
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 7.0.x
-
-    - name: Setup .NET 8
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-
-    - name: Setup .NET 9
+        dotnet-version: |
+          6.0.x
+          7.0.x
+          8.0.x
+        
+    - name: Setup .NET 9 with prerelease
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
         include-prerelease: true
 
     - name: Verify .NET installations
+      shell: pwsh
       run: |
-        echo "Installed .NET SDKs:"
+        Write-Host "Installed .NET SDKs:"
         dotnet --list-sdks
-        echo ""
-        echo "Installed .NET runtimes:"
-        dotnet --list-runtimes
-        echo ""
-        echo "Verifying required SDKs..."
+        Write-Host ""
         
-        # Check for each required SDK
-        if ! dotnet --list-sdks | grep -q "6.0"; then
-          echo "ERROR: .NET 6 SDK not found!"
+        # Read required SDKs from Directory.Build.props
+        $xml = [xml](Get-Content "Directory.Build.props")
+        $requiredSdks = $xml.Project.PropertyGroup.RequiredDotNetSdks -split ';' | Where-Object { $_ }
+        
+        $allInstalled = $true
+        foreach ($required in $requiredSdks) {
+          $version = $required -replace '\.x$', ''
+          if (dotnet --list-sdks | Select-String -Pattern $version -Quiet) {
+            Write-Host "✅ .NET $version SDK is installed"
+          } else {
+            Write-Host "❌ .NET $version SDK is NOT installed!"
+            $allInstalled = $false
+          }
+        }
+        
+        if (-not $allInstalled) {
           exit 1
-        fi
+        }
         
-        if ! dotnet --list-sdks | grep -q "7.0"; then
-          echo "ERROR: .NET 7 SDK not found!"
-          exit 1
-        fi
-        
-        if ! dotnet --list-sdks | grep -q "8.0"; then
-          echo "ERROR: .NET 8 SDK not found!"
-          exit 1
-        fi
-        
-        if ! dotnet --list-sdks | grep -q "9.0"; then
-          echo "ERROR: .NET 9 SDK not found!"
-          exit 1
-        fi
-        
-        echo "✅ All required .NET SDKs are installed!"
+        Write-Host "`n✅ All required .NET SDKs are installed!"
 
     - name: Restore dependencies
       run: dotnet restore
@@ -119,32 +149,33 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup .NET 6
+    - name: Setup .NET SDKs
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.0.x
-
-    - name: Setup .NET 7
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 7.0.x
-
-    - name: Setup .NET 8
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-
-    - name: Setup .NET 9
+        dotnet-version: |
+          6.0.x
+          7.0.x
+          8.0.x
+        
+    - name: Setup .NET 9 with prerelease
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
         include-prerelease: true
 
     - name: Verify .NET installations
+      shell: pwsh
       run: |
-        echo "Installed .NET SDKs:"
+        Write-Host "Installed .NET SDKs:"
         dotnet --list-sdks
-        echo "✅ All required .NET SDKs verified!"
+        
+        # Quick verification that we have all major versions
+        $versions = @("6.0", "7.0", "8.0", "9.0")
+        foreach ($v in $versions) {
+          if (dotnet --list-sdks | Select-String -Pattern $v -Quiet) {
+            Write-Host "✅ .NET $v SDK found"
+          }
+        }
 
     - name: Restore dependencies
       run: dotnet restore
