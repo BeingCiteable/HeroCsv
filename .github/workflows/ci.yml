@@ -40,7 +40,7 @@ jobs:
       run: dotnet build --no-restore -c Release
 
     - name: Test
-      run: dotnet test --no-build -c Release --verbosity normal --logger "trx;LogFileName=${{ matrix.os }}-test-results.trx"
+      run: dotnet test --no-build -c Release --verbosity normal --logger "console;verbosity=detailed" --logger "trx;LogFileName=${{ matrix.os }}-test-results.trx"
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -50,13 +50,19 @@ jobs:
         path: '**/*.trx'
         retention-days: 7
 
-    - name: Test Report
-      uses: dorny/test-reporter@v1
+    - name: Parse Test Results
       if: always()
-      with:
-        name: Test Results (${{ matrix.os }})
-        path: '**/*.trx'
-        reporter: dotnet-trx
+      shell: pwsh
+      run: |
+        $results = Get-ChildItem -Path . -Filter "*.trx" -Recurse
+        if ($results.Count -gt 0) {
+          Write-Host "Found $($results.Count) test result file(s)"
+          foreach ($file in $results) {
+            Write-Host "Test results in: $($file.FullName)"
+          }
+        } else {
+          Write-Host "No test result files found"
+        }
 
   package:
     needs: build
