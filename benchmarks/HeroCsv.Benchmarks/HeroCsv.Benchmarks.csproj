@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.2" />
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.2" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta6.25358.103" />
+    <PackageReference Include="Spectre.Console" Version="0.50.0" />
+    
+    <!-- Popular CSV Libraries for Comparison -->
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <PackageReference Include="Sylvan.Data.Csv" Version="1.4.2" />
+    <PackageReference Include="LumenWorksCsvReader" Version="4.0.0" />
+    <PackageReference Include="Sep" Version="0.11.0" />
+    <PackageReference Include="ServiceStack.Text" Version="8.8.0" />
+    <PackageReference Include="Csv" Version="2.0.170" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\HeroCsv\HeroCsv.csproj" />
+  </ItemGroup>
+
+</Project>

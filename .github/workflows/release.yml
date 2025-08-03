@@ -69,9 +69,9 @@ jobs:
       run: |
         VERSION="${{ needs.validate-version.outputs.version }}"
         # Update version in csproj file
-        sed -i "s|<PackageVersion>.*</PackageVersion>|<PackageVersion>$VERSION</PackageVersion>|" src/FastCsv/FastCsv.csproj
+        sed -i "s|<PackageVersion>.*</PackageVersion>|<PackageVersion>$VERSION</PackageVersion>|" src/HeroCsv/HeroCsv.csproj
         # Also update AssemblyVersion and FileVersion
-        sed -i "s|<Version>.*</Version>|<Version>$VERSION</Version>|" src/FastCsv/FastCsv.csproj || true
+        sed -i "s|<Version>.*</Version>|<Version>$VERSION</Version>|" src/HeroCsv/HeroCsv.csproj || true
 
     - name: Restore dependencies
       run: dotnet restore
@@ -83,7 +83,7 @@ jobs:
       run: dotnet test -c Release --no-build --verbosity normal
 
     - name: Pack
-      run: dotnet pack src/FastCsv/FastCsv.csproj -c Release --no-build --output ./artifacts
+      run: dotnet pack src/HeroCsv/HeroCsv.csproj -c Release --no-build --output ./artifacts
 
     - name: Push to NuGet
       run: |

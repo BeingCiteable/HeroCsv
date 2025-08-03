@@ -1,4 +1,4 @@
-# FastCsv Release Guide
+# HeroCsv Release Guide
 
 ## Quick Start
 
@@ -8,10 +8,10 @@
 2. Click "+ Create"
 3. Use these settings:
    ```
-   Key Name: FastCsv-GitHub-Actions
+   Key Name: HeroCsv-GitHub-Actions
    Expiration: 365 days
    Scopes: ✅ Push, ✅ Push new packages
-   Glob Pattern: FastCsv*
+   Glob Pattern: HeroCsv*
    ```
 4. **Copy the key immediately!**
 5. Add to GitHub: Settings → Secrets → Actions → New secret
@@ -98,6 +98,6 @@ git tag -d v1.0.0
 - [ ] Package visible on NuGet.org
 
 ## Links
-- [NuGet Package](https://www.nuget.org/packages/FastCsv/)
-- [GitHub Actions](https://github.com/BeingCiteable/FastCsv/actions)
+- [NuGet Package](https://www.nuget.org/packages/HeroCsv/)
+- [GitHub Actions](https://github.com/BeingCiteable/HeroCsv/actions)
 - [API Keys](https://www.nuget.org/account/apikeys)

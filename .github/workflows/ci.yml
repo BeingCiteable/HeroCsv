@@ -129,7 +129,7 @@ jobs:
       run: dotnet restore
 
     - name: Pack
-      run: dotnet pack src/FastCsv/FastCsv.csproj -c Release --no-restore --output ./artifacts
+      run: dotnet pack src/HeroCsv/HeroCsv.csproj -c Release --no-restore --output ./artifacts
 
     - name: Upload NuGet packages
       uses: actions/upload-artifact@v4

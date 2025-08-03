@@ -1,8 +1,8 @@
-# FastCsv
+# HeroCsv
 
-[![CI Build](https://github.com/BeingCiteable/FastCsv/actions/workflows/ci.yml/badge.svg)](https://github.com/BeingCiteable/FastCsv/actions/workflows/ci.yml)
-[![NuGet](https://img.shields.io/nuget/v/FastCsv.svg)](https://www.nuget.org/packages/FastCsv/)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/FastCsv.svg)](https://www.nuget.org/packages/FastCsv/)
+[![CI Build](https://github.com/BeingCiteable/HeroCsv/actions/workflows/ci.yml/badge.svg)](https://github.com/BeingCiteable/HeroCsv/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/HeroCsv.svg)](https://www.nuget.org/packages/HeroCsv/)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/HeroCsv.svg)](https://www.nuget.org/packages/HeroCsv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An **ultra-fast and low memory usage** CSV parsing library for .NET focused on **reading operations only**. Built with zero-allocation parsing using ReadOnlySpan<char> and progressive framework-specific optimizations.
@@ -23,7 +23,7 @@ An **ultra-fast and low memory usage** CSV parsing library for .NET focused on *
 ## Installation
 
 ```bash
-dotnet add package FastCsv
+dotnet add package HeroCsv
 ```
 
 ## Quick Start
@@ -31,7 +31,7 @@ dotnet add package FastCsv
 ### Basic CSV Reading (Simple API)
 
 ```csharp
-using FastCsv;
+using HeroCsv;
 
 // Most basic usage
 var csvData = """
@@ -69,7 +69,7 @@ foreach (var record in Csv.ReadContent(csvData, options))
 ### Object Mapping
 
 ```csharp
-using FastCsv;
+using HeroCsv;
 
 // Define your model
 public class Employee
@@ -139,7 +139,7 @@ foreach (var record in Csv.ReadContent(csvData))
 ### File and Stream Operations
 
 ```csharp
-using FastCsv;
+using HeroCsv;
 
 // Read from file
 foreach (var record in Csv.ReadFile("data.csv"))
@@ -177,7 +177,7 @@ foreach (var record in Csv.ReadFileAutoDetect("unknown_format.csv"))
 ### Advanced Configuration
 
 ```csharp
-using FastCsv;
+using HeroCsv;
 
 // Custom CSV options for complex scenarios
 var options = new CsvOptions
@@ -245,7 +245,7 @@ var isAccelerated = System.Numerics.Vector.IsHardwareAccelerated;
 ### Advanced Performance Features
 
 ```csharp
-using FastCsv.Parsing;
+using HeroCsv.Parsing;
 
 // Ultra-fast field iteration without allocations
 foreach (var field in CsvFieldIterator.IterateFields(csvData, options))
@@ -366,7 +366,7 @@ static void ProcessBatch(List<string[]> batch)
 
 ## Performance Philosophy
 
-FastCsv is designed as an **ultra-fast and low memory usage** library with progressive enhancement:
+HeroCsv is designed as an **ultra-fast and low memory usage** library with progressive enhancement:
 
 - **Zero-allocation parsing** using ReadOnlySpan<char> for maximum performance
 - **Framework-agnostic core** with consistent performance across all platforms
@@ -401,7 +401,7 @@ The library follows a modular architecture with core interfaces and implementati
 - **CsvOptions**: Configuration struct for parsing behavior
 
 ### Key Classes
-- **FastCsvReader**: Main CSV reader implementation with async support
+- **HeroCsvReader**: Main CSV reader implementation with async support
 - **CsvReaderBuilder**: Builder pattern implementation for configuration
 - **CsvRecord**: Record implementation with extension method support
 - **CsvParser**: Core parsing logic with ReadOnlySpan<char> optimization
@@ -434,7 +434,7 @@ MIT License - see LICENSE file for details.
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
 
-Repository: https://github.com/BeingCiteable/FastCsv
+Repository: https://github.com/BeingCiteable/HeroCsv
 
 ## Design Principles
 

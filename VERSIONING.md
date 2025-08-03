@@ -1,8 +1,8 @@
-# FastCsv Versioning
+# HeroCsv Versioning
 
 ## Version Format
 
-FastCsv uses [Semantic Versioning](https://semver.org/): **MAJOR.MINOR.PATCH**
+HeroCsv uses [Semantic Versioning](https://semver.org/): **MAJOR.MINOR.PATCH**
 
 - **MAJOR**: Breaking API changes
 - **MINOR**: New features (backward compatible)

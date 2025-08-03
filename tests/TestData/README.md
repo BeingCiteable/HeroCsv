@@ -1,6 +1,6 @@
-# FastCsv Test Data Files
+# HeroCsv Test Data Files
 
-This directory contains various CSV test files used for unit testing and benchmarking the FastCsv library.
+This directory contains various CSV test files used for unit testing and benchmarking the HeroCsv library.
 
 ## Basic Test Files
 
@@ -192,4 +192,4 @@ if (TestDataHelper.TestFileExists(TestDataHelper.Files.HugeDataset))
 7. **Error Handling**: malformed.csv
 8. **Performance**: medium_dataset.csv, large_dataset_10k.csv, huge_dataset.csv
 
-This comprehensive test data ensures FastCsv works correctly across all real-world CSV scenarios.
+This comprehensive test data ensures HeroCsv works correctly across all real-world CSV scenarios.

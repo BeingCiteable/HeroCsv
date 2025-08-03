@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository contains FastCsv, a high-performance CSV parsing library for .NET focused on **reading operations only**. The library is designed for **ultra-fast and low memory usage** through zero-allocation parsing using ReadOnlySpan<char> and spans, with progressive framework-specific optimizations.
+This repository contains HeroCsv, a high-performance CSV parsing library for .NET focused on **reading operations only**. The library is designed for **ultra-fast and low memory usage** through zero-allocation parsing using ReadOnlySpan<char> and spans, with progressive framework-specific optimizations.
 
 ## Project Vision
 
@@ -91,7 +91,7 @@ dotnet pack --no-build -c Release # Pack without building
 
 ### Running
 ```bash
-dotnet run --project tests/FastCsv.Tests # Run test project
+dotnet run --project tests/HeroCsv.Tests # Run test project
 ```
 
 ## Version-Specific Features
@@ -132,9 +132,9 @@ dotnet run --project tests/FastCsv.Tests # Run test project
 - **CsvFieldEnumerator**: Field-by-field parsing without string allocation
 
 ### Performance Comparison (1000 rows, 100 iterations)
-- **FastCsv Row Enumeration**: 0.22 ms/op (beats Sep's 0.25 ms/op)
-- **FastCsv Count-Only**: 0.06 ms/op (beats Sep's 0.10 ms/op)
-- **FastCsv Field Iterator**: 0.31 ms/op (unique feature, no comparison)
+- **HeroCsv Row Enumeration**: 0.22 ms/op (beats Sep's 0.25 ms/op)
+- **HeroCsv Count-Only**: 0.06 ms/op (beats Sep's 0.10 ms/op)
+- **HeroCsv Field Iterator**: 0.31 ms/op (unique feature, no comparison)
 
 ### Usage Examples
 ```csharp
@@ -159,9 +159,9 @@ foreach (var row in reader.EnumerateRows())
 ## Current Project Structure
 
 ```
-FastCsv/
+HeroCsv/
 ├── src/
-│   └── FastCsv/
+│   └── HeroCsv/
 │       ├── Csv.cs                  # Core static API
 │       ├── Csv.net7.cs            # Async operations (ReadFileAsync, ReadStreamAsync)
 │       ├── Csv.net8.cs            # Auto-detection features
@@ -170,8 +170,8 @@ FastCsv/
 │       ├── ICsvReaderBuilder.cs   # Core builder interface
 │       ├── ICsvReaderBuilder.net6.cs # Hardware acceleration options
 │       ├── ICsvRecord.cs          # Core record interface
-│       ├── FastCsvReader.cs       # Main reader implementation
-│       ├── FastCsvReader.net6.cs  # Hardware acceleration enhancements
+│       ├── HeroCsvReader.cs       # Main reader implementation
+│       ├── HeroCsvReader.net6.cs  # Hardware acceleration enhancements
 │       ├── CsvReaderBuilder.cs    # Builder implementation
 │       ├── CsvOptions.cs          # Configuration struct
 │       ├── CsvReadResult.cs       # Results container
@@ -192,17 +192,17 @@ FastCsv/
 │       ├── Validation/
 │       │   ├── IValidationHandler.cs # Core validation interface
 │       │   └── ValidationHandler.cs  # Default validation handler
-│       └── FastCsv.csproj         # Project file
+│       └── HeroCsv.csproj         # Project file
 ├── tests/
-│   └── FastCsv.Tests/
+│   └── HeroCsv.Tests/
 │       ├── UnitTest1.cs           # Basic tests
-│       └── FastCsv.Tests.csproj   # Test project
+│       └── HeroCsv.Tests.csproj   # Test project
 ├── benchmarks/
-│   └── FastCsv.Benchmarks/
+│   └── HeroCsv.Benchmarks/
 │       ├── QuickBenchmark.cs      # Performance comparison tests
-│       └── FastCsv.Benchmarks.csproj # Benchmark project
+│       └── HeroCsv.Benchmarks.csproj # Benchmark project
 ├── .vscode/                       # VS Code configuration
-├── FastCsv.sln                    # Solution file
+├── HeroCsv.sln                    # Solution file
 ├── README.md                      # Project documentation
 ├── CLAUDE.md                      # This file
 └── .gitignore                     # Git ignore rules
@@ -339,7 +339,7 @@ internal class CsvReaderBuilder : ICsvReaderBuilder
 
 ### Actual Current Structure
 ```
-src/FastCsv/
+src/HeroCsv/
 ├── Csv.cs                  # Core static API (partial)
 ├── Csv.net7.cs            # Async file operations
 ├── Csv.net8.cs            # Auto-detection features
@@ -350,8 +350,8 @@ src/FastCsv/
 ├── CsvMapper.cs           # Core mapper implementation (partial)
 ├── CsvMapper.net6.cs      # Async mapping support
 ├── CsvMapper.net8.cs      # Frozen collections optimization
-├── FastCsvReader.cs       # Main reader implementation (partial)
-├── FastCsvReader.net6.cs  # Async support
+├── HeroCsvReader.cs       # Main reader implementation (partial)
+├── HeroCsvReader.net6.cs  # Async support
 ├── CsvRecord.cs           # Record implementation
 ├── CsvRow.cs              # Zero-allocation row struct
 ├── CsvParser.cs           # Core parsing logic
@@ -361,7 +361,7 @@ src/FastCsv/
 ├── CsvReadResult.cs       # Read results container
 ├── CsvValidationResult.cs # Validation results
 ├── ExtensionsToICsvRecord.cs # Extension methods
-├── FastCsvParser.cs       # Optimized parser with SearchValues
+├── HeroCsvParser.cs       # Optimized parser with SearchValues
 ├── RowEnumerable.cs       # Zero-allocation row enumeration
 ├── ICsvDataSource.cs      # Data source abstraction
 ├── ICsvRecord.cs          # Record interface
@@ -381,7 +381,7 @@ The library uses the partial class pattern, but not as extensively as originally
 - **ICsvReader**: Has .net6.cs for async enumerable
 - **ICsvReaderBuilder**: Has .net6.cs for hardware options
 - **CsvMapper**: Has .net6.cs and .net8.cs for async and frozen collections
-- **FastCsvReader**: Has .net6.cs for async support
+- **HeroCsvReader**: Has .net6.cs for async support
 
 ## Cleanup Notes
 
@@ -400,7 +400,7 @@ The library uses the partial class pattern, but not as extensively as originally
 ## Current API Design
 
 ### Progressive Disclosure Pattern (Current Implementation)
-FastCsv implements a **progressive enhancement** approach with three main entry points:
+HeroCsv implements a **progressive enhancement** approach with three main entry points:
 
 1. **Simple Static API**: `Csv.Read()` for basic string array operations
 2. **Object Mapping API**: `Csv.Read<T>()` for typed object mapping
