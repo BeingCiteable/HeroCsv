@@ -2,13 +2,13 @@ name: CI Build
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop, dev]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: "9.0.x"
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
@@ -18,127 +18,127 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # Full history for versioning
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for versioning
 
-    - name: Setup .NET SDKs
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: |
-          6.0.x
-          7.0.x
-          8.0.x
-          9.0.x
+      - name: Setup .NET SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            7.0.x
+            8.0.x
+            9.0.x
 
-    - name: Verify .NET installations
-      shell: pwsh
-      run: |
-        Write-Host "Installed .NET SDKs:"
-        dotnet --list-sdks
-        Write-Host ""
-        
-        # Read required SDKs from Directory.Build.props
-        $xml = [xml](Get-Content "Directory.Build.props")
-        $requiredSdks = $xml.Project.PropertyGroup.RequiredDotNetSdks -split ';' | Where-Object { $_ }
-        
-        $allInstalled = $true
-        foreach ($required in $requiredSdks) {
-          $version = $required -replace '\.x$', ''
-          if (dotnet --list-sdks | Select-String -Pattern $version -Quiet) {
-            Write-Host "✅ .NET $version SDK is installed"
+      - name: Verify .NET installations
+        shell: pwsh
+        run: |
+          Write-Host "Installed .NET SDKs:"
+          dotnet --list-sdks
+          Write-Host ""
+
+          # Read required SDKs from Directory.Build.props
+          $xml = [xml](Get-Content "Directory.Build.props")
+          $requiredSdks = $xml.Project.PropertyGroup.RequiredDotNetSdks -split ';' | Where-Object { $_ }
+
+          $allInstalled = $true
+          foreach ($required in $requiredSdks) {
+            $version = $required -replace '\.x$', ''
+            if (dotnet --list-sdks | Select-String -Pattern $version -Quiet) {
+              Write-Host "✅ .NET $version SDK is installed"
+            } else {
+              Write-Host "❌ .NET $version SDK is NOT installed!"
+              $allInstalled = $false
+            }
+          }
+
+          if (-not $allInstalled) {
+            exit 1
+          }
+
+          Write-Host "`n✅ All required .NET SDKs are installed!"
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Test
+        run: dotnet test --no-build -c Release --verbosity normal --logger "console;verbosity=detailed" --logger "trx;LogFileName=${{ matrix.os }}-test-results.trx"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: "**/*.trx"
+          retention-days: 7
+
+      - name: Parse Test Results
+        if: always()
+        shell: pwsh
+        run: |
+          $results = Get-ChildItem -Path . -Filter "*.trx" -Recurse
+          if ($results.Count -gt 0) {
+            Write-Host "Found $($results.Count) test result file(s)"
+            foreach ($file in $results) {
+              Write-Host "Test results in: $($file.FullName)"
+            }
           } else {
-            Write-Host "❌ .NET $version SDK is NOT installed!"
-            $allInstalled = $false
+            Write-Host "No test result files found"
           }
-        }
-        
-        if (-not $allInstalled) {
-          exit 1
-        }
-        
-        Write-Host "`n✅ All required .NET SDKs are installed!"
-
-    - name: Restore dependencies
-      run: dotnet restore
-
-    - name: Build
-      run: dotnet build --no-restore -c Release
-
-    - name: Test
-      run: dotnet test --no-build -c Release --verbosity normal --logger "console;verbosity=detailed" --logger "trx;LogFileName=${{ matrix.os }}-test-results.trx"
-
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results-${{ matrix.os }}
-        path: '**/*.trx'
-        retention-days: 7
-
-    - name: Parse Test Results
-      if: always()
-      shell: pwsh
-      run: |
-        $results = Get-ChildItem -Path . -Filter "*.trx" -Recurse
-        if ($results.Count -gt 0) {
-          Write-Host "Found $($results.Count) test result file(s)"
-          foreach ($file in $results) {
-            Write-Host "Test results in: $($file.FullName)"
-          }
-        } else {
-          Write-Host "No test result files found"
-        }
 
   package:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup .NET SDKs
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: |
-          6.0.x
-          7.0.x
-          8.0.x
-          9.0.x
+      - name: Setup .NET SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            7.0.x
+            8.0.x
+            9.0.x
 
-    - name: Verify .NET installations
-      shell: pwsh
-      run: |
-        Write-Host "Installed .NET SDKs:"
-        dotnet --list-sdks
-        
-        # Quick verification that we have all major versions
-        $versions = @("6.0", "7.0", "8.0", "9.0")
-        foreach ($v in $versions) {
-          if (dotnet --list-sdks | Select-String -Pattern $v -Quiet) {
-            Write-Host "✅ .NET $v SDK found"
+      - name: Verify .NET installations
+        shell: pwsh
+        run: |
+          Write-Host "Installed .NET SDKs:"
+          dotnet --list-sdks
+
+          # Quick verification that we have all major versions
+          $versions = @("6.0", "7.0", "8.0", "9.0")
+          foreach ($v in $versions) {
+            if (dotnet --list-sdks | Select-String -Pattern $v -Quiet) {
+              Write-Host "✅ .NET $v SDK found"
+            }
           }
-        }
 
-    - name: Restore dependencies
-      run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore
 
-    - name: Pack
-      run: dotnet pack src/HeroCsv/HeroCsv.csproj -c Release --no-restore --output ./artifacts
+      - name: Pack
+        run: dotnet pack src/HeroCsv/HeroCsv.csproj -c Release --no-restore --output ./artifacts
 
-    - name: Upload NuGet packages
-      uses: actions/upload-artifact@v4
-      with:
-        name: nuget-packages
-        path: ./artifacts/*.nupkg
+      - name: Upload NuGet packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: ./artifacts/*.nupkg
 
-    - name: Upload symbol packages
-      uses: actions/upload-artifact@v4
-      with:
-        name: symbol-packages
-        path: ./artifacts/*.snupkg
+      - name: Upload symbol packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: symbol-packages
+          path: ./artifacts/*.snupkg
