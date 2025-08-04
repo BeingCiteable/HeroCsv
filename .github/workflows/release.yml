@@ -1,6 +1,9 @@
 name: Release to NuGet
 
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [published]
   workflow_dispatch:

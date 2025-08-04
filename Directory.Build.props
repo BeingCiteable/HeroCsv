@@ -3,7 +3,7 @@
     <Copyright>Copyright (c) 2025 HeroCsv Contributors</Copyright>
     <Product>HeroCsv</Product>
     <Company>HeroCsv</Company>
-    <Version>1.0.0-prerelease</Version>
+    <Version>1.0.1-dev</Version>
     <FileVersion>1.0.0.0</FileVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <RepositoryUrl>https://github.com/BeingCiteable/HeroCsv</RepositoryUrl>

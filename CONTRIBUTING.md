@@ -1,6 +1,6 @@
 # Contributing to HeroCsv
 
-## Development Workflow
+## Simple Development Workflow
 
 1. **Fork & Clone**
 
@@ -55,27 +55,65 @@ perf: optimize SearchValues for NET8
 docs: update README examples
 ```
 
-## Code Style
+## Version Management (Maintainers)
 
-- Use latest C# features
-- Follow existing patterns
-- Add XML documentation for public APIs
-- No unnecessary comments
+### Continuous Development
 
-## Testing
+- PRs are merged to master continuously
+- Version in `Directory.Build.props` stays as-is between releases
+- No version bumps until ready to release
 
-- Add unit tests for new features
-- Maintain or improve code coverage
-- Test across all target frameworks
-- Include benchmarks for performance changes
+### When Ready to Release
 
-## Release Process (Maintainers)
+1. **Decide on version number** based on changes since last release:
 
-1. Ensure all PRs for release are merged
-2. Update version in `Directory.Build.props`
-3. Create and push tag:
+   - Major: Breaking changes (1.0.0 → 2.0.0)
+   - Minor: New features (1.0.0 → 1.1.0)
+   - Patch: Bug fixes only (1.0.0 → 1.0.1)
+
+2. **Create Release PR**
+
    ```bash
-   git tag v1.0.1
-   git push --tags
+   git checkout master
+   git pull origin master
+   git checkout -b release/v1.0.1
    ```
-4. GitHub Actions handles the rest
+
+3. **Update version** in `Directory.Build.props`:
+
+   ```xml
+   <Version>1.0.1</Version>
+   ```
+
+4. **Create PR** with title "Release v1.0.1"
+
+   - Include summary of changes
+   - Wait for CI to pass
+   - Merge to master
+
+5. **Tag and Release**
+
+   ```bash
+   git checkout master
+   git pull origin master
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```
+
+6. **GitHub Actions** automatically:
+   - Builds and tests
+   - Publishes to NuGet
+   - Creates GitHub release
+
+### Between Releases
+
+Keep version in `Directory.Build.props` as:
+
+- Current released version, OR
+- Next version with `-dev` suffix (e.g., `1.0.2-dev`)
+
+This way:
+
+- Master always builds and passes tests
+- Version only changes for releases
+- Clear separation between development and release
