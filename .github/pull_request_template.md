@@ -1,29 +1,23 @@
 ## Description
-<!-- Provide a brief description of the changes in this PR -->
+<!-- Describe your changes -->
 
 ## Type of Change
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
 - [ ] Performance improvement
-- [ ] Code refactoring
+- [ ] Documentation update
 
 ## Checklist
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published
-
-## Testing
-<!-- Describe the tests that you ran to verify your changes -->
+- [ ] I have tested this code locally
+- [ ] I have added tests that prove my fix/feature works
+- [ ] I have updated the documentation (if needed)
+- [ ] I have followed the existing code style
+- [ ] I have checked my code with `dotnet build -c Release`
+- [ ] All tests pass with `dotnet test`
 
 ## Performance Impact
 <!-- If applicable, describe any performance implications -->
 
 ## Breaking Changes
-<!-- If applicable, describe any breaking changes and migration path -->
+<!-- If applicable, describe what breaks and migration path -->
