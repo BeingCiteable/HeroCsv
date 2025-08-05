@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright (c) 2025 HeroCsv Contributors</Copyright>
     <Product>HeroCsv</Product>
-    <Company>HeroCsv</Company>
+    <Company>BeingCiteable</Company>
     <Version>1.0.0</Version>
     <FileVersion>1.0.0.0</FileVersion>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
@@ -18,7 +18,7 @@
   <PropertyGroup>
     <!-- Define all supported target frameworks in one place -->
     <SupportedTargetFrameworks>netstandard2.0;net6.0;net7.0;net8.0;net9.0</SupportedTargetFrameworks>
-    
+
     <!-- SDK versions required for CI/CD -->
     <RequiredDotNetSdks>6.0.x;7.0.x;8.0.x;9.0.x</RequiredDotNetSdks>
   </PropertyGroup>
