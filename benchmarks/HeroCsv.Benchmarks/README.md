@@ -1,117 +1,171 @@
-# HeroCsv Benchmark Suite
+# HeroCsv Benchmarks
 
-Comprehensive benchmarking comparing HeroCsv with popular .NET CSV libraries.
+Comprehensive performance testing suite for the HeroCsv CSV parsing library, designed to ensure consistent high performance and detect regressions.
 
-## 📊 Libraries Compared
-
-| Library | Version | Description | Notes |
-|---------|---------|-------------|-------|
-| **HeroCsv** | Current | Our zero-allocation implementation | Baseline for comparison |
-| [CsvHelper](https://github.com/JoshClose/CsvHelper) | 33.0.1 | Most popular .NET CSV library | Feature-rich, widely adopted |
-| [Sylvan.Data.Csv](https://github.com/MarkPflug/Sylvan) | 1.3.9 | High-performance CSV reader | Optimized for speed |
-| [CsvReader](https://github.com/phatcher/CsvReader) | 1.2.2 | Lightweight CSV parser | Minimal dependencies |
-| [Sep](https://github.com/nietras/Sep) | 0.5.2 | Modern high-performance parser | .NET 6+ optimized |
-| [ServiceStack.Text](https://github.com/ServiceStack/ServiceStack.Text) | 8.6.0 | Full-featured serialization | Part of ServiceStack |
-| [Csv](https://github.com/stevehansen/csv) | 2.0.93 | Kent Boggart's CSV library | Simple API |
-
-## 🏃 Benchmark Suites
-
-### 1. Quick Performance Comparison (`quick`)
-- **Purpose**: Quick competitive analysis without complex setup
-- **Focus**: Fair comparison of string allocation performance
-- **Metrics**: Operations per iteration across all libraries
-- **Dataset**: 1,000 rows with realistic data
-
-### 2. Simplified Library Comparison (`simple`)
-- **Purpose**: BenchmarkDotNet comparison with major libraries
-- **Focus**: Detailed performance metrics with memory diagnostics
-- **Metrics**: Execution time, memory allocation, GC pressure
-- **Libraries**: CsvHelper, Sylvan, Sep, ServiceStack.Text
-
-### 3. Original HeroCsv Tests (`original`)
-- **Purpose**: Internal HeroCsv performance validation
-- **Focus**: String vs Memory vs Span performance within HeroCsv
-- **Metrics**: Detailed HeroCsv feature benchmarks
-
-## 🚀 Running Benchmarks
+## Quick Start
 
 ```bash
-# Show available benchmark suites
-dotnet run --project benchmarks/HeroCsv.Benchmarks
+# Fast performance check for development (runs in ~1-2 minutes)
+dotnet run -c Release -- ci
 
-# Run specific benchmark suite
-dotnet run --project benchmarks/HeroCsv.Benchmarks -- quick
-dotnet run --project benchmarks/HeroCsv.Benchmarks -- simple
-dotnet run --project benchmarks/HeroCsv.Benchmarks -- original
+# Compare HeroCsv against other popular CSV libraries
+dotnet run -c Release -- library simple
+
+# Test with real-world CSV files of various sizes
+dotnet run -c Release -- realdata
+
+# View all available benchmark options
+dotnet run -c Release -- list
 ```
 
-## 📈 Expected Results
+## Benchmark Categories
 
-### Performance Hierarchy (Predicted)
-1. **Sep** - Modern, highly optimized for .NET 6+
-2. **HeroCsv (Memory)** - Our zero-allocation implementation
-3. **Sylvan.Data.Csv** - Known high-performance library
-4. **HeroCsv (String)** - Our standard implementation
-5. **CsvReader** - Lightweight, decent performance
-6. **CsvHelper** - Feature-rich but potentially slower
-7. **ServiceStack.Text** - General-purpose, not CSV-specialized
-8. **Csv** - Simple implementation
+### CI Benchmarks (`ci`)
+Fast-running benchmarks designed for continuous integration pipelines. These tests verify core parsing performance hasn't regressed while keeping execution time minimal.
 
-### Memory Efficiency (Predicted)
-1. **HeroCsv (Memory)** - Zero additional allocations
-2. **Sep** - Modern memory-efficient design
-3. **Sylvan.Data.Csv** - Optimized memory usage
-4. **HeroCsv (String)** - Standard allocation patterns
-5. **CsvReader** - Lightweight allocations
-6. **Others** - Varying allocation patterns
+**Key features:**
+- Completes in 1-2 minutes for rapid feedback
+- Tests essential operations: parsing, counting, object mapping
+- Uses synthetic data (100-1000 rows) for consistent results
+- Automatically runs on all pull requests
 
-## 🎯 Optimization Targets
+### Library Comparison (`library`)
+Head-to-head performance comparisons with other popular .NET CSV parsing libraries.
 
-Based on benchmark results, we can identify:
+**Subcommands:**
+- `simple` - Comprehensive comparison with CsvHelper, Sylvan.Data.Csv, Sep, and others
+- `direct` - Focused comparison between HeroCsv and Sep (the current performance leader)
 
-1. **Performance Gaps**: Where HeroCsv trails competitors
-2. **Memory Inefficiencies**: Unnecessary allocations to eliminate
-3. **API Improvements**: Better APIs for common use cases
-4. **Feature Parity**: Missing features that affect performance
+**What's measured:**
+- Parse time for various file sizes
+- Memory allocations
+- Throughput (rows/second)
 
-## 📊 Analyzing Results
+### Real Data Benchmarks (`realdata`)
+Performance testing with actual CSV files to ensure the library performs well with real-world data patterns.
 
-BenchmarkDotNet provides comprehensive output including:
+**Test files include:**
+- Small files (< 1MB): Configuration data, lookup tables
+- Medium files (1-50MB): Typical business data exports
+- Large files (> 50MB): Big data exports, logs
 
-- **Mean/Median**: Average execution time
-- **Allocated**: Memory allocated per operation
-- **Rank**: Performance ranking
-- **Ratio**: Performance relative to baseline
-- **Gen0/Gen1/Gen2**: Garbage collection pressure
+### Performance Analysis (`perf`)
+Deep-dive performance analysis for optimization work.
 
-### Key Metrics to Watch
-- **Memory Allocation**: Lower is better (bytes allocated)
-- **Execution Time**: Lower is better (nanoseconds)
-- **Allocation Rate**: How much memory per operation
-- **GC Pressure**: Generation 0/1/2 collections
+**Subcommands:**
+- `quick` - Rapid performance overview with key metrics
+- `internal` - Component-level benchmarks (parser, field iterator, memory pools)
 
-## 🔧 Configuration
+## CI/CD Integration
 
-Benchmarks run with:
-- **.NET 9.0** target framework
-- **Release** configuration
-- **3 warmup iterations**, **5 measurement iterations**
-- **Memory diagnostics** enabled
-- **Cross-platform** compatible (Windows diagnostics when available)
+### Automatic Triggers
+Benchmarks run automatically on:
+- **Pull Requests**: CI benchmarks only, comparing against master baseline
+- **Master Push**: Full CI suite, results stored as performance baseline
+- **Manual Dispatch**: Any benchmark type via GitHub Actions UI
 
-## 📝 Contributing Benchmark Results
+### Performance Gates
+- **Pull Requests**: Warning at >5% regression, helps catch issues early
+- **Master Branch**: Fails at >10% regression, prevents performance degradation
 
-When contributing benchmark results:
+### Results Storage
+- Benchmark artifacts stored for 30 days
+- JSON reports enable historical comparison
+- Performance trends tracked over time
 
-1. Include system specifications (CPU, RAM, OS)
-2. Note any background processes or unusual conditions
-3. Run benchmarks multiple times for consistency
-4. Include both raw BenchmarkDotNet output and summary analysis
+## Running Locally
 
-## 🎯 Baseline Goals
+### Basic Usage
+```bash
+# Run with default settings
+dotnet run -c Release -- [command]
 
-Target performance goals for HeroCsv:
-- **Top 3** in speed benchmarks
-- **Lowest** memory allocation for Memory API
-- **Competitive** with specialized high-performance libraries
-- **Superior** memory efficiency for zero-allocation scenarios
+# Specify custom output directory
+dotnet run -c Release -- ci --output ./my-results
+
+# Enable detailed logging
+dotnet run -c Release -- ci --verbose
+```
+
+### Development Workflow
+1. Make performance-related changes
+2. Run `ci` benchmarks for quick validation
+3. Run relevant specific benchmarks (e.g., `library` if changing parser)
+4. Compare results against baseline
+
+## Understanding Results
+
+### Key Metrics
+- **Mean**: Average execution time (lower is better)
+- **Error**: Standard error of measurements
+- **StdDev**: Standard deviation (lower means more consistent)
+- **Allocated**: Memory allocated per operation (aim for zero)
+
+### Example Output
+```
+| Method              | Mean     | Error   | StdDev  | Allocated |
+|-------------------- |---------:|--------:|--------:|----------:|
+| ReadContent_100Rows | 23.45 μs | 0.12 μs | 0.10 μs |      2 KB |
+```
+
+## Writing New Benchmarks
+
+### Guidelines
+- Use meaningful method names that describe what's being tested
+- Include setup data in `[GlobalSetup]` to avoid measuring initialization
+- Add `[MemoryDiagnoser]` to track allocations
+- Keep individual benchmark execution under 100ms for CI suite
+
+### Example
+```csharp
+[MemoryDiagnoser]
+[JsonExporter("*-report.json")] // Enables CI comparison
+public class MyNewBenchmark
+{
+    private string _csvData;
+    
+    [GlobalSetup]
+    public void Setup()
+    {
+        // Prepare test data once, outside of measurements
+        _csvData = GenerateRealisticCsvData(rows: 1000);
+    }
+    
+    [Benchmark]
+    public int ParseWithValidation()
+    {
+        // Test specific functionality
+        var result = Csv.Configure()
+            .WithContent(_csvData)
+            .WithValidation(true)
+            .Read();
+            
+        return result.RecordCount;
+    }
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**"No benchmarks found"**
+- Ensure your benchmark class is public
+- Verify methods have `[Benchmark]` attribute
+
+**High variance in results**
+- Close other applications
+- Disable CPU throttling
+- Run with `--job long` for more iterations
+
+**Out of memory**
+- Reduce test data size
+- Check for memory leaks in setup
+
+## Contributing
+
+When submitting performance improvements:
+1. Run relevant benchmarks before and after changes
+2. Include benchmark results in PR description
+3. Explain any tradeoffs (e.g., memory vs speed)
+4. Add new benchmarks for new features

@@ -18,7 +18,9 @@ internal sealed partial class CsvRecord(string[] fields, int lineNumber) : ICsvR
         {
             if (index < 0 || index >= _fields.Length)
             {
-                throw new ArgumentOutOfRangeException(nameof(index));
+                throw new ArgumentOutOfRangeException(nameof(index), index,
+                    $"Field index {index} is out of range. Record has {_fields.Length} fields on line {lineNumber}. " +
+                    $"Available fields: {GetFieldPreview()}");
             }
             return _fields[index].AsSpan();
         }
@@ -67,6 +69,41 @@ internal sealed partial class CsvRecord(string[] fields, int lineNumber) : ICsvR
         {
             var result = new string[_fields.Length];
             Array.Copy(_fields, result, _fields.Length);
+            return result;
+        }
+        
+        /// <summary>
+        /// Gets a preview of fields for error messages
+        /// </summary>
+        private string GetFieldPreview()
+        {
+            if (_fields.Length == 0) return "(empty record)";
+            
+            const int maxFieldsToShow = 3;
+            const int maxFieldLength = 20;
+            
+            var fieldsToShow = Math.Min(_fields.Length, maxFieldsToShow);
+            var preview = new string[fieldsToShow];
+            
+            for (int i = 0; i < fieldsToShow; i++)
+            {
+                var field = _fields[i];
+                if (field.Length > maxFieldLength)
+                {
+                    preview[i] = $"[{i}]=\"{field.Substring(0, maxFieldLength)}...\"";
+                }
+                else
+                {
+                    preview[i] = $"[{i}]=\"{field}\"";
+                }
+            }
+            
+            var result = string.Join(", ", preview);
+            if (_fields.Length > maxFieldsToShow)
+            {
+                result += $", ... ({_fields.Length - maxFieldsToShow} more)";
+            }
+            
             return result;
         }
 

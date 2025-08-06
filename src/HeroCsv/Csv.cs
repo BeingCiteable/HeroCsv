@@ -70,19 +70,25 @@ public static partial class Csv
         {
             if (content.IsEmpty) return 0;
 
-            int recordCount = CsvParser.CountLines(content);
-
+            // CsvParser.CountLines counts newline characters
+            int newlineCount = CsvParser.CountLines(content);
+            
+            // Number of records = newline count + 1 (for the last record if it doesn't end with newline)
+            int recordCount = newlineCount;
+            
+            // If content doesn't end with a newline, there's one more record
             if (content.Length > 0 && content[content.Length - 1] != '\n' && content[content.Length - 1] != '\r')
             {
                 recordCount++;
             }
 
+            // If hasHeader is true, subtract 1 from total count
             if (options.HasHeader && recordCount > 0)
             {
                 recordCount--;
             }
 
-            return recordCount;
+            return Math.Max(0, recordCount);
         }
 
         /// <summary>
@@ -128,7 +134,7 @@ public static partial class Csv
         public static IEnumerable<string[]> ReadContent(string content, CsvOptions options)
         {
             using var reader = CreateReader(content, options);
-            return [.. reader.GetRecords()];
+            return reader.GetRecords().ToList();
         }
 
         /// <summary>
@@ -152,6 +158,7 @@ public static partial class Csv
         /// <returns>Read-only list of all parsed records</returns>
         public static IReadOnlyList<string[]> ReadAllRecords(ReadOnlySpan<char> content, CsvOptions options = default)
         {
+            options = GetValidOptions(options);
             // Convert span to string to ensure memory safety across method boundaries
             return ReadAllRecords(content.ToString(), options);
         }
@@ -210,6 +217,7 @@ public static partial class Csv
         /// <returns>CSV reader instance</returns>
         public static ICsvReader CreateReader(string content, CsvOptions options)
         {
+            options = GetValidOptions(options);
             return new HeroCsvReader(content, options);
         }
 
@@ -235,6 +243,21 @@ public static partial class Csv
         {
             options = GetValidOptions(options);
             return new HeroCsvReader(stream, options, encoding, leaveOpen);
+        }
+
+        /// <summary>
+        /// Creates a CSV reader from a file
+        /// </summary>
+        /// <param name="filePath">Path to the CSV file</param>
+        /// <param name="options">Parsing options</param>
+        /// <param name="encoding">Text encoding (defaults to UTF-8)</param>
+        /// <returns>CSV reader instance</returns>
+        public static ICsvReader CreateReaderFromFile(string filePath, CsvOptions options = default, Encoding? encoding = null)
+        {
+            options = GetValidOptions(options);
+            var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var dataSource = new StreamDataSource(fileStream, encoding, leaveOpen: false);
+            return new HeroCsvReader(dataSource, options);
         }
 
         /// <summary>
@@ -361,7 +384,7 @@ public static partial class Csv
         /// <returns>Enumerable of mapped objects</returns>
         public static IEnumerable<T> ReadAutoMapWithOverrides<T>(string content, CsvOptions options, Action<CsvMapping<T>> configureMapping) where T : class, new()
         {
-            var mapping = CsvMapping<T>.CreateAutoMapWithOverrides();
+            var mapping = CsvMapping.CreateAutoMapWithOverrides<T>();
             mapping.Options = options;
             configureMapping(mapping);
             return Read<T>(content, mapping);
@@ -384,10 +407,11 @@ public static partial class Csv
         /// Reads CSV data from a stream and returns each row as a string array
         /// </summary>
         /// <param name="stream">Stream containing CSV data</param>
+        /// <param name="leaveOpen">Whether to leave the stream open after reading (default: false)</param>
         /// <returns>Each CSV row as an array of field values</returns>
-        public static IEnumerable<string[]> ReadStream(Stream stream)
+        public static IEnumerable<string[]> ReadStream(Stream stream, bool leaveOpen = false)
         {
-            return ReadStream(stream, CsvOptions.Default);
+            return ReadStream(stream, CsvOptions.Default, leaveOpen);
         }
 
         /// <summary>
@@ -395,12 +419,11 @@ public static partial class Csv
         /// </summary>
         /// <param name="stream">Stream containing CSV data</param>
         /// <param name="options">Parsing configuration for delimiter, quotes, headers, etc.</param>
+        /// <param name="leaveOpen">Whether to leave the stream open after reading (default: false)</param>
         /// <returns>Each CSV row as an array of field values</returns>
-        public static IEnumerable<string[]> ReadStream(Stream stream, CsvOptions options)
+        public static IEnumerable<string[]> ReadStream(Stream stream, CsvOptions options, bool leaveOpen = false)
         {
-            using var streamReader = new StreamReader(stream);
-            var content = streamReader.ReadToEnd();
-            using var reader = CreateReader(content, options);
+            using var reader = CreateReader(stream, options, leaveOpen: leaveOpen);
             return reader.GetRecords().ToList(); // Materialize to avoid accessing disposed reader
         }
 
@@ -409,10 +432,11 @@ public static partial class Csv
         /// </summary>
         /// <typeparam name="T">Type to map CSV records to</typeparam>
         /// <param name="stream">Stream containing CSV data</param>
+        /// <param name="leaveOpen">Whether to leave the stream open after reading (default: false)</param>
         /// <returns>Enumerable of mapped objects</returns>
-        public static IEnumerable<T> ReadStream<T>(Stream stream) where T : class, new()
+        public static IEnumerable<T> ReadStream<T>(Stream stream, bool leaveOpen = false) where T : class, new()
         {
-            return ReadStream<T>(stream, CsvOptions.Default);
+            return ReadStream<T>(stream, CsvOptions.Default, leaveOpen);
         }
 
         /// <summary>
@@ -421,12 +445,30 @@ public static partial class Csv
         /// <typeparam name="T">Type to map CSV records to</typeparam>
         /// <param name="stream">Stream containing CSV data</param>
         /// <param name="options">Parsing configuration for delimiter, quotes, headers, etc.</param>
+        /// <param name="leaveOpen">Whether to leave the stream open after reading (default: false)</param>
         /// <returns>Enumerable of mapped objects</returns>
-        public static IEnumerable<T> ReadStream<T>(Stream stream, CsvOptions options) where T : class, new()
+        public static IEnumerable<T> ReadStream<T>(Stream stream, CsvOptions options, bool leaveOpen = false) where T : class, new()
         {
-            using var reader = new StreamReader(stream);
-            var content = reader.ReadToEnd();
-            return Read<T>(content, options);
+            using var reader = CreateReader(stream, options, leaveOpen: leaveOpen);
+            
+            var mapper = new CsvMapper<T>(options);
+            
+            // If the CSV has headers, read them first and set on mapper
+            if (options.HasHeader && reader.TryReadRecord(out var headerRecord))
+            {
+                mapper.SetHeaders(headerRecord.ToArray());
+            }
+            
+            // Now read the data records
+            var records = reader.GetRecords();
+            using var enumerator = records.GetEnumerator();
+
+            // Transform each CSV record into the target object type
+            while (enumerator.MoveNext())
+            {
+                var record = enumerator.Current;
+                yield return mapper.MapRecord(record);
+            }
         }
 
         /// <summary>

@@ -40,6 +40,8 @@ obj/
 out/
 [Tt]est[Rr]esults*/
 [Cc]overage[Rr]eport*/
+coverage-report/
+TestResults/
 *.tmp
 *.tmp_proj
 *.log
@@ -50,6 +52,23 @@ out/
 *.log
 *.svclog
 *.scc
+
+## Test and Coverage Artifacts
+*.trx
+*.coverage
+*.coveragexml
+*.cobertura.xml
+coverage.json
+coverage.opencover.xml
+coverage.info
+.nyc_output/
+htmlcov/
+.coverage
+.tox/
+.nox/
+.coverage.*
+*.cover
+.pytest_cache/
 
 ## IDE
 .idea/

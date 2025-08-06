@@ -11,22 +11,44 @@ public partial interface ICsvReader : IDisposable, IAsyncDisposable
 public partial interface ICsvReader : IDisposable
 #endif
 {
+    /// <summary>
+    /// Gets the current line number in the CSV file
+    /// </summary>
     int LineNumber { get; }
 
+    /// <summary>
+    /// Gets a value indicating whether more data is available to read
+    /// </summary>
     bool HasMoreData { get; }
 
+    /// <summary>
+    /// Gets the total number of records read so far
+    /// </summary>
     int RecordCount { get; }
 
-
+    /// <summary>
+    /// Reads the next CSV record
+    /// </summary>
+    /// <returns>The next CSV record</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no more data is available</exception>
     ICsvRecord ReadRecord();
 
     /// <summary>
     /// Try to read the next record, returns false if no more data
     /// </summary>
+    /// <param name="record">The CSV record if available, null otherwise</param>
+    /// <returns>True if a record was read, false if no more data</returns>
     bool TryReadRecord(out ICsvRecord record);
 
+    /// <summary>
+    /// Skips the next record without processing it
+    /// </summary>
     void SkipRecord();
 
+    /// <summary>
+    /// Skips the specified number of records
+    /// </summary>
+    /// <param name="count">Number of records to skip</param>
     void SkipRecords(int count);
 
     /// <summary>

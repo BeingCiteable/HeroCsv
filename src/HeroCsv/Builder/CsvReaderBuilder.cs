@@ -14,11 +14,11 @@ public sealed class CsvReaderBuilder : ICsvReaderBuilder
     private string? _filePath;
     private Stream? _stream;
     private CsvOptions _options = CsvOptions.Default;
-    private bool _validateData = false;
-    private bool _trackErrors = false;
-    private Action<CsvValidationError>? _errorCallback = null;
+    private bool _validateData;
+    private bool _trackErrors;
+    private Action<CsvValidationError>? _errorCallback;
 #if NET6_0_OR_GREATER
-    private bool _hardwareAcceleration = false;
+    private bool _hardwareAcceleration;
 #endif
 
     /// <inheritdoc />
@@ -147,7 +147,8 @@ public sealed class CsvReaderBuilder : ICsvReaderBuilder
     {
         if (_content != null) return _content;
         if (_filePath != null) return File.ReadAllText(_filePath);
-        throw new InvalidOperationException("No content or file path specified");
+        throw new InvalidOperationException(
+            "No CSV data source specified. Use WithContent() to provide CSV string data or WithFile() to specify a file path.");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

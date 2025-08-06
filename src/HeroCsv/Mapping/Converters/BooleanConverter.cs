@@ -55,7 +55,11 @@ public class BooleanConverter : ICsvConverter
         if (_falseValues.Contains(value))
             return false;
             
-        throw new FormatException($"Unable to parse '{value}' as boolean. Expected one of: {string.Join(", ", _trueValues)} for true or {string.Join(", ", _falseValues)} for false");
+        throw new FormatException(
+            $"Unable to parse '{value}' as boolean. " +
+            $"Expected values for true: {FormatValues(_trueValues)} " +
+            $"Expected values for false: {FormatValues(_falseValues)} " +
+            $"(comparison is case-insensitive)");
     }
 
     /// <inheritdoc />
@@ -68,5 +72,15 @@ public class BooleanConverter : ICsvConverter
             return boolValue ? "true" : "false";
             
         return value.ToString() ?? string.Empty;
+    }
+    
+    /// <summary>
+    /// Formats a set of values for error messages
+    /// </summary>
+    private static string FormatValues(HashSet<string> values)
+    {
+        var sorted = new List<string>(values);
+        sorted.Sort(StringComparer.OrdinalIgnoreCase);
+        return string.Join(", ", sorted.Select(v => $"'{v}'"));
     }
 }

@@ -22,20 +22,25 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     private readonly Dictionary<int, Func<string, object?>> _converters;
     private readonly Dictionary<PropertyInfo, CsvColumnAttribute?> _attributeCache;
     private readonly Dictionary<PropertyInfo, ICsvConverter?> _converterCache;
+    private readonly Dictionary<string, CultureInfo> _fieldCultures;
     private string[]? _headers;
+    private CultureInfo _culture;
 
     /// <summary>
     /// Creates a mapper with auto mapping using property names
     /// </summary>
     /// <param name="options">CSV parsing options</param>
-    public CsvMapper(CsvOptions options)
+    /// <param name="culture">Culture for parsing (defaults to current culture)</param>
+    public CsvMapper(CsvOptions options, CultureInfo? culture = null)
     {
         _options = options;
+        _culture = culture ?? CultureInfo.CurrentCulture;
         _propertyMap = new Dictionary<string, List<PropertyInfo>>(StringComparer.OrdinalIgnoreCase);
-        _indexMap = new Dictionary<int, List<PropertyInfo>>();
+        _indexMap = [];
         _converters = [];
         _attributeCache = [];
         _converterCache = [];
+        _fieldCultures = [];
         InitializeAutoMapping();
     }
 
@@ -43,15 +48,18 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     /// Creates a mapper with manual mapping configuration
     /// </summary>
     /// <param name="mapping">Manual mapping configuration</param>
-    public CsvMapper(CsvMapping<T> mapping)
+    /// <param name="culture">Culture for parsing (defaults to current culture)</param>
+    public CsvMapper(CsvMapping<T> mapping, CultureInfo? culture = null)
     {
         _mapping = mapping;
         _options = mapping.Options;
+        _culture = culture ?? CultureInfo.CurrentCulture;
         _propertyMap = new Dictionary<string, List<PropertyInfo>>(StringComparer.OrdinalIgnoreCase);
-        _indexMap = new Dictionary<int, List<PropertyInfo>>();
+        _indexMap = [];
         _converters = [];
         _attributeCache = [];
         _converterCache = [];
+        _fieldCultures = [];
 
         // Initialize auto mapping with overrides - auto mapping first, then manual overrides
         if (mapping.UseAutoMapWithOverrides)
@@ -59,6 +67,25 @@ internal sealed partial class CsvMapper<T> where T : class, new()
             InitializeAutoMapping();
         }
         InitializeManualMapping();
+    }
+
+    /// <summary>
+    /// Sets the culture for a specific field
+    /// </summary>
+    /// <param name="fieldName">Name of the field</param>
+    /// <param name="culture">Culture to use for this field</param>
+    public void SetFieldCulture(string fieldName, CultureInfo culture)
+    {
+        _fieldCultures[fieldName] = culture;
+    }
+
+    /// <summary>
+    /// Sets the default culture for all fields
+    /// </summary>
+    /// <param name="culture">Culture to use</param>
+    public void SetCulture(CultureInfo culture)
+    {
+        _culture = culture;
     }
 
     /// <summary>
@@ -90,20 +117,32 @@ internal sealed partial class CsvMapper<T> where T : class, new()
             if (index < record.Length)
             {
                 var value = record[index];
-                
+
                 // Map the same value to all properties that map to this index
                 foreach (var property in properties)
                 {
                     if (!string.IsNullOrEmpty(value) || !_options.SkipEmptyFields)
                     {
-                        var convertedValue = ConvertValue(index, value, property);
-                        property.SetValue(instance, convertedValue);
+                        try
+                        {
+                            var convertedValue = ConvertValue(index, value, property);
+                            property.SetValue(instance, convertedValue);
+                        }
+                        catch (Exception ex) when (ex is FormatException || ex is OverflowException || ex is ArgumentException)
+                        {
+                            // For conversion errors in built-in conversions, use default value
+                            var targetType = property.PropertyType;
+                            var underlyingType = Nullable.GetUnderlyingType(targetType);
+                            var defaultValue = underlyingType != null
+                                ? null
+                                : (targetType.IsValueType ? Activator.CreateInstance(targetType) : null);
+                            property.SetValue(instance, defaultValue);
+                        }
                     }
                     else
                     {
                         // Check for default value from mapping or attribute
-                        object? defaultValue;
-                        if (_mapping?.TryGetDefault(property.Name, out defaultValue) == true && defaultValue != null)
+                        if (_mapping?.TryGetDefault(property.Name, out object? defaultValue) == true && defaultValue != null)
                         {
                             property.SetValue(instance, defaultValue);
                         }
@@ -136,16 +175,17 @@ internal sealed partial class CsvMapper<T> where T : class, new()
         foreach (var property in properties)
         {
             var attribute = GetCsvColumnAttribute(property);
-            
+
             // If attribute specifies index, use that
             if (attribute?.HasIndex == true)
             {
-                if (!_indexMap.ContainsKey(attribute.Index))
+                if (!_indexMap.TryGetValue(attribute.Index, out var indexList))
                 {
-                    _indexMap[attribute.Index] = new List<PropertyInfo>();
+                    indexList = [];
+                    _indexMap[attribute.Index] = indexList;
                 }
-                _indexMap[attribute.Index].Add(property);
-                
+                indexList.Add(property);
+
                 // Also set up converter if available
                 var converter = GetConverter(property);
                 if (converter != null)
@@ -156,20 +196,22 @@ internal sealed partial class CsvMapper<T> where T : class, new()
             // If attribute specifies name, use that name
             else if (attribute?.Name is { } attributeName && !string.IsNullOrEmpty(attributeName))
             {
-                if (!_propertyMap.ContainsKey(attributeName))
+                if (!_propertyMap.TryGetValue(attributeName, out var propList))
                 {
-                    _propertyMap[attributeName] = new List<PropertyInfo>();
+                    propList = [];
+                    _propertyMap[attributeName] = propList;
                 }
-                _propertyMap[attributeName].Add(property);
+                propList.Add(property);
             }
             // Otherwise use property name
             else
             {
-                if (!_propertyMap.ContainsKey(property.Name))
+                if (!_propertyMap.TryGetValue(property.Name, out var propList))
                 {
-                    _propertyMap[property.Name] = new List<PropertyInfo>();
+                    propList = [];
+                    _propertyMap[property.Name] = propList;
                 }
-                _propertyMap[property.Name].Add(property);
+                propList.Add(property);
             }
         }
     }
@@ -188,12 +230,13 @@ internal sealed partial class CsvMapper<T> where T : class, new()
             {
                 if (mapping.ColumnIndex.HasValue)
                 {
-                    if (!_indexMap.ContainsKey(mapping.ColumnIndex.Value))
+                    if (!_indexMap.TryGetValue(mapping.ColumnIndex.Value, out var indexList))
                     {
-                        _indexMap[mapping.ColumnIndex.Value] = new List<PropertyInfo>();
+                        indexList = [];
+                        _indexMap[mapping.ColumnIndex.Value] = indexList;
                     }
-                    _indexMap[mapping.ColumnIndex.Value].Add(property);
-                    
+                    indexList.Add(property);
+
                     if (mapping.Converter != null)
                     {
                         _converters[mapping.ColumnIndex.Value] = mapping.Converter;
@@ -201,11 +244,12 @@ internal sealed partial class CsvMapper<T> where T : class, new()
                 }
                 else if (!string.IsNullOrEmpty(mapping.ColumnName))
                 {
-                    if (!_propertyMap.ContainsKey(mapping.ColumnName!))
+                    if (!_propertyMap.TryGetValue(mapping.ColumnName!, out var propList))
                     {
-                        _propertyMap[mapping.ColumnName!] = new List<PropertyInfo>();
+                        propList = [];
+                        _propertyMap[mapping.ColumnName!] = propList;
                     }
-                    _propertyMap[mapping.ColumnName!].Add(property);
+                    propList.Add(property);
                 }
             }
         }
@@ -225,21 +269,21 @@ internal sealed partial class CsvMapper<T> where T : class, new()
             // Preserve any index mappings that were set by attributes
             var attributeIndexMappings = new Dictionary<int, List<PropertyInfo>>(_indexMap);
             _indexMap.Clear();
-            
+
             // First, restore attribute-based index mappings
             foreach (var kvp in attributeIndexMappings)
             {
                 _indexMap[kvp.Key] = kvp.Value;
             }
-            
+
             // Then, add header-based mappings (but don't override attribute mappings)
             for (int i = 0; i < _headers.Length; i++)
             {
                 var header = _headers[i];
                 if (!string.IsNullOrEmpty(header) && _propertyMap.TryGetValue(header, out var properties) && !_indexMap.ContainsKey(i))
                 {
-                    _indexMap[i] = new List<PropertyInfo>(properties);
-                    
+                    _indexMap[i] = [.. properties];
+
                     // Set up converter if available through attribute for the first property
                     // (converters should be the same for properties mapping to the same column)
                     if (properties.Count > 0)
@@ -254,7 +298,7 @@ internal sealed partial class CsvMapper<T> where T : class, new()
                 }
             }
         }
-        
+
         // For manual or auto mapping with overrides, apply manual mappings (overrides auto mappings)
         if (_mapping != null)
         {
@@ -269,12 +313,13 @@ internal sealed partial class CsvMapper<T> where T : class, new()
                         var property = typeof(T).GetProperty(mapping.PropertyName);
                         if (property != null && property.CanWrite && property.SetMethod?.IsPublic == true)
                         {
-                            if (!_indexMap.ContainsKey(index))
+                            if (!_indexMap.TryGetValue(index, out var indexList))
                             {
-                                _indexMap[index] = new List<PropertyInfo>();
+                                indexList = [];
+                                _indexMap[index] = indexList;
                             }
-                            _indexMap[index].Add(property);
-                            
+                            indexList.Add(property);
+
                             if (mapping.Converter != null)
                             {
                                 _converters[index] = mapping.Converter;
@@ -287,25 +332,53 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     }
 
     /// <summary>
+    /// Convert string value to target type (public for testing and direct use)
+    /// </summary>
+    /// <param name="value">String value to convert</param>
+    /// <param name="property">Target property info</param>
+    /// <returns>Converted value</returns>
+    public object? ConvertValue(string value, PropertyInfo property)
+    {
+        // Public API lets exceptions bubble up for testing
+        return ConvertValue(-1, value, property);
+    }
+
+    /// <summary>
     /// Convert string value to target type
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private object? ConvertValue(int index, string value, PropertyInfo property)
     {
         var targetType = property.PropertyType;
-        
+
         // Use custom converter if available
         if (_converters.TryGetValue(index, out var converter))
         {
-            return converter(value);
+            try
+            {
+                return converter(value);
+            }
+            catch
+            {
+                // Return default value if custom converter throws
+                return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
+            }
         }
 
         // Check for attribute converter
         var attributeConverter = GetConverter(property);
         if (attributeConverter != null)
         {
-            var attribute = GetCsvColumnAttribute(property);
-            return attributeConverter.ConvertFromString(value, targetType, attribute?.Format);
+            try
+            {
+                var attribute = GetCsvColumnAttribute(property);
+                return attributeConverter.ConvertFromString(value, targetType, attribute?.Format);
+            }
+            catch
+            {
+                // Return default value if attribute converter throws
+                return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
+            }
         }
 
         // Handle nullable types first
@@ -325,12 +398,11 @@ internal sealed partial class CsvMapper<T> where T : class, new()
         if (string.IsNullOrEmpty(value))
         {
             // Check for fluent mapping default first
-            object? defaultValue;
-            if (_mapping?.TryGetDefault(property.Name, out defaultValue) == true && defaultValue != null)
+            if (_mapping?.TryGetDefault(property.Name, out object? defaultValue) == true && defaultValue != null)
             {
                 return defaultValue;
             }
-            
+
             // Check for attribute default
             var attribute = GetCsvColumnAttribute(property);
             if (attribute?.Default != null)
@@ -346,29 +418,36 @@ internal sealed partial class CsvMapper<T> where T : class, new()
             return null; // Arrays are not supported, return null
         }
 
-        // Common type conversions
+        // Get culture for this field
+        var culture = GetFieldCulture(property);
+
+        // Common type conversions with culture support - let exceptions bubble up
         return targetType.Name switch
         {
             nameof(String) => value,
-            nameof(Byte) => byte.Parse(value),
-            nameof(SByte) => sbyte.Parse(value),
-            nameof(Int16) => short.Parse(value),
-            nameof(UInt16) => ushort.Parse(value),
-            nameof(Int32) => int.Parse(value),
-            nameof(UInt32) => uint.Parse(value),
-            nameof(Int64) => long.Parse(value),
-            nameof(UInt64) => ulong.Parse(value),
-            nameof(Single) => float.Parse(value),
-            nameof(Double) => double.Parse(value),
-            nameof(Decimal) => decimal.Parse(value),
+            nameof(Byte) => byte.Parse(value, NumberStyles.Number, culture),
+            nameof(SByte) => sbyte.Parse(value, NumberStyles.Number, culture),
+            nameof(Int16) => short.Parse(value, NumberStyles.Number, culture),
+            nameof(UInt16) => ushort.Parse(value, NumberStyles.Number, culture),
+            nameof(Int32) => int.Parse(value, NumberStyles.Number, culture),
+            nameof(UInt32) => uint.Parse(value, NumberStyles.Number, culture),
+            nameof(Int64) => long.Parse(value, NumberStyles.Number, culture),
+            nameof(UInt64) => ulong.Parse(value, NumberStyles.Number, culture),
+            nameof(Single) => float.Parse(value, NumberStyles.Number, culture),
+            nameof(Double) => double.Parse(value, NumberStyles.Number, culture),
+            nameof(Decimal) => decimal.Parse(value, NumberStyles.Number, culture),
             nameof(Boolean) => bool.Parse(value),
             nameof(Char) => value.Length > 0 ? value[0] : '\0',
             nameof(DateTime) => ParseDateTime(value, property),
             nameof(DateTimeOffset) => ParseDateTimeOffset(value, property),
             nameof(Guid) => Guid.Parse(value),
-            nameof(TimeSpan) => TimeSpan.Parse(value),
-            _ => targetType.IsEnum ? 
-                ParseEnum(targetType, value) 
+            nameof(TimeSpan) => TimeSpan.Parse(value, culture),
+#if NET6_0_OR_GREATER
+            nameof(DateOnly) => ParseDateOnly(value, property),
+            nameof(TimeOnly) => ParseTimeOnly(value, property),
+#endif
+            _ => targetType.IsEnum ?
+                ParseEnum(targetType, value)
                 : TryConvertType(value, targetType)
         };
     }
@@ -384,7 +463,7 @@ internal sealed partial class CsvMapper<T> where T : class, new()
             if (targetType.IsGenericType)
             {
                 var genericTypeDef = targetType.GetGenericTypeDefinition();
-                if (genericTypeDef == typeof(List<>) || 
+                if (genericTypeDef == typeof(List<>) ||
                     genericTypeDef == typeof(Dictionary<,>) ||
                     genericTypeDef == typeof(IList<>) ||
                     genericTypeDef == typeof(IDictionary<,>) ||
@@ -394,8 +473,8 @@ internal sealed partial class CsvMapper<T> where T : class, new()
                     return Activator.CreateInstance(targetType);
                 }
             }
-            
-            return Convert.ChangeType(value, targetType);
+
+            return Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
         }
         catch
         {
@@ -421,42 +500,105 @@ internal sealed partial class CsvMapper<T> where T : class, new()
     }
 
     /// <summary>
-    /// Parse DateTime with format support
+    /// Gets the culture to use for a specific field
+    /// </summary>
+    private CultureInfo GetFieldCulture(PropertyInfo property)
+    {
+        // Check for field-specific culture first
+        if (_fieldCultures.TryGetValue(property.Name, out var fieldCulture))
+        {
+            return fieldCulture;
+        }
+
+        // Fall back to mapper's default culture
+        return _culture;
+    }
+
+    /// <summary>
+    /// Parse DateTime with format and culture support
     /// </summary>
     private DateTime ParseDateTime(string value, PropertyInfo property)
     {
+        var culture = GetFieldCulture(property);
+
         // Check if there's a format specified in the mapping
         string? format = null;
         _mapping?.TryGetFormat(property.Name, out format);
-        
+
         if (format != null)
         {
-            if (DateTime.TryParseExact(value, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+            if (DateTime.TryParseExact(value, format, culture, DateTimeStyles.None, out var dt))
                 return dt;
-            throw new FormatException($"Unable to parse '{value}' as DateTime using format '{format}'");
+            throw new FormatException($"Unable to parse '{value}' as DateTime using format '{format}' and culture '{culture.Name}'");
         }
-        
-        return DateTime.Parse(value);
+
+        return DateTime.Parse(value, culture);
     }
-    
+
     /// <summary>
-    /// Parse DateTimeOffset with format support
+    /// Parse DateTimeOffset with format and culture support
     /// </summary>
     private DateTimeOffset ParseDateTimeOffset(string value, PropertyInfo property)
     {
+        var culture = GetFieldCulture(property);
+
         // Check if there's a format specified in the mapping
         string? format = null;
         _mapping?.TryGetFormat(property.Name, out format);
-        
+
         if (format != null)
         {
-            if (DateTimeOffset.TryParseExact(value, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dto))
+            if (DateTimeOffset.TryParseExact(value, format, culture, DateTimeStyles.None, out var dto))
                 return dto;
-            throw new FormatException($"Unable to parse '{value}' as DateTimeOffset using format '{format}'");
+            throw new FormatException($"Unable to parse '{value}' as DateTimeOffset using format '{format}' and culture '{culture.Name}'");
         }
-        
-        return DateTimeOffset.Parse(value);
+
+        return DateTimeOffset.Parse(value, culture);
     }
+
+#if NET6_0_OR_GREATER
+    /// <summary>
+    /// Parse DateOnly with format and culture support
+    /// </summary>
+    private DateOnly ParseDateOnly(string value, PropertyInfo property)
+    {
+        var culture = GetFieldCulture(property);
+        
+        // Check if there's a format specified in the mapping
+        string? format = null;
+        _mapping?.TryGetFormat(property.Name, out format);
+
+        if (format != null)
+        {
+            if (DateOnly.TryParseExact(value, format, culture, DateTimeStyles.None, out var dateOnly))
+                return dateOnly;
+            throw new FormatException($"Unable to parse '{value}' as DateOnly using format '{format}' and culture '{culture.Name}'");
+        }
+
+        return DateOnly.Parse(value, culture);
+    }
+
+    /// <summary>
+    /// Parse TimeOnly with format and culture support
+    /// </summary>
+    private TimeOnly ParseTimeOnly(string value, PropertyInfo property)
+    {
+        var culture = GetFieldCulture(property);
+        
+        // Check if there's a format specified in the mapping
+        string? format = null;
+        _mapping?.TryGetFormat(property.Name, out format);
+
+        if (format != null)
+        {
+            if (TimeOnly.TryParseExact(value, format, culture, DateTimeStyles.None, out var timeOnly))
+                return timeOnly;
+            throw new FormatException($"Unable to parse '{value}' as TimeOnly using format '{format}' and culture '{culture.Name}'");
+        }
+
+        return TimeOnly.Parse(value, culture);
+    }
+#endif
 
     /// <summary>
     /// Checks if a property is ignored by attribute
@@ -496,264 +638,4 @@ internal sealed partial class CsvMapper<T> where T : class, new()
         }
         return converter;
     }
-}
-
-/// <summary>
-/// Configuration for manual CSV mapping
-/// </summary>
-/// <typeparam name="T">Type to map CSV records to</typeparam>
-public sealed class CsvMapping<T> where T : class, new()
-{
-    /// <summary>
-    /// CSV parsing options
-    /// </summary>
-    public CsvOptions Options { get; set; } = CsvOptions.Default;
-
-    private readonly List<CsvPropertyMapping> _propertyMappings = new();
-    private readonly HashSet<string> _ignoredProperties = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, object?> _defaultValues = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, string> _formats = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _requiredProperties = new(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Property mapping configurations
-    /// </summary>
-    public IReadOnlyList<CsvPropertyMapping> PropertyMappings => _propertyMappings;
-
-    /// <summary>
-    /// Whether to use auto mapping with manual overrides
-    /// </summary>
-    public bool UseAutoMapWithOverrides { get; set; } = false;
-
-    /// <summary>
-    /// Maps a property to a column by name
-    /// </summary>
-    /// <param name="propertyName">Name of the property to map</param>
-    /// <param name="columnName">Name of the CSV column</param>
-    /// <returns>This mapping instance for fluent configuration</returns>
-    public CsvMapping<T> MapProperty(string propertyName, string columnName)
-    {
-        _propertyMappings.Add(new CsvPropertyMapping
-        {
-            PropertyName = propertyName,
-            ColumnName = columnName
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Maps a property to a column by index
-    /// </summary>
-    /// <param name="propertyName">Name of the property to map</param>
-    /// <param name="columnIndex">Zero-based index of the CSV column</param>
-    /// <returns>This mapping instance for fluent configuration</returns>
-    public CsvMapping<T> MapProperty(string propertyName, int columnIndex)
-    {
-        _propertyMappings.Add(new CsvPropertyMapping
-        {
-            PropertyName = propertyName,
-            ColumnIndex = columnIndex
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Maps a property to a column with custom converter
-    /// </summary>
-    /// <param name="propertyName">Name of the property to map</param>
-    /// <param name="columnName">Name of the CSV column</param>
-    /// <param name="converter">Custom converter function</param>
-    /// <returns>This mapping instance for fluent configuration</returns>
-    public CsvMapping<T> MapProperty(string propertyName, string columnName, Func<string, object?> converter)
-    {
-        _propertyMappings.Add(new CsvPropertyMapping
-        {
-            PropertyName = propertyName,
-            ColumnName = columnName,
-            Converter = converter
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Maps a property to a column with custom converter by index
-    /// </summary>
-    /// <param name="propertyName">Name of the property to map</param>
-    /// <param name="columnIndex">Zero-based index of the CSV column</param>
-    /// <param name="converter">Custom converter function</param>
-    /// <returns>This mapping instance for fluent configuration</returns>
-    public CsvMapping<T> MapProperty(string propertyName, int columnIndex, Func<string, object?> converter)
-    {
-        _propertyMappings.Add(new CsvPropertyMapping
-        {
-            PropertyName = propertyName,
-            ColumnIndex = columnIndex,
-            Converter = converter
-        });
-        return this;
-    }
-
-
-    /// <summary>
-    /// Enables auto mapping with manual overrides
-    /// </summary>
-    /// <returns>This mapping instance for fluent configuration</returns>
-    public CsvMapping<T> EnableAutoMapWithOverrides()
-    {
-        UseAutoMapWithOverrides = true;
-        return this;
-    }
-
-    /// <summary>
-    /// Creates a new mapping instance
-    /// </summary>
-    /// <returns>New mapping instance</returns>
-    public static CsvMapping<T> Create() => new();
-
-    /// <summary>
-    /// Creates a new mapping instance with auto mapping and manual overrides enabled
-    /// </summary>
-    /// <returns>New mapping instance with auto mapping enabled</returns>
-    public static CsvMapping<T> CreateAutoMapWithOverrides()
-    {
-        return new CsvMapping<T> { UseAutoMapWithOverrides = true };
-    }
-
-    /// <summary>
-    /// Ignores a property during mapping
-    /// </summary>
-    /// <param name="propertyName">Name of the property to ignore</param>
-    public void IgnoreProperty(string propertyName)
-    {
-        _ignoredProperties.Add(propertyName);
-    }
-
-    /// <summary>
-    /// Checks if a property should be ignored
-    /// </summary>
-    /// <param name="propertyName">Property name to check</param>
-    /// <returns>True if property should be ignored</returns>
-    public bool IsPropertyIgnored(string propertyName)
-    {
-        return _ignoredProperties.Contains(propertyName);
-    }
-
-    /// <summary>
-    /// Sets a default value for a property
-    /// </summary>
-    /// <param name="propertyName">Property name</param>
-    /// <param name="defaultValue">Default value</param>
-    public void SetDefault(string propertyName, object? defaultValue)
-    {
-        _defaultValues[propertyName] = defaultValue;
-    }
-
-    /// <summary>
-    /// Gets the default value for a property
-    /// </summary>
-    /// <param name="propertyName">Property name</param>
-    /// <param name="defaultValue">Default value if found</param>
-    /// <returns>True if default value exists</returns>
-    public bool TryGetDefault(string propertyName, out object? defaultValue)
-    {
-        return _defaultValues.TryGetValue(propertyName, out defaultValue);
-    }
-
-    /// <summary>
-    /// Sets a format string for a property
-    /// </summary>
-    /// <param name="propertyName">Property name</param>
-    /// <param name="format">Format string</param>
-    public void SetFormat(string propertyName, string format)
-    {
-        _formats[propertyName] = format;
-    }
-
-    /// <summary>
-    /// Gets the format string for a property
-    /// </summary>
-    /// <param name="propertyName">Property name</param>
-    /// <param name="format">Format string if found</param>
-    /// <returns>True if format exists</returns>
-    public bool TryGetFormat(string propertyName, out string? format)
-    {
-        if (_formats.TryGetValue(propertyName, out var f))
-        {
-            format = f;
-            return true;
-        }
-        format = null;
-        return false;
-    }
-
-    /// <summary>
-    /// Sets a property as required
-    /// </summary>
-    /// <param name="propertyName">Property name</param>
-    /// <param name="required">Whether the property is required</param>
-    public void SetRequired(string propertyName, bool required)
-    {
-        if (required)
-            _requiredProperties.Add(propertyName);
-        else
-            _requiredProperties.Remove(propertyName);
-    }
-
-    /// <summary>
-    /// Checks if a property is required
-    /// </summary>
-    /// <param name="propertyName">Property name</param>
-    /// <returns>True if property is required</returns>
-    public bool IsPropertyRequired(string propertyName)
-    {
-        return _requiredProperties.Contains(propertyName);
-    }
-
-    /// <summary>
-    /// Sets a custom converter for a property
-    /// </summary>
-    /// <param name="propertyName">Property name</param>
-    /// <param name="converter">Converter function</param>
-    public void SetConverter(string propertyName, Func<string, object?> converter)
-    {
-        var existing = _propertyMappings.FirstOrDefault(m => m.PropertyName == propertyName);
-        if (existing != null)
-        {
-            existing.Converter = converter;
-        }
-        else
-        {
-            _propertyMappings.Add(new CsvPropertyMapping
-            {
-                PropertyName = propertyName,
-                Converter = converter
-            });
-        }
-    }
-}
-
-/// <summary>
-/// Individual property mapping configuration
-/// </summary>
-public sealed class CsvPropertyMapping
-{
-    /// <summary>
-    /// Name of the property to map to
-    /// </summary>
-    public string PropertyName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Name of the CSV column to map from
-    /// </summary>
-    public string? ColumnName { get; set; }
-
-    /// <summary>
-    /// Index of the CSV column to map from
-    /// </summary>
-    public int? ColumnIndex { get; set; }
-
-    /// <summary>
-    /// Custom converter function for this property
-    /// </summary>
-    public Func<string, object?>? Converter { get; set; }
 }

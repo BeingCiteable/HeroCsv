@@ -5,6 +5,9 @@ namespace HeroCsv.Models;
 /// <summary>
 /// Configuration for CSV parsing and writing operations
 /// </summary>
+/// <remarks>
+/// Creates a new CsvOptions instance
+/// </remarks>
 public readonly struct CsvOptions(
     char delimiter = ',',
     char quote = '"',
@@ -14,31 +17,40 @@ public readonly struct CsvOptions(
     string? newLine = null,
     StringPool? stringPool = null)
 {
-    public readonly char Delimiter = delimiter;
+    /// <summary>
+    /// Character used to separate fields in CSV
+    /// </summary>
+    public char Delimiter { get; } = delimiter;
 
-    public readonly char Quote = quote;
+    /// <summary>
+    /// Character used to quote fields containing special characters
+    /// </summary>
+    public char Quote { get; } = quote;
 
-    public readonly bool HasHeader = hasHeader;
+    /// <summary>
+    /// Whether the first row contains column headers
+    /// </summary>
+    public bool HasHeader { get; } = hasHeader;
 
     /// <summary>
     /// Trim leading and trailing whitespace from fields
     /// </summary>
-    public readonly bool TrimWhitespace = trimWhitespace;
+    public bool TrimWhitespace { get; } = trimWhitespace;
 
     /// <summary>
     /// Skip empty fields during object mapping
     /// </summary>
-    public readonly bool SkipEmptyFields = skipEmptyFields;
+    public bool SkipEmptyFields { get; } = skipEmptyFields;
 
     /// <summary>
     /// Line terminator for CSV writing
     /// </summary>
-    public readonly string NewLine = newLine ?? Environment.NewLine;
+    public string NewLine { get; } = newLine ?? Environment.NewLine;
 
     /// <summary>
     /// String pool for memory optimization with repeated values
     /// </summary>
-    public readonly StringPool? StringPool = stringPool;
+    public StringPool? StringPool { get; } = stringPool;
 
     /// <summary>
     /// Default CSV configuration

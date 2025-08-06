@@ -1,0 +1,153 @@
+name: Release Benchmarks
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to benchmark'
+        required: true
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  comprehensive-benchmarks:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+    
+    - name: Setup .NET SDKs
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          6.0.x
+          7.0.x
+          8.0.x
+          9.0.x
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build -c Release --no-restore
+    
+    - name: Run feature and competitor benchmarks
+      run: |
+        cd benchmarks/HeroCsv.Benchmarks
+        dotnet run -c Release --no-build -- features
+        dotnet run -c Release --no-build -- competitors
+    
+    - name: Generate summary report
+      shell: pwsh
+      run: |
+        $resultsPath = "benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results"
+        $summaryPath = "$resultsPath/summary.md"
+        
+        $content = @"
+        # HeroCsv Benchmark Results
+        
+        **Version**: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+        **Date**: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC")
+        **Platform**: ${{ matrix.os }}
+        
+        ## Performance Summary
+        
+        "@
+        
+        # Find the latest markdown reports
+        $mdFiles = Get-ChildItem -Path $resultsPath -Filter "*.md" | 
+                   Where-Object { $_.Name -match "(Feature|Competitor)Benchmarks" } |
+                   Sort-Object LastWriteTime -Descending
+        
+        foreach ($mdFile in $mdFiles) {
+            $content += "`n## $($mdFile.BaseName)`n"
+            $content += Get-Content $mdFile.FullName -Raw
+        }
+        
+        $content | Out-File -FilePath $summaryPath -Encoding utf8
+        
+        Write-Host "Summary report created at: $summaryPath"
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-benchmarks-${{ matrix.os }}-${{ github.event.release.tag_name || github.event.inputs.tag }}
+        path: |
+          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.json
+          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.csv
+          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.html
+          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.md
+          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/summary.md
+        retention-days: 365 # Keep release benchmarks for a year
+    
+    - name: Publish to GitHub Pages
+      if: matrix.os == 'ubuntu-latest'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results
+        destination_dir: benchmarks/${{ github.event.release.tag_name || github.event.inputs.tag }}
+        keep_files: true
+  
+  create-comparison-report:
+    needs: comprehensive-benchmarks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: release-benchmarks-*
+        path: ./benchmark-results
+    
+    - name: Create comparison report
+      shell: pwsh
+      run: |
+        $version = "${{ github.event.release.tag_name || github.event.inputs.tag }}"
+        $reportPath = "./benchmark-comparison.md"
+        
+        $content = @"
+        # HeroCsv $version - Cross-Platform Benchmark Comparison
+        
+        Generated: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC")
+        
+        ## Platform Comparison
+        
+        | Benchmark | Ubuntu | Windows | macOS |
+        |-----------|--------|---------|-------|
+        "@
+        
+        # TODO: Parse JSON results and create comparison table
+        # This would require more complex JSON parsing logic
+        
+        $content += @"
+        
+        ## Memory Allocation Summary
+        
+        All benchmarks track memory allocations to ensure zero-allocation goals are met.
+        
+        ## Download Full Results
+        
+        Full benchmark results are available as artifacts on the [release page](https://github.com/${{ github.repository }}/releases/tag/$version).
+        "@
+        
+        $content | Out-File -FilePath $reportPath -Encoding utf8
+    
+    - name: Upload comparison report
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-comparison-${{ github.event.release.tag_name || github.event.inputs.tag }}
+        path: ./benchmark-comparison.md
+        retention-days: 365

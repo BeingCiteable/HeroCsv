@@ -1,3 +1,4 @@
+using System.Globalization;
 using HeroCsv.Core;
 using HeroCsv.Mapping;
 using HeroCsv.Models;
@@ -68,7 +69,7 @@ public static class ExtensionsToICsvRecord
             return (T)(object)value;
         }
 
-        return (T)Convert.ChangeType(value, typeof(T));
+        return (T)Convert.ChangeType(value, typeof(T), CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -92,7 +93,7 @@ public static class ExtensionsToICsvRecord
                 return true;
             }
 
-            value = (T)Convert.ChangeType(fieldValue, typeof(T));
+            value = (T)Convert.ChangeType(fieldValue, typeof(T), CultureInfo.InvariantCulture);
             return true;
         }
         catch

@@ -3,6 +3,7 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 #endif
 using System.Collections.Generic;
+using HeroCsv.Exceptions;
 using HeroCsv.Models;
 
 namespace HeroCsv.Parsing;
@@ -30,6 +31,11 @@ public ref struct CsvRow
         _fieldCount = -1;
         _positionsComputed = false;
     }
+
+    /// <summary>
+    /// Gets the line content for this row
+    /// </summary>
+    private readonly ReadOnlySpan<char> Line => _buffer.Slice(_lineStart, _lineLength);
 
 #if NET8_0_OR_GREATER
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -166,13 +172,26 @@ public ref struct CsvRow
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     private void ThrowIndexOutOfRange(int index)
     {
-        throw new IndexOutOfRangeException($"Field index {index} is out of range. Row has {_fieldCount} fields.");
+        var preview = GetRowPreview();
+        throw new CsvFieldIndexOutOfRangeException(index, _fieldCount, preview);
     }
 
     /// <summary>
-    /// Gets the raw line
+    /// Gets a preview of the row for error messages
     /// </summary>
-    public ReadOnlySpan<char> Line => _buffer.Slice(_lineStart, _lineLength);
+    private string GetRowPreview()
+    {
+        const int maxPreviewLength = 100;
+        var content = Line.ToString();
+
+        if (content.Length <= maxPreviewLength)
+        {
+            return $"\"{content}\"";
+        }
+
+        return $"\"{content.Substring(0, maxPreviewLength)}...\" (truncated from {content.Length} chars)";
+    }
+
 
     /// <summary>
     /// Gets a field value as a string (allocates)

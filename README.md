@@ -19,6 +19,7 @@ An **ultra-fast and low memory usage** CSV parsing library for .NET focused on *
 - **Rich extension methods** for type conversion and field access
 - **Stream processing** with encoding support and memory efficiency
 - **Reading-focused design** - no writing operations for maximum performance
+- **Full transparency benchmarks** - Complete performance comparisons with all major CSV libraries
 
 ## Installation
 
@@ -95,20 +96,34 @@ foreach (var emp in employees)
     Console.WriteLine($"{emp.FirstName} {emp.LastName} - {emp.Department}: ${emp.Salary:N0}");
 }
 
-// Manual column mapping
+// Manual column mapping (type-safe with expressions)
 var employeesManual = Csv.Read<Employee>(csvData, mapping =>
     mapping.Map(e => e.FirstName, 0)
            .Map(e => e.LastName, 1)
            .Map(e => e.Department, 2)
-           .Map(e => e.Salary, 3)
-           .Map(e => e.HireDate, 4));
+           .Map(e => e.Salary, 3, decimal.Parse)  // Type-safe converter
+           .Map(e => e.HireDate, 4, DateTime.Parse));
+
+// Manual column mapping by name with type-safe converters
+var employeesByName = Csv.Read<Employee>(csvData, CsvMapping.Create<Employee>()
+    .Map(e => e.FirstName, "First Name")
+    .Map(e => e.LastName, "Last Name")
+    .Map(e => e.Department, "Department")
+    .Map(e => e.Salary, "Salary", value => decimal.Parse(value.Replace("$", "")))
+    .Map(e => e.HireDate, "Hire Date", DateTime.Parse));
 
 // Auto mapping with manual overrides
 var employeesWithOverrides = Csv.ReadAutoMapWithOverrides<Employee>(csvData, mapping =>
 {
-    mapping.AutoMap();  // Auto-map by header names
-    mapping.Map(e => e.Salary, col => decimal.Parse(col) * 1.1m); // Custom converter
+    // Override specific columns while auto-mapping the rest
+    mapping.Map(e => e.Salary, 3, value => decimal.Parse(value) * 1.1m); // 10% salary adjustment
 });
+
+// Mix old string-based API with new type-safe API
+var mixedMapping = CsvMapping.Create<Employee>()
+    .MapProperty("FirstName", 0)              // Old API (string-based)
+    .Map(e => e.LastName, 1)                 // New API (type-safe)
+    .Map(e => e.Salary, 3, decimal.Parse);   // New API with converter
 ```
 
 ### Type Conversion and Field Access
@@ -380,6 +395,20 @@ HeroCsv is designed as an **ultra-fast and low memory usage** library with progr
 
 ### Benchmarks
 
+HeroCsv is committed to **full transparency** in performance claims. We provide comprehensive benchmarks comparing against all major CSV libraries.
+
+#### Performance Comparison
+
+View our [live benchmark results](https://beingciteable.github.io/HeroCsv/benchmarks/) or run them yourself:
+
+```bash
+# Run full competitor comparison
+dotnet run -c Release --project benchmarks/HeroCsv.Benchmarks -- competitors
+
+# Run comprehensive feature benchmarks
+dotnet run -c Release --project benchmarks/HeroCsv.Benchmarks -- comprehensive
+```
+
 Performance varies by .NET version due to progressive optimizations:
 
 - **.NET Standard 2.0**: Fallback implementations for compatibility
@@ -387,6 +416,8 @@ Performance varies by .NET version due to progressive optimizations:
 - **.NET 7**: Enhanced span operations
 - **.NET 8**: SearchValues and FrozenCollections for maximum speed
 - **.NET 9**: Vector512 support and enhanced JIT optimizations
+
+See [benchmarks/BENCHMARKS.md](benchmarks/BENCHMARKS.md) for detailed information about our transparency initiative.
 
 ## Architecture
 

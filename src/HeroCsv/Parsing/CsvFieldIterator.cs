@@ -12,29 +12,29 @@ public static class CsvFieldIterator
     /// Creates an iterator for field-by-field CSV processing
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static CsvFieldCollection IterateFields(ReadOnlySpan<char> data, CsvOptions options)
+    public static CsvFieldEnumerable IterateFields(ReadOnlySpan<char> data, CsvOptions options)
     {
-        return new CsvFieldCollection(data, options);
+        return new CsvFieldEnumerable(data, options);
     }
 
     /// <summary>
     /// Creates an iterator for field-by-field CSV processing
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static CsvFieldCollection IterateFields(string data, CsvOptions options)
+    public static CsvFieldEnumerable IterateFields(string data, CsvOptions options)
     {
-        return new CsvFieldCollection(data.AsSpan(), options);
+        return new CsvFieldEnumerable(data.AsSpan(), options);
     }
 
     /// <summary>
-    /// Collection of CSV fields for enumeration
+    /// Provides enumeration over CSV fields
     /// </summary>
-    public readonly ref struct CsvFieldCollection
+    public readonly ref struct CsvFieldEnumerable
     {
         private readonly ReadOnlySpan<char> _data;
         private readonly CsvOptions _options;
 
-        internal CsvFieldCollection(ReadOnlySpan<char> data, CsvOptions options)
+        internal CsvFieldEnumerable(ReadOnlySpan<char> data, CsvOptions options)
         {
             _data = data;
             _options = options;
@@ -246,15 +246,24 @@ public static class CsvFieldIterator
     {
         private readonly ReadOnlySpan<char> _value;
         private readonly bool _trimWhitespace;
+        private readonly int _rowIndex;
+        private readonly int _fieldIndex;
 
-        public readonly int RowIndex;
-        public readonly int FieldIndex;
+        /// <summary>
+        /// Gets the row index of this field
+        /// </summary>
+        public int RowIndex => _rowIndex;
+
+        /// <summary>
+        /// Gets the field index within the row
+        /// </summary>
+        public int FieldIndex => _fieldIndex;
 
         internal CsvField(ReadOnlySpan<char> value, int rowIndex, int fieldIndex, bool trimWhitespace)
         {
             _value = value;
-            RowIndex = rowIndex;
-            FieldIndex = fieldIndex;
+            _rowIndex = rowIndex;
+            _fieldIndex = fieldIndex;
             _trimWhitespace = trimWhitespace;
         }
 

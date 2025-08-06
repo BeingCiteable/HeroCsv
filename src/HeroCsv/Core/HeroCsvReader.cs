@@ -12,12 +12,17 @@ namespace HeroCsv.Core;
 /// High-performance CSV reader implementation optimized for zero allocations
 /// </summary>
 public sealed partial class HeroCsvReader : ICsvReader, IDisposable
+#if NET6_0_OR_GREATER
+    , IAsyncDisposable
+#endif
 {
     private readonly ICsvDataSource _dataSource;
     private readonly CsvOptions _options;
-    private int _recordCount = 0;
-    private bool _disposed = false;
+    private int _recordCount;
+    private bool _disposed;
 
+    // CA1859: These fields must remain as interfaces to support dependency injection
+    // and different implementations (e.g., NullErrorHandler, ValidationHandler)
     private readonly IValidationHandler _validationHandler;
     private readonly IErrorHandler _errorHandler;
 
@@ -31,7 +36,8 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
         bool trackErrors = false,
         Action<CsvValidationError>? errorCallback = null)
     {
-        if (content == null) throw new ArgumentNullException(nameof(content));
+        if (content == null) throw new ArgumentNullException(nameof(content),
+            "CSV content cannot be null. Provide valid CSV string data or use empty string for no data.");
         _dataSource = new StringDataSource(content);
         _options = options;
 
@@ -76,7 +82,8 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
         bool trackErrors = false,
         Action<CsvValidationError>? errorCallback = null)
     {
-        if (stream == null) throw new ArgumentNullException(nameof(stream));
+        if (stream == null) throw new ArgumentNullException(nameof(stream),
+            "Stream cannot be null. Provide a valid stream containing CSV data.");
         _dataSource = new StreamDataSource(stream, encoding, leaveOpen);
         _options = options;
 
@@ -155,7 +162,7 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
     /// Provides high-performance field iteration without allocations
     /// </summary>
     /// <returns>Iterator for efficient field-by-field processing</returns>
-    public CsvFieldIterator.CsvFieldCollection IterateFields()
+    public CsvFieldIterator.CsvFieldEnumerable IterateFields()
     {
         if (_dataSource is StringDataSource stringSource)
         {
@@ -189,10 +196,14 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
     /// </summary>
     public bool TryReadRecord(out ICsvRecord record)
     {
+#if NET7_0_OR_GREATER
+        ThrowIfDisposed();
+#else
         if (_disposed)
         {
             throw new ObjectDisposedException(nameof(HeroCsvReader));
         }
+#endif
 
         if (!_dataSource.TryReadLine(out var lineSpan, out var lineNumber))
         {
@@ -288,11 +299,15 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
         if (_disposed)
             return;
 
-        // For now, just use sync dispose since ICsvDataSource doesn't have async dispose
-        Dispose();
-        await Task.CompletedTask;
+        if (_dataSource != null)
+        {
+            await _dataSource.DisposeAsync().ConfigureAwait(false);
+        }
+        
+        _disposed = true;
     }
 #endif
+
 
     /// <inheritdoc />
     public IReadOnlyList<string[]> ReadAllRecords()
@@ -326,13 +341,13 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
         {
             // Stream-based sources require incremental parsing
             var records = new List<string[]>();
-            
+
             // Skip header if configured
             if (_options.HasHeader && HasMoreData)
             {
                 SkipRecord();
             }
-            
+
             while (TryReadRecord(out var record))
             {
                 records.Add(record.ToArray());
@@ -345,7 +360,7 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
     /// Estimates row count for pre-allocation to reduce list resizing overhead
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int EstimateRowCount(ReadOnlySpan<char> buffer)
+    private static int EstimateRowCount(ReadOnlySpan<char> buffer)
     {
         if (buffer.IsEmpty) return 0;
 
@@ -444,7 +459,7 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
             // Only use buffer optimization for data sources that support it
             if (_dataSource is StringDataSource || _dataSource is MemoryDataSource)
             {
-                var totalLines = _dataSource.CountLinesDirectly();
+                var totalLines = _dataSource.CountLines();
 
                 // Account for header if present
                 if (_options.HasHeader && totalLines > 0)
@@ -456,8 +471,8 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
             }
             else
             {
-                // For stream-based sources, use CountLinesDirectly as-is
-                var totalLines = _dataSource.CountLinesDirectly();
+                // For stream-based sources, use CountLines as-is
+                var totalLines = _dataSource.CountLines();
 
                 // Account for header if present
                 if (_options.HasHeader && totalLines > 0)
@@ -471,13 +486,13 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
 
         // Fall back to record-by-record counting when validation is needed
         var count = 0;
-        
+
         // Skip header on first read if configured
         if (_options.HasHeader && HasMoreData)
         {
             _dataSource.TryReadLine(out _, out _); // Skip header line
         }
-        
+
         while (TryReadRecord(out _))
         {
             count++;
@@ -490,56 +505,41 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
     public async Task<IReadOnlyList<string[]>> ReadAllRecordsAsync(CancellationToken cancellationToken = default)
     {
 #if NET6_0_OR_GREATER
+        // Yield to make this truly async
+        await Task.Yield();
+        
         // Only reset if the data source supports it
         if (_dataSource.SupportsReset)
         {
             Reset();
         }
 
-        // Use async data source if available
-        if (_dataSource is IAsyncCsvDataSource asyncSource)
+        // Skip header if configured
+        if (_options.HasHeader && HasMoreData)
         {
-            var records = new List<string[]>();
-            bool headerSkipped = !_options.HasHeader; // If no header, consider it already skipped
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var result = await asyncSource.TryReadLineAsync(cancellationToken).ConfigureAwait(false);
-                if (!result.success) break;
-
-                // Skip empty lines
-                if (string.IsNullOrEmpty(result.line)) continue;
-
-                // Skip header if configured and not yet skipped
-                if (_options.HasHeader && !headerSkipped)
-                {
-                    headerSkipped = true;
-                    continue;
-                }
-
-                var fields = CsvParser.ParseLine(result.line.AsSpan(), _options);
-
-                // Perform validation if enabled
-                if (_validationHandler.IsEnabled || _errorHandler.IsEnabled)
-                {
-                    _validationHandler.ValidateRecord(fields, result.lineNumber, _validationHandler.ExpectedFieldCount);
-                }
-
-                records.Add(fields);
-                _recordCount++;
-            }
-
-            return records;
+            SkipRecord();
         }
-#endif
+
+        // Fallback to sync method - async operations require async data source
+        var records = new List<string[]>();
+        while (!cancellationToken.IsCancellationRequested && TryReadRecord(out var record))
+        {
+            records.Add(record.ToArray());
+        }
+        return records;
+#else
         // Check for cancellation before starting work
         if (cancellationToken.IsCancellationRequested)
         {
-            return new List<string[]>(); // Return empty results when cancelled
+            return []; // Return empty results when cancelled
         }
-        
+
         // Fallback to sync method wrapped in Task.Run for non-async sources
         return await Task.Run(() => ReadAllRecords(), cancellationToken).ConfigureAwait(false);
+#endif
     }
 
+#if NET7_0_OR_GREATER
+    partial void ThrowIfDisposed();
+#endif
 }

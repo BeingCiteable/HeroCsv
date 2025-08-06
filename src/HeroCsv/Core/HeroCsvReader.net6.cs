@@ -16,51 +16,59 @@ public sealed partial class HeroCsvReader
     /// <inheritdoc />
     public async IAsyncEnumerable<string[]> ReadRecordsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+#if NET7_0_OR_GREATER
+        ThrowIfDisposed();
+#else
+        if (_disposed)
+        {
+            throw new ObjectDisposedException(nameof(HeroCsvReader));
+        }
+#endif
+
         // Only reset if the data source supports it
         if (_dataSource.SupportsReset)
         {
             Reset();
         }
 
-        // Use async data source if available
-        if (_dataSource is IAsyncCsvDataSource asyncSource)
+        bool headerSkipped = !_options.HasHeader;
+
+        while (true)
         {
-            bool headerSkipped = !_options.HasHeader; // If no header, consider it already skipped
+            // Check for cancellation before reading each line
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            var (success, line, lineNumber) = await _dataSource.TryReadLineAsync(cancellationToken).ConfigureAwait(false);
+            if (!success) break;
 
-            while (!cancellationToken.IsCancellationRequested)
+            // Skip empty lines
+            if (string.IsNullOrEmpty(line)) continue;
+
+            // Skip header if configured and not yet skipped
+            if (_options.HasHeader && !headerSkipped)
             {
-                var result = await asyncSource.TryReadLineAsync(cancellationToken).ConfigureAwait(false);
-                if (!result.success) break;
-
-                // Skip empty lines
-                if (string.IsNullOrEmpty(result.line)) continue;
-
-                // Skip header if configured and not yet skipped
-                if (_options.HasHeader && !headerSkipped)
+                headerSkipped = true;
+                // Parse header to get field count for validation
+                if (_validationHandler.IsEnabled)
                 {
-                    headerSkipped = true;
-                    continue;
+                    var headerFields = CsvParser.ParseLine(line.AsSpan(), _options);
+                    // Expected field count will be set on first data row
                 }
-
-                var fields = CsvParser.ParseLine(result.line.AsSpan(), _options);
-
-                // Perform validation if enabled
-                if (_validationHandler.IsEnabled || _errorHandler.IsEnabled)
-                {
-                    _validationHandler.ValidateRecord(fields, result.lineNumber, _validationHandler.ExpectedFieldCount);
-                }
-
-                _recordCount++;
-                yield return fields;
+                continue;
             }
-        }
-        else
-        {
-            // Fallback to sync method for non-async sources
-            while (!cancellationToken.IsCancellationRequested && TryReadRecord(out var record))
+
+            var fields = CsvParser.ParseLine(line.AsSpan(), _options);
+
+            // Perform validation if enabled
+            if (_validationHandler.IsEnabled || _errorHandler.IsEnabled)
             {
-                yield return record.ToArray();
+                _validationHandler.ValidateRecord(fields, lineNumber, _validationHandler.ExpectedFieldCount);
             }
+
+            _recordCount++;
+            
+            // Yield the record (cancellation will be checked on next iteration)
+            yield return fields;
         }
     }
 }

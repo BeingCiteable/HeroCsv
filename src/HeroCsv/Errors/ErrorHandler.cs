@@ -13,13 +13,13 @@ internal class ErrorHandler(bool isEnabled) : IErrorHandler
 
     public event Action<CsvValidationError>? ErrorOccurred;
 
-    public void RecordError(CsvValidationError error)
+    public void RecordError(CsvValidationError validationError)
     {
         if (!isEnabled)
             return;
 
-        _validationResult.AddError(error);
-        ErrorOccurred?.Invoke(error);
+        _validationResult.AddError(validationError);
+        ErrorOccurred?.Invoke(validationError);
     }
 
     public CsvValidationResult GetValidationResult()

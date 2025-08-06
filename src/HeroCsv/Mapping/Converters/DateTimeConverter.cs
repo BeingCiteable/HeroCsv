@@ -48,7 +48,12 @@ public class DateTimeConverter : ICsvConverter
             }
 
             // Otherwise throw generic error
-            throw new FormatException($"Unable to parse '{value}' as DateTime");
+            var triedFormats = new[] { "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "dd-MM-yyyy",
+                "dd/MM/yyyy HH:mm:ss", "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss" };
+            throw new FormatException(
+                $"Unable to parse '{value}' as DateTime. " +
+                $"Tried standard parsing and common formats: {string.Join(", ", triedFormats.Select(f => $"'{f}'"))}. " +
+                "Consider specifying a format string or adding the format to the converter.");
         }
 
         if (targetType == typeof(DateTimeOffset) || targetType == typeof(DateTimeOffset?))

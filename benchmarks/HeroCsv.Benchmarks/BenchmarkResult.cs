@@ -21,7 +21,7 @@ public class BenchmarkResult
     public string FileSize { get; set; } = "";
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public string Environment { get; set; } = "";
-    public Dictionary<string, object> AdditionalMetrics { get; set; } = new();
+    public Dictionary<string, object> AdditionalMetrics { get; set; } = [];
 }
 
 /// <summary>
@@ -34,7 +34,7 @@ public class BenchmarkResultSet
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public string MachineName { get; set; } = Environment.MachineName;
     public string RuntimeVersion { get; set; } = Environment.Version.ToString();
-    public List<BenchmarkResult> Results { get; set; } = new();
+    public List<BenchmarkResult> Results { get; set; } = [];
 }
 
 /// <summary>

@@ -20,8 +20,8 @@ public interface IErrorHandler
     /// <summary>
     /// Records a validation error
     /// </summary>
-    /// <param name="error">The validation error to record</param>
-    void RecordError(CsvValidationError error);
+    /// <param name="validationError">The validation error to record</param>
+    void RecordError(CsvValidationError validationError);
 
     /// <summary>
     /// Gets the validation result containing all errors

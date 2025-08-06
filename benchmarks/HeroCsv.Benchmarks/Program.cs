@@ -1,6 +1,7 @@
 using System.CommandLine;
 using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Jobs;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -145,7 +146,40 @@ public class Program
         perfCommand.Add(quickPerfCommand);
         perfCommand.Add(internalPerfCommand);
 
-        // Add all commands to root
+        // Quick benchmarks for CI/CD
+        var quickCommand = new Command("quick", "Quick benchmarks for CI/CD and rapid testing");
+        quickCommand.SetAction(parseResult =>
+        {
+            var output = parseResult.GetValue(outputOption);
+            var verbose = parseResult.GetValue(verboseOption);
+            RunQuickBenchmarks(output, verbose);
+            return 0;
+        });
+        
+        // Feature benchmarks for comprehensive testing
+        var featuresCommand = new Command("features", "Benchmark all HeroCsv features");
+        featuresCommand.SetAction(parseResult =>
+        {
+            var output = parseResult.GetValue(outputOption);
+            var verbose = parseResult.GetValue(verboseOption);
+            RunFeatureBenchmarks(output, verbose);
+            return 0;
+        });
+        
+        // Competitor comparison for transparency
+        var competitorsCommand = new Command("competitors", "Compare performance with other CSV libraries");
+        competitorsCommand.SetAction(parseResult =>
+        {
+            var output = parseResult.GetValue(outputOption);
+            var verbose = parseResult.GetValue(verboseOption);
+            RunCompetitorBenchmarks(output, verbose);
+            return 0;
+        });
+        
+        // Add all commands to root (simplified structure)
+        rootCommand.Add(quickCommand);
+        rootCommand.Add(featuresCommand);
+        rootCommand.Add(competitorsCommand);
         rootCommand.Add(realDataCommand);
         rootCommand.Add(libraryCommand);
         rootCommand.Add(perfCommand);
@@ -190,7 +224,8 @@ public class Program
     {
         if (verbose) AnsiConsole.MarkupLine($"[yellow]🏃 Running Quick Performance Analysis[/] [grey](rows: {rows}, iterations: {iterations})[/]");
 
-        QuickBenchmark.RunComparison();
+        // This method is now replaced by QuickBenchmarks
+        BenchmarkRunner.Run<QuickBenchmarks>(CreateUnifiedConfig("QuickBenchmarks", output));
     }
 
     private static void RunInternalBenchmarks(DirectoryInfo? output, bool verbose)
@@ -198,6 +233,27 @@ public class Program
         if (verbose) AnsiConsole.MarkupLine("[yellow]🧪 Running Internal HeroCsv Benchmarks[/]");
 
         BenchmarkRunner.Run<CsvParsingBenchmarks>(CreateUnifiedConfig("CsvParsingBenchmarks", output));
+    }
+    
+    private static void RunQuickBenchmarks(DirectoryInfo? output, bool verbose)
+    {
+        if (verbose) AnsiConsole.MarkupLine("[yellow]⚡ Running Quick Benchmarks for CI/CD[/]");
+        
+        BenchmarkRunner.Run<QuickBenchmarks>(CreateUnifiedConfig("QuickBenchmarks", output));
+    }
+    
+    private static void RunFeatureBenchmarks(DirectoryInfo? output, bool verbose)
+    {
+        if (verbose) AnsiConsole.MarkupLine("[yellow]📊 Running Feature Benchmarks[/]");
+        
+        BenchmarkRunner.Run<FeatureBenchmarks>(CreateUnifiedConfig("FeatureBenchmarks", output));
+    }
+    
+    private static void RunCompetitorBenchmarks(DirectoryInfo? output, bool verbose)
+    {
+        if (verbose) AnsiConsole.MarkupLine("[yellow]🏆 Running Competitor Comparison Benchmarks[/]");
+        
+        BenchmarkRunner.Run<CompetitorBenchmarks>(CreateUnifiedConfig("CompetitorBenchmarks", output));
     }
 
     private static void ListAvailableResources(bool verbose)
@@ -221,9 +277,12 @@ public class Program
             .AddColumn("[yellow]Command[/]")
             .AddColumn("[yellow]Description[/]");
 
+        typesTable.AddRow("[green]quick[/]", "Quick benchmarks for CI/CD and rapid testing");
+        typesTable.AddRow("[green]features[/]", "Benchmark all HeroCsv features (core, mapping, I/O, advanced)");
+        typesTable.AddRow("[green]competitors[/]", "Transparent comparison with CsvHelper, Sylvan, Sep");
         typesTable.AddRow("[green]realdata[/]", "Real CSV files performance testing");
-        typesTable.AddRow("[green]library[/]", "Compare with other CSV libraries");
-        typesTable.AddRow("[green]perf[/]", "Performance analysis and profiling");
+        typesTable.AddRow("[green]library[/]", "Library-specific comparisons");
+        typesTable.AddRow("[green]perf[/]", "Internal performance analysis");
 
         var typesPanel = new Panel(typesTable)
             .Header("[blue]🏆 Benchmark Types[/]")

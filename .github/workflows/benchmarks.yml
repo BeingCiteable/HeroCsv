@@ -1,0 +1,99 @@
+name: Performance Benchmarks
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'benchmarks/**'
+      - '.github/workflows/benchmarks.yml'
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      benchmark_type:
+        description: 'Type of benchmark to run'
+        required: false
+        default: 'quick'
+        type: choice
+        options:
+          - quick
+          - features
+          - competitors
+          - realdata
+          - library
+          - perf
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build benchmarks/HeroCsv.Benchmarks/HeroCsv.Benchmarks.csproj -c Release --no-restore
+    
+    - name: Run benchmarks
+      run: |
+        cd benchmarks/HeroCsv.Benchmarks
+        # Determine which benchmark to run
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          BENCHMARK_TYPE="${{ github.event.inputs.benchmark_type }}"
+        else
+          BENCHMARK_TYPE="quick"
+        fi
+        
+        echo "Running $BENCHMARK_TYPE benchmarks..."
+        dotnet run -c Release --no-build -- $BENCHMARK_TYPE --verbose
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: benchmark-results-${{ github.sha }}
+        path: |
+          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.json
+          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.csv
+          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.html
+          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.md
+        retention-days: 90
+    
+    # Store benchmark results for comparison
+    - name: Store benchmark result
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        tool: 'benchmarkdotnet'
+        output-file-path: benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*-report.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true
+        comment-on-alert: true
+        alert-threshold: '110%' # Alert if performance degrades by more than 10%
+        fail-on-alert: true
+        summary-always: true
+    
+    # Compare PR benchmarks against master
+    - name: Compare benchmark results
+      if: github.event_name == 'pull_request'
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        tool: 'benchmarkdotnet'
+        output-file-path: benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*-report.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        alert-threshold: '105%' # More sensitive for PRs
+        comment-on-alert: true
+        fail-on-alert: false # Don't fail PRs, just warn
+        summary-always: true

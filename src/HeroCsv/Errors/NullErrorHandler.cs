@@ -17,7 +17,7 @@ internal class NullErrorHandler : IErrorHandler
         remove { } // No-op
     }
 
-    public void RecordError(CsvValidationError error)
+    public void RecordError(CsvValidationError validationError)
     {
         // Do nothing - error tracking is disabled
     }

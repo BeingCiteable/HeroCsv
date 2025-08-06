@@ -29,6 +29,14 @@
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>$(NoWarn);CS1591</NoWarn>
+		
+		<!-- Code Analysis -->
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<AnalysisLevel>latest-recommended</AnalysisLevel>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+		
+		<!-- Disable specific warnings that are by design -->
+		<NoWarn>$(NoWarn);CA1859;CA2012</NoWarn>
 
 		<!-- Strong naming -->
 		<SignAssembly>false</SignAssembly>
