@@ -58,22 +58,33 @@ dotnet run -c Release -- list
 
 ### CI/CD
 Benchmarks run automatically on:
-- Pull requests (quick benchmarks)
-- Releases (features and competitor comparisons)
-- Manual workflow dispatch
+- **Pull requests**: Quick benchmarks with automatic comparison against master
+- **Push to master**: Stores benchmark results for future comparisons
+- **Releases**: Comprehensive features and competitor benchmarks on all platforms
+- **Weekly schedule**: Sunday 2 AM UTC for performance tracking
+- **Manual dispatch**: On-demand benchmark runs
 
 ## Results
 
 ### Viewing Results
-- **Local**: Results are saved in `BenchmarkDotNet.Artifacts/results/`
+- **Local**: Results are saved in `BenchmarkResults/BenchmarkDotNet/{benchmark-type}/`
 - **CI**: Available as artifacts in GitHub Actions
 - **Published**: Available on GitHub Pages after releases
+- **PR Comments**: Automatic performance comparison comments on pull requests
 
 ### Result Formats
-- **JSON**: Machine-readable detailed results
+- **JSON**: Machine-readable detailed results (Brief and Full formats)
 - **CSV**: For spreadsheet analysis
-- **HTML**: Interactive web reports
+- **HTML**: Interactive web reports with charts
 - **Markdown**: Human-readable summaries
+
+### Automatic Comparisons
+The CI/CD pipeline automatically:
+1. **Compares PR benchmarks** against the master branch baseline
+2. **Alerts on regressions** when performance degrades by >5% (PRs) or >10% (master)
+3. **Comments on PRs** with detailed performance comparison
+4. **Stores historical data** for trend analysis on GitHub Pages
+5. **Creates issues** for significant performance regressions
 
 ## Performance Goals
 

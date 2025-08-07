@@ -1,13 +1,16 @@
-name: Release Benchmarks
+name: Release & Scheduled Benchmarks
 
 on:
   release:
     types: [published]
+  schedule:
+    # Run comprehensive benchmarks weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to benchmark'
-        required: true
+        description: 'Tag to benchmark (optional for scheduled runs)'
+        required: false
 
 env:
   DOTNET_VERSION: '9.0.x'
@@ -44,8 +47,39 @@ jobs:
     - name: Run feature and competitor benchmarks
       run: |
         cd benchmarks/HeroCsv.Benchmarks
+        
+        # Run features benchmark
+        echo "Running features benchmark..."
         dotnet run -c Release --no-build -- features
+        
+        # Copy JSON results for comparison
+        if [ -d "BenchmarkResults/BenchmarkDotNet/FeatureBenchmarks/results" ]; then
+          cp BenchmarkResults/BenchmarkDotNet/FeatureBenchmarks/results/*-report-brief.json features-results.json || true
+        fi
+        
+        # Run competitors benchmark
+        echo "Running competitors benchmark..."
         dotnet run -c Release --no-build -- competitors
+        
+        # Copy JSON results for comparison
+        if [ -d "BenchmarkResults/BenchmarkDotNet/CompetitorBenchmarks/results" ]; then
+          cp BenchmarkResults/BenchmarkDotNet/CompetitorBenchmarks/results/*-report-brief.json competitors-results.json || true
+        fi
+    
+    - name: Store benchmark results for tracking
+      if: matrix.os == 'ubuntu-latest'
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        tool: 'benchmarkdotnet'
+        output-file-path: benchmarks/HeroCsv.Benchmarks/features-results.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        gh-pages-branch: gh-pages
+        benchmark-data-dir-path: 'release-benchmarks/features'
+        auto-push: true
+        comment-on-alert: false
+        alert-threshold: '110%'
+        fail-on-alert: false
+        summary-always: false
     
     - name: Generate summary report
       shell: pwsh
@@ -83,19 +117,19 @@ jobs:
       with:
         name: release-benchmarks-${{ matrix.os }}-${{ github.event.release.tag_name || github.event.inputs.tag }}
         path: |
-          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.json
-          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.csv
-          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.html
-          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.md
-          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/summary.md
+          benchmarks/HeroCsv.Benchmarks/BenchmarkResults/**/*.json
+          benchmarks/HeroCsv.Benchmarks/BenchmarkResults/**/*.csv
+          benchmarks/HeroCsv.Benchmarks/BenchmarkResults/**/*.html
+          benchmarks/HeroCsv.Benchmarks/BenchmarkResults/**/*.md
+          benchmarks/HeroCsv.Benchmarks/*-results.json
         retention-days: 365 # Keep release benchmarks for a year
     
     - name: Publish to GitHub Pages
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && github.event_name == 'release'
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results
+        publish_dir: benchmarks/HeroCsv.Benchmarks/BenchmarkResults
         destination_dir: benchmarks/${{ github.event.release.tag_name || github.event.inputs.tag }}
         keep_files: true
   

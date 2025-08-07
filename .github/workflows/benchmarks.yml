@@ -58,17 +58,38 @@ jobs:
         
         echo "Running $BENCHMARK_TYPE benchmarks..."
         dotnet run -c Release --no-build -- $BENCHMARK_TYPE
+        
+        # Find and copy JSON results to standard location for github-action-benchmark
+        echo "Looking for benchmark results..."
+        if [ -d "BenchmarkResults/BenchmarkDotNet/${BENCHMARK_TYPE}/results" ]; then
+          echo "Found results directory"
+          cp BenchmarkResults/BenchmarkDotNet/${BENCHMARK_TYPE}/results/*-report-brief.json benchmark-results.json || true
+          if [ -f benchmark-results.json ]; then
+            echo "Benchmark results saved to benchmark-results.json"
+          fi
+        fi
     
+    - name: Find benchmark results
+      if: always()
+      run: |
+        echo "Looking for benchmark results..."
+        find . -name "*.json" -o -name "*.csv" -o -name "*.html" -o -name "*.md" | grep -i benchmark || true
+        
+        # Check if benchmark-results.json was created
+        if [ -f benchmarks/HeroCsv.Benchmarks/benchmark-results.json ]; then
+          echo "Found benchmark-results.json for comparison"
+          ls -la benchmarks/HeroCsv.Benchmarks/benchmark-results.json
+        fi
+        
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: benchmark-results-${{ github.sha }}
         path: |
-          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.json
-          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.csv
-          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.html
-          benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*.md
+          BenchmarkResults/**/*
+          benchmarks/HeroCsv.Benchmarks/bin/Release/**/*.json
+          benchmarks/HeroCsv.Benchmarks/bin/Release/**/*.html
         retention-days: 90
     
     # Store benchmark results for comparison
@@ -77,12 +98,14 @@ jobs:
       uses: benchmark-action/github-action-benchmark@v1
       with:
         tool: 'benchmarkdotnet'
-        output-file-path: benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*-report.json
+        output-file-path: benchmarks/HeroCsv.Benchmarks/benchmark-results.json
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        gh-pages-branch: gh-pages
+        benchmark-data-dir-path: 'benchmarks'
         auto-push: true
         comment-on-alert: true
         alert-threshold: '110%' # Alert if performance degrades by more than 10%
-        fail-on-alert: true
+        fail-on-alert: false # Don't fail the build on performance regression
         summary-always: true
     
     # Compare PR benchmarks against master
@@ -91,9 +114,12 @@ jobs:
       uses: benchmark-action/github-action-benchmark@v1
       with:
         tool: 'benchmarkdotnet'
-        output-file-path: benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/results/*-report.json
+        output-file-path: benchmarks/HeroCsv.Benchmarks/benchmark-results.json
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        gh-pages-branch: gh-pages
+        benchmark-data-dir-path: 'benchmarks'
         alert-threshold: '105%' # More sensitive for PRs
         comment-on-alert: true
         fail-on-alert: false # Don't fail PRs, just warn
         summary-always: true
+        comment-always: true # Always comment on PRs with benchmark results

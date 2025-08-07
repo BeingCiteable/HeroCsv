@@ -11,7 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive performance benchmarks covering all major features
 - Full transparency competitor comparison benchmarks against CsvHelper, Sylvan, Sep, and others
 - CI/CD benchmark automation with GitHub Actions
-- Benchmark results publishing to GitHub Pages
+- Benchmark results publishing to GitHub Pages with automatic comparison
+- JSON export for BenchmarkDotNet results enabling GitHub Actions integration
+- Automated benchmark comparison for pull requests with performance alerts
+- Scheduled weekly benchmark runs to track performance over time
+- Cross-platform benchmark support (Ubuntu, Windows, macOS)
 - XML documentation for all public APIs
 - Improved error messages with field preview context
 - `leaveOpen` parameter for stream operations

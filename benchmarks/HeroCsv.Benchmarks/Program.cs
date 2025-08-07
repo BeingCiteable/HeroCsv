@@ -2,6 +2,10 @@ using System.CommandLine;
 using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Exporters;
+using BenchmarkDotNet.Exporters.Json;
+using BenchmarkDotNet.Columns;
+using BenchmarkDotNet.Reports;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -366,7 +370,16 @@ public class Program
             outputDir = BenchmarkExporter.GetBenchmarkOutputDirectory($"BenchmarkDotNet/{benchmarkType}");
         }
 
-        return DefaultConfig.Instance.WithArtifactsPath(outputDir);
+        return DefaultConfig.Instance
+            .WithArtifactsPath(outputDir)
+            .AddExporter(JsonExporter.Full)
+            .AddExporter(JsonExporter.Brief)
+            .AddExporter(MarkdownExporter.GitHub)
+            .AddExporter(HtmlExporter.Default)
+            .AddColumn(StatisticColumn.Mean)
+            .AddColumn(StatisticColumn.StdDev)
+            .AddColumn(StatisticColumn.Error)
+            .AddColumn(RankColumn.Arabic);
     }
 
     private static string? FindSolutionRoot()
