@@ -9,7 +9,7 @@ using HeroCsv.Models;
 using Xunit;
 using Xunit.Sdk;
 
-namespace HeroCsv.Tests.DataSourceTests;
+namespace HeroCsv.Tests.DataSource;
 
 /// <summary>
 /// Tests for file-specific data source operations

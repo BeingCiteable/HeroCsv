@@ -7,7 +7,7 @@ using HeroCsv.DataSources;
 using HeroCsv.Models;
 using Xunit;
 
-namespace HeroCsv.Tests.DataSourceTests;
+namespace HeroCsv.Tests.DataSource;
 
 /// <summary>
 /// Integration tests for data source functionality across different .NET versions and data source types

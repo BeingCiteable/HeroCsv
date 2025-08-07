@@ -1,7 +1,7 @@
 using HeroCsv.DataSources;
 using Xunit;
 
-namespace HeroCsv.Tests.DataSourceTests;
+namespace HeroCsv.Tests.DataSource;
 
 public class StringDataSourceTests
 {
