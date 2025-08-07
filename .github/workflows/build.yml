@@ -1,4 +1,13 @@
-name: CI Build
+name: Build
+
+# Description: Build and test pipeline.
+# Purpose: Validate code quality, run tests, and ensure the project builds
+#          successfully across multiple .NET versions.
+# Triggers:
+#   - Push to main/master branches
+#   - Pull requests to main/master
+#   - Manual dispatch
+# Output: Build artifacts, test results, code coverage reports
 
 on:
   push:

@@ -1,5 +1,14 @@
 name: Release to NuGet
 
+# Description: Automated NuGet package publishing pipeline.
+# Purpose: Build, pack, and publish HeroCsv package to NuGet.org when a new version
+#          is released. Includes validation and symbol package generation.
+# Triggers:
+#   - Push of version tags (v*)
+#   - GitHub release publication
+#   - Manual dispatch with version override
+# Output: Published NuGet package and symbols on NuGet.org
+
 on:
   push:
     tags:

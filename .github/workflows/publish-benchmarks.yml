@@ -1,15 +1,19 @@
 name: Publish Benchmark Results
 
+# Description: Generate and publish comprehensive benchmark results to GitHub Pages.
+# Purpose: Create public-facing performance dashboard with detailed comparisons
+#          across all benchmark categories (competitors, AOT, features, large/wide datasets).
+# Triggers:
+#   - Weekly schedule (Sunday 3 AM UTC)
+#   - Manual dispatch
+# Output: Interactive HTML dashboard at https://[username].github.io/HeroCsv/
+#         with charts, tables, and downloadable results.
+
 on:
   workflow_dispatch:
-  push:
-    branches: [ master, main ]
-    paths:
-      - 'benchmarks/**'
-      - '.github/workflows/publish-benchmarks.yml'
   schedule:
-    # Run weekly on Sunday at 2 AM UTC
-    - cron: '0 2 * * 0'
+    # Run weekly on Sunday at 3 AM UTC (1 hour after release benchmarks)
+    - cron: '0 3 * * 0'
 
 permissions:
   contents: read
@@ -30,8 +34,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
-            7.0.x
             8.0.x
             9.0.x
       

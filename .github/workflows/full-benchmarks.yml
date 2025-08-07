@@ -1,0 +1,139 @@
+name: Full Benchmarks
+
+# Description: Complete benchmark suite execution for comprehensive performance analysis.
+# Purpose: Run all benchmark categories systematically to track long-term performance
+#          trends, validate optimizations, and identify gradual performance degradation.
+# Triggers:
+#   - Weekly schedule (Sunday 2 AM UTC)
+#   - Manual dispatch with suite selection (all/performance/features/quick)
+# Output: Complete benchmark results across all categories, consolidated reports,
+#         and trend tracking data for performance monitoring.
+# Benchmark Categories:
+#   - quick: Fast benchmarks for CI/CD
+#   - features: Feature-specific performance tests
+#   - competitors: Comparison with other CSV libraries
+#   - aot: AOT vs reflection performance
+#   - large: Large dataset handling (10K, 100K, 1M rows)
+#   - wide: Wide dataset handling (50, 100, 200 columns)
+
+on:
+  schedule:
+    # Run weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      benchmark_suite:
+        description: 'Benchmark suite to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - performance  # competitors, large, wide
+          - features     # features, aot
+          - quick        # quick tests only
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  run-benchmarks:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          8.0.x
+          9.0.x
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build benchmarks/HeroCsv.Benchmarks/HeroCsv.Benchmarks.csproj -c Release --no-restore
+    
+    - name: Determine benchmark suite
+      id: suite
+      run: |
+        SUITE="${{ github.event.inputs.benchmark_suite || 'all' }}"
+        echo "suite=$SUITE" >> $GITHUB_OUTPUT
+        
+        case $SUITE in
+          "performance")
+            echo "benchmarks=competitors large wide" >> $GITHUB_OUTPUT
+            ;;
+          "features")
+            echo "benchmarks=features aot" >> $GITHUB_OUTPUT
+            ;;
+          "quick")
+            echo "benchmarks=quick" >> $GITHUB_OUTPUT
+            ;;
+          *)
+            echo "benchmarks=quick features competitors aot large wide" >> $GITHUB_OUTPUT
+            ;;
+        esac
+    
+    - name: Run benchmarks
+      run: |
+        cd benchmarks/HeroCsv.Benchmarks
+        BENCHMARKS="${{ steps.suite.outputs.benchmarks }}"
+        
+        for BENCHMARK in $BENCHMARKS; do
+          echo "========================================="
+          echo "Running $BENCHMARK benchmarks..."
+          echo "========================================="
+          dotnet run -c Release --no-build -- $BENCHMARK || true
+          
+          # Give time for results to be written
+          sleep 2
+        done
+    
+    - name: Collect all results
+      run: |
+        mkdir -p ./all-results
+        
+        # Copy all benchmark results
+        if [ -d "benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts" ]; then
+          cp -r benchmarks/HeroCsv.Benchmarks/BenchmarkDotNet.Artifacts/* ./all-results/ || true
+        fi
+        
+        # Find and consolidate JSON results
+        find benchmarks/HeroCsv.Benchmarks -name "*-report*.json" -type f -exec cp {} ./all-results/ \; || true
+        
+        # Create summary
+        echo "# Comprehensive Benchmark Results" > ./all-results/SUMMARY.md
+        echo "" >> ./all-results/SUMMARY.md
+        echo "**Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> ./all-results/SUMMARY.md
+        echo "**Suite**: ${{ steps.suite.outputs.suite }}" >> ./all-results/SUMMARY.md
+        echo "**Benchmarks**: ${{ steps.suite.outputs.benchmarks }}" >> ./all-results/SUMMARY.md
+        echo "" >> ./all-results/SUMMARY.md
+        echo "## Files Generated" >> ./all-results/SUMMARY.md
+        ls -la ./all-results/ >> ./all-results/SUMMARY.md
+    
+    - name: Upload comprehensive results
+      uses: actions/upload-artifact@v4
+      with:
+        name: comprehensive-benchmarks-${{ github.run_id }}
+        path: ./all-results/
+        retention-days: 90
+    
+    - name: Update benchmark tracking
+      continue-on-error: true
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        tool: 'benchmarkdotnet'
+        output-file-path: ./all-results/*-report-brief.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        gh-pages-branch: gh-pages
+        benchmark-data-dir-path: 'comprehensive'
+        auto-push: true
+        comment-on-alert: false
+        alert-threshold: '120%'
+        fail-on-alert: false
+        summary-always: false

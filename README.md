@@ -1,6 +1,6 @@
 # HeroCsv
 
-[![CI Build](https://github.com/BeingCiteable/HeroCsv/actions/workflows/ci.yml/badge.svg)](https://github.com/BeingCiteable/HeroCsv/actions/workflows/ci.yml)
+[![Build](https://github.com/BeingCiteable/HeroCsv/actions/workflows/build.yml/badge.svg)](https://github.com/BeingCiteable/HeroCsv/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/HeroCsv.svg)](https://www.nuget.org/packages/HeroCsv/)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/HeroCsv.svg)](https://www.nuget.org/packages/HeroCsv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

@@ -1,5 +1,14 @@
 name: Performance Benchmarks
 
+# Description: Quick performance checks for pull requests and commits to master.
+# Purpose: Detect performance regressions early by running fast benchmarks on every PR
+#          and tracking performance trends on master branch.
+# Triggers: 
+#   - Pull requests that modify source or benchmark code
+#   - Pushes to master branch
+#   - Manual dispatch with selectable benchmark type
+# Output: Performance comparison comments on PRs, historical tracking on gh-pages
+
 on:
   pull_request:
     paths:
@@ -19,9 +28,9 @@ on:
           - quick
           - features
           - competitors
-          - realdata
-          - library
-          - perf
+          - aot
+          - large
+          - wide
 
 env:
   DOTNET_VERSION: '9.0.x'
