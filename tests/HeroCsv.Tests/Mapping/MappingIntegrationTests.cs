@@ -346,15 +346,15 @@ public class MappingIntegrationTests
         using var source = new StreamDataSource(stream);
 
         // Read first line
-        var (success, line, lineNumber) = source.TryReadLineAsync(TestContext.Current.CancellationToken).GetAwaiter().GetResult();
+        source.TryReadLine(out var line, out var lineNumber);
 
         // Reset
         source.Reset();
 
         // Should be able to read from beginning again
-        var result = source.TryReadLineAsync(TestContext.Current.CancellationToken).GetAwaiter().GetResult();
-        Assert.Equal("line1", result.line);
-        Assert.Equal(1, result.lineNumber);
+        source.TryReadLine(out line, out lineNumber);
+        Assert.Equal("line1", line);
+        Assert.Equal(1, lineNumber);
     }
 
     [Fact]

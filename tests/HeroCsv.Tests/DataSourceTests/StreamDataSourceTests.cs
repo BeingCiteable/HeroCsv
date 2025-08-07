@@ -267,7 +267,7 @@ public class StreamDataSourceTests
             using var source = new StreamDataSource(stream);
 
             // Act & Assert
-            Assert.Throws<NotSupportedException>(() => 
+            Assert.Throws<NotSupportedException>(() =>
                 source.TryGetLinePosition(out _, out _, out _));
         }
 
@@ -331,7 +331,7 @@ public class StreamDataSourceTests
             using var source = new StreamDataSource(stream);
 
             // Act
-            var result = await source.TryReadLineAsync();
+            var result = await source.TryReadLineAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.success);
@@ -373,7 +373,7 @@ public class StreamDataSourceTests
             using var source = new StreamDataSource(stream);
 
             // Read first line
-            var (success, line, lineNumber) = source.TryReadLineAsync(TestContext.Current.CancellationToken).GetAwaiter().GetResult();
+            source.TryReadLine(out var line, out var lineNumber);
 
             source.Reset();
             Assert.True(source.HasMoreData);
@@ -408,7 +408,7 @@ public class StreamDataSourceTests
             var stream = new MemoryStream(Encoding.UTF8.GetBytes("test"));
             using (var source = new StreamDataSource(stream, leaveOpen: true))
             {
-                var (success, line, lineNumber) = source.TryReadLineAsync(TestContext.Current.CancellationToken).GetAwaiter().GetResult();
+                source.TryReadLine(out var _, out var _);
             }
 
             Assert.True(stream.CanRead);
@@ -446,7 +446,7 @@ public class StreamDataSourceTests
             // Act
             while (true)
             {
-                var result = await source.TryReadLineAsync();
+                var result = await source.TryReadLineAsync(TestContext.Current.CancellationToken);
                 if (!result.success) break;
                 lines.Add(result.line);
             }
@@ -474,7 +474,7 @@ public class StreamDataSourceTests
             // Assert
             Assert.True(firstResult.success);
             Assert.Equal("Line1", firstResult.line);
-            
+
             // Second read should respect cancellation
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => source.TryReadLineAsync(cts.Token).AsTask());
@@ -489,7 +489,7 @@ public class StreamDataSourceTests
             using var source = new StreamDataSource(stream);
 
             // Act
-            var count = await source.CountLinesAsync();
+            var count = await source.CountLinesAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(4, count);
@@ -502,13 +502,13 @@ public class StreamDataSourceTests
             var longContent = string.Join("\n", Enumerable.Range(1, 10000).Select(i => $"Line{i}"));
             using var stream = new MemoryStream(Encoding.UTF8.GetBytes(longContent));
             using var source = new StreamDataSource(stream);
-            
+
             // Use a pre-cancelled token to ensure cancellation
             var cts = new CancellationTokenSource();
             cts.Cancel();
 
             // Act & Assert
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => 
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
                 source.CountLinesAsync(cts.Token).AsTask());
         }
 

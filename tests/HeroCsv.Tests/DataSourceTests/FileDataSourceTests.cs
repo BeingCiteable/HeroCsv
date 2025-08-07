@@ -59,10 +59,10 @@ public class FileDataSourceTests
         // Arrange
         var csvContent = "A,B\n1,2\n3,4";
         var tempFile = Path.GetTempFileName();
-        
+
         try
         {
-            await File.WriteAllTextAsync(tempFile, csvContent);
+            await File.WriteAllTextAsync(tempFile, csvContent, TestContext.Current.CancellationToken);
 
             // Act
             var records = await Csv.ReadFileAsync(tempFile, cancellationToken: CancellationToken.None);
@@ -88,10 +88,10 @@ public class FileDataSourceTests
         var csvContent = "A|B\n1|2";
         var tempFile = Path.GetTempFileName();
         var options = new CsvOptions(delimiter: '|');
-        
+
         try
         {
-            await File.WriteAllTextAsync(tempFile, csvContent);
+            await File.WriteAllTextAsync(tempFile, csvContent, TestContext.Current.CancellationToken);
 
             // Act
             var records = await Csv.ReadFileAsync(tempFile, options, cancellationToken: CancellationToken.None);
@@ -124,7 +124,7 @@ public class FileDataSourceTests
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
-        
+
         try
         {
             await File.WriteAllTextAsync(tempFile, "", TestContext.Current.CancellationToken);
@@ -148,7 +148,7 @@ public class FileDataSourceTests
         // Arrange
         var tempFile = Path.GetTempFileName();
         var expectedRecords = 1000;
-        
+
         try
         {
             // Generate a large CSV file
@@ -157,8 +157,8 @@ public class FileDataSourceTests
             {
                 csvContent += $"Person{i},{20 + (i % 50)},City{i % 10}\n";
             }
-            
-            await File.WriteAllTextAsync(tempFile, csvContent);
+
+            await File.WriteAllTextAsync(tempFile, csvContent, TestContext.Current.CancellationToken);
 
             // Act
             var records = await Csv.ReadFileAsync(tempFile, cancellationToken: CancellationToken.None);
@@ -182,13 +182,13 @@ public class FileDataSourceTests
         // Arrange
         var csvContent = "A,B\n1,2";
         var tempFile = Path.GetTempFileName();
-        
+
         try
         {
-            await File.WriteAllTextAsync(tempFile, csvContent);
+            await File.WriteAllTextAsync(tempFile, csvContent, TestContext.Current.CancellationToken);
 
             using var cts = new CancellationTokenSource();
-            
+
             // Act - should complete before cancellation
             var records = await Csv.ReadFileAsync(tempFile, cancellationToken: cts.Token);
 
@@ -208,10 +208,10 @@ public class FileDataSourceTests
         // Arrange
         var csvContent = "A,B\n1,2";
         var tempFile = Path.GetTempFileName();
-        
+
         try
         {
-            await File.WriteAllTextAsync(tempFile, csvContent);
+            await File.WriteAllTextAsync(tempFile, csvContent, TestContext.Current.CancellationToken);
 
             using var cts = new CancellationTokenSource();
             cts.Cancel(); // Cancel immediately
@@ -243,7 +243,7 @@ public class FileDataSourceTests
         // Arrange
         var csvContent = "Name,Value\nTëst,123\nUnicode,Ω";
         var tempFile = Path.GetTempFileName();
-        
+
         try
         {
             // Write with UTF-8 encoding

@@ -440,7 +440,7 @@ public class StringDataSourceTests
             using var source = new StringDataSource("Test line");
 
             // Act
-            var result = await source.TryReadLineAsync();
+            var result = await source.TryReadLineAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.True(result.success);
@@ -455,7 +455,7 @@ public class StringDataSourceTests
             using var source = new StringDataSource("Line1\nLine2\nLine3");
 
             // Act
-            var count = await source.CountLinesAsync();
+            var count = await source.CountLinesAsync(TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(3, count);

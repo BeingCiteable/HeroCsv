@@ -25,16 +25,16 @@ public class BasicFunctionalityTests
     public void EndToEnd_BasicCsvOperations()
     {
         var content = "Name,Age\nJohn,25\nJane,30";
-        
+
         // Test ReadContent
         var records = Csv.ReadContent(content).ToList();
         Assert.Equal(2, records.Count);
         Assert.Equal("John", records[0][0]);
-        
+
         // Test CountRecords
         var count = Csv.CountRecords(content);
         Assert.Equal(2, count);
-        
+
         // Test CreateReader
         using var reader = Csv.CreateReader(content);
         Assert.NotNull(reader);
@@ -45,7 +45,7 @@ public class BasicFunctionalityTests
     public void EndToEnd_TypedCsvOperations()
     {
         var content = "Name,Age\nJohn,25\nJane,30";
-        
+
         // Test typed reading
         var people = Csv.Read<Person>(content).ToList();
         Assert.Equal(2, people.Count);
@@ -58,7 +58,7 @@ public class BasicFunctionalityTests
     {
         var content = "Name;Age\nJohn;25";
         var options = new CsvOptions(delimiter: ';');
-        
+
         var records = Csv.ReadContent(content, options).ToList();
         Assert.Single(records);
         Assert.Equal("John", records[0][0]);
@@ -70,23 +70,23 @@ public class BasicFunctionalityTests
     {
         var content = "John,25\nJane,30";
         var options = new CsvOptions(hasHeader: false);
-        
+
         var records = Csv.ReadContent(content, options).ToList();
         Assert.Equal(2, records.Count);
         Assert.Equal("John", records[0][0]);
     }
 
-    #if NET7_0_OR_GREATER
+#if NET7_0_OR_GREATER
     [Fact]
     public async Task EndToEnd_AsyncFileOperations()
     {
         var tempFile = Path.GetTempFileName();
         try
         {
-            await File.WriteAllTextAsync(tempFile, "Name,Age\nJohn,25");
-            
-            var records = await Csv.ReadFileAsync(tempFile);
-            
+            await File.WriteAllTextAsync(tempFile, "Name,Age\nJohn,25", TestContext.Current.CancellationToken);
+
+            var records = await Csv.ReadFileAsync(tempFile, cancellationToken: TestContext.Current.CancellationToken);
+
             Assert.Single(records);
             Assert.Equal("John", records[0][0]);
         }
@@ -95,5 +95,5 @@ public class BasicFunctionalityTests
             File.Delete(tempFile);
         }
     }
-    #endif
+#endif
 }

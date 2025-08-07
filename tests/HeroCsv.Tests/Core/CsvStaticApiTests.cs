@@ -160,7 +160,7 @@ public class CsvStaticApiTests
         public void ReadFile_NonExistentFile_ThrowsFileNotFoundException()
         {
             // Act & Assert
-            Assert.Throws<FileNotFoundException>(() => 
+            Assert.Throws<FileNotFoundException>(() =>
                 Csv.ReadFile("nonexistent.csv").ToList());
         }
     }
@@ -217,7 +217,7 @@ public class CsvStaticApiTests
             var mapping = CsvMapping.CreateAutoMapWithOverrides<TestModels.Person>()
                 .Map(p => p.Name, "PersonName")
                 .Map(p => p.Age, "PersonAge");
-                
+
             var people = Csv.Read<TestModels.Person>(csv, mapping).ToList();
 
             // Assert
@@ -274,7 +274,7 @@ public class CsvStaticApiTests
             // Assert
             Assert.Single(records); // Data was read
             Assert.True(stream.CanRead); // Stream is still open
-            
+
             stream.Dispose(); // Manual cleanup
         }
 
@@ -508,12 +508,12 @@ public class CsvStaticApiTests
             // Arrange
             var tempFile = Path.GetTempFileName();
             var csvContent = "Name,Age\nJohn,25\nJane,30";
-            await File.WriteAllTextAsync(tempFile, csvContent);
+            await File.WriteAllTextAsync(tempFile, csvContent, TestContext.Current.CancellationToken);
 
             try
             {
                 // Act
-                var records = await Csv.ReadFileAsync(tempFile);
+                var records = await Csv.ReadFileAsync(tempFile, cancellationToken: TestContext.Current.CancellationToken);
 
                 // Assert
                 Assert.Equal(2, records.Count); // Data records only (header skipped by default)
@@ -532,13 +532,13 @@ public class CsvStaticApiTests
             // Arrange
             var tempFile = Path.GetTempFileName();
             var csvContent = "Name,Age\nJohn,25\nJane,30";
-            await File.WriteAllTextAsync(tempFile, csvContent);
+            await File.WriteAllTextAsync(tempFile, csvContent, TestContext.Current.CancellationToken);
             var records = new List<string[]>();
 
             try
             {
                 // Act
-                await foreach (var record in Csv.ReadFileAsyncEnumerable(tempFile))
+                await foreach (var record in Csv.ReadFileAsyncEnumerable(tempFile, cancellationToken: TestContext.Current.CancellationToken))
                 {
                     records.Add(record);
                 }
@@ -562,7 +562,7 @@ public class CsvStaticApiTests
             using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
 
             // Act
-            var records = await Csv.ReadStreamAsync(stream);
+            var records = await Csv.ReadStreamAsync(stream, cancellationToken: TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(2, records.Count); // Data records only (header skipped by default)
