@@ -83,13 +83,11 @@ jobs:
           echo "WARNING: No JSON benchmark results found"
           echo "Creating placeholder results file"
           # Create a minimal valid BenchmarkDotNet JSON structure
-          cat > benchmark-results.json << 'EOF'
-{
-  "Title": "Placeholder",
-  "HostEnvironmentInfo": {},
-  "Benchmarks": []
-}
-EOF
+          echo '{
+            "Title": "Placeholder",
+            "HostEnvironmentInfo": {},
+            "Benchmarks": []
+          }' > benchmark-results.json
           echo "json_found=false" >> $GITHUB_OUTPUT
         fi
         
