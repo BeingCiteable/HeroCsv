@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2025-01-07
+## [1.0.0] - 2025-08-07
 
 ### Added
 - **Source Generation for AOT** - Compile-time code generation for zero-reflection CSV mapping
@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stream disposal issues when using `ReadStream` methods
 - Test reliability for async cancellation scenarios
 
-## [1.0.0-prerelease] - 2024-12-30
+## [1.0.0-prerelease] - 2025-08-02
 
 ### Added
 - Initial release of HeroCsv
