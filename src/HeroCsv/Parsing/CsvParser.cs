@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using HeroCsv.Core;
 using HeroCsv.Models;
 using HeroCsv.Utilities;
 #if NET8_0_OR_GREATER
@@ -12,10 +13,12 @@ using System.Runtime.InteropServices;
 namespace HeroCsv.Parsing;
 
 /// <summary>
-/// Unified CSV parser with automatic optimizations
+/// Unified CSV parser with automatic optimizations and strategy pattern support
 /// </summary>
 public static class CsvParser
 {
+        private static readonly ParsingStrategySelector DefaultStrategySelector = new();
+        private static readonly StringBuilderPool DefaultStringBuilderPool = new();
         /// <summary>
         /// Finds the next line ending from the given position
         /// </summary>
@@ -100,22 +103,33 @@ public static class CsvParser
         }
 
         /// <summary>
-        /// Parses a CSV line into fields
+        /// Parses a CSV line into fields using the most appropriate strategy
         /// </summary>
         public static string[] ParseLine(ReadOnlySpan<char> line, CsvOptions options)
         {
             if (line.IsEmpty) return [""];
 
+            // Fast path for simple cases
             if (options.Delimiter == ',' && !options.TrimWhitespace && line.IndexOf('"') < 0)
             {
                 return ParseSimpleCommaLine(line, options.StringPool);
             }
 
+            // Use strategy pattern for complex cases
             bool hasQuotes = line.IndexOf(options.Quote) >= 0;
 
             return hasQuotes
                 ? ParseQuotedLine(line, options)
                 : ParseUnquotedLine(line, options);
+        }
+        
+        /// <summary>
+        /// Parses a CSV line using the strategy pattern for maximum flexibility
+        /// </summary>
+        public static string[] ParseLineWithStrategy(ReadOnlySpan<char> line, CsvOptions options, ParsingStrategySelector? selector = null)
+        {
+            selector ??= DefaultStrategySelector;
+            return selector.ParseLine(line, options);
         }
 
         /// <summary>
@@ -312,15 +326,18 @@ public static class CsvParser
         }
 
         /// <summary>
-        /// Handles parsing lines with quoted fields
+        /// Handles parsing lines with quoted fields using pooled StringBuilder
         /// </summary>
         private static string[] ParseQuotedLine(ReadOnlySpan<char> line, CsvOptions options)
         {
             var fieldList = new List<string>(8);
             var inQuotes = false;
-            var fieldBuilder = new StringBuilder();
+            var fieldBuilder = DefaultStringBuilderPool.Rent();
             var i = 0;
             var fieldStart = true; // Track if we're at the start of a field
+            
+            try
+            {
 
             while (i < line.Length)
             {
@@ -373,6 +390,11 @@ public static class CsvParser
             fieldList.Add(options.TrimWhitespace ? finalField.Trim() : finalField);
 
             return [.. fieldList];
+            }
+            finally
+            {
+                DefaultStringBuilderPool.Return(fieldBuilder);
+            }
         }
 
         /// <summary>

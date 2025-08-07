@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HeroCsv.Configuration;
 using HeroCsv.Core;
 using HeroCsv.DataSources;
 using HeroCsv.Models;
@@ -13,10 +14,17 @@ public sealed class CsvReaderBuilder : ICsvReaderBuilder
     private string? _content;
     private string? _filePath;
     private Stream? _stream;
-    private CsvOptions _options = CsvOptions.Default;
-    private bool _validateData;
-    private bool _trackErrors;
-    private Action<CsvValidationError>? _errorCallback;
+    private readonly CsvReaderConfiguration _configuration;
+    
+    public CsvReaderBuilder()
+    {
+        _configuration = new CsvReaderConfiguration
+        {
+            Options = CsvOptions.Default,
+            StringBuilderPool = new StringBuilderPool()
+        };
+    }
+    
 #if NET6_0_OR_GREATER
     private bool _hardwareAcceleration;
 #endif
@@ -49,69 +57,81 @@ public sealed class CsvReaderBuilder : ICsvReaderBuilder
     /// <inheritdoc />
     public ICsvReaderBuilder WithDelimiter(char delimiter)
     {
-        _options = new CsvOptions(delimiter, _options.Quote, _options.HasHeader, _options.TrimWhitespace, _options.SkipEmptyFields, _options.NewLine);
+        _configuration.Options = new CsvOptions(
+            delimiter, 
+            _configuration.Options.Quote, 
+            _configuration.Options.HasHeader, 
+            _configuration.Options.TrimWhitespace, 
+            _configuration.Options.SkipEmptyFields, 
+            _configuration.Options.NewLine);
         return this;
     }
 
     /// <inheritdoc />
     public ICsvReaderBuilder WithQuote(char quote)
     {
-        _options = new CsvOptions(_options.Delimiter, quote, _options.HasHeader, _options.TrimWhitespace, _options.SkipEmptyFields, _options.NewLine);
+        _configuration.Options = new CsvOptions(
+            _configuration.Options.Delimiter, 
+            quote, 
+            _configuration.Options.HasHeader, 
+            _configuration.Options.TrimWhitespace, 
+            _configuration.Options.SkipEmptyFields, 
+            _configuration.Options.NewLine);
         return this;
     }
 
     /// <inheritdoc />
     public ICsvReaderBuilder WithValidation(bool validate = true)
     {
-        _validateData = validate;
+        _configuration.EnableValidation = validate;
         return this;
     }
 
     /// <inheritdoc />
     public ICsvReaderBuilder WithErrorTracking(bool trackErrors = true)
     {
-        _trackErrors = trackErrors;
+        _configuration.TrackErrors = trackErrors;
         return this;
     }
 
     /// <inheritdoc />
     public ICsvReaderBuilder WithErrorCallback(Action<CsvValidationError> errorCallback)
     {
-        _errorCallback = errorCallback;
-        _trackErrors = true; // Automatically enable error tracking when callback is set
+        _configuration.ErrorCallback = errorCallback;
+        _configuration.TrackErrors = true; // Automatically enable error tracking when callback is set
         return this;
     }
 
     /// <inheritdoc />
     public ICsvReaderBuilder WithSkipEmptyFields(bool skipEmpty = true)
     {
-        _options = new CsvOptions(
-            _options.Delimiter,
-            _options.Quote,
-            _options.HasHeader,
-            _options.TrimWhitespace,
+        _configuration.Options = new CsvOptions(
+            _configuration.Options.Delimiter,
+            _configuration.Options.Quote,
+            _configuration.Options.HasHeader,
+            _configuration.Options.TrimWhitespace,
             skipEmpty,
-            _options.NewLine);
+            _configuration.Options.NewLine);
         return this;
     }
 
     /// <inheritdoc />
     public ICsvReaderBuilder WithTrimWhitespace(bool trimWhitespace = true)
     {
-        _options = new CsvOptions(
-            _options.Delimiter,
-            _options.Quote,
-            _options.HasHeader,
+        _configuration.Options = new CsvOptions(
+            _configuration.Options.Delimiter,
+            _configuration.Options.Quote,
+            _configuration.Options.HasHeader,
             trimWhitespace,
-            _options.SkipEmptyFields,
-            _options.NewLine);
+            _configuration.Options.SkipEmptyFields,
+            _configuration.Options.NewLine);
         return this;
     }
 
     /// <inheritdoc />
     public ICsvReaderBuilder WithOptions(CsvOptions options)
     {
-        _options = options;
+        _configuration.Options = options;
         return this;
     }
 
@@ -128,18 +148,13 @@ public sealed class CsvReaderBuilder : ICsvReaderBuilder
     {
         if (_stream != null)
         {
-            return new HeroCsvReader(
-                _stream,
-                _options,
-                encoding: null,
-                leaveOpen: false,
-                _validateData,
-                _trackErrors,
-                _errorCallback);
+            var streamSource = new StreamDataSource(_stream);
+            return new HeroCsvReader(streamSource, _configuration);
         }
 
         var content = GetContent();
-        return CreateConfiguredReader(content);
+        var stringSource = new StringDataSource(content);
+        return new HeroCsvReader(stringSource, _configuration);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -151,16 +166,6 @@ public sealed class CsvReaderBuilder : ICsvReaderBuilder
             "No CSV data source specified. Use WithContent() to provide CSV string data or WithFile() to specify a file path.");
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private HeroCsvReader CreateConfiguredReader(string content)
-    {
-        return new HeroCsvReader(
-            content,
-            _options,
-            _validateData,
-            _trackErrors,
-            _errorCallback);
-    }
 
     /// <summary>
     /// Executes parsing and returns results
@@ -174,8 +179,8 @@ public sealed class CsvReaderBuilder : ICsvReaderBuilder
             recordCount: reader.RecordCount,
             lineCount: reader.LineNumber,
             validationResult: reader.ValidationResult,
-            validationPerformed: _validateData,
-            errorTrackingEnabled: _trackErrors);
+            validationPerformed: _configuration.EnableValidation,
+            errorTrackingEnabled: _configuration.TrackErrors);
     }
 
     /// <summary>

@@ -6,7 +6,7 @@ namespace HeroCsv.DataSources;
 /// <summary>
 /// Provides abstraction for CSV data sources supporting both sync and async operations
 /// </summary>
-internal interface ICsvDataSource : IDisposable
+public interface ICsvDataSource : IDisposable
 #if NET6_0_OR_GREATER
     , IAsyncDisposable
 #endif

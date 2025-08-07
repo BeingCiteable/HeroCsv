@@ -57,7 +57,7 @@ jobs:
         fi
         
         echo "Running $BENCHMARK_TYPE benchmarks..."
-        dotnet run -c Release --no-build -- $BENCHMARK_TYPE --verbose
+        dotnet run -c Release --no-build -- $BENCHMARK_TYPE
     
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4

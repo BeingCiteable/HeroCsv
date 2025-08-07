@@ -1,3 +1,4 @@
+using HeroCsv.Configuration;
 using HeroCsv.DataSources;
 using HeroCsv.Errors;
 using HeroCsv.Models;
@@ -17,7 +18,9 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
 #endif
 {
     private readonly ICsvDataSource _dataSource;
-    private readonly CsvOptions _options;
+    private readonly CsvReaderConfiguration _configuration;
+    private readonly CsvOptions _options; // Keep for backward compatibility
+    private readonly ParsingStrategySelector _parsingSelector;
     private int _recordCount;
     private bool _disposed;
 
@@ -38,9 +41,20 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
     {
         if (content == null) throw new ArgumentNullException(nameof(content),
             "CSV content cannot be null. Provide valid CSV string data or use empty string for no data.");
+        
         _dataSource = new StringDataSource(content);
-        _options = options;
-
+        _options = options; // Keep for backward compatibility
+        _configuration = new CsvReaderConfiguration
+        {
+            Options = options,
+            EnableValidation = validateData,
+            TrackErrors = trackErrors,
+            ErrorCallback = errorCallback,
+            StringPool = options.StringPool,
+            StringBuilderPool = new StringBuilderPool()
+        };
+        
+        _parsingSelector = new ParsingStrategySelector(_configuration.StringBuilderPool);
         _errorHandler = trackErrors ? new ErrorHandler(true) : new NullErrorHandler();
         if (errorCallback != null && _errorHandler is ErrorHandler handler)
         {
@@ -60,8 +74,18 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
         Action<CsvValidationError>? errorCallback = null)
     {
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
-        _options = options;
-
+        _options = options; // Keep for backward compatibility
+        _configuration = new CsvReaderConfiguration
+        {
+            Options = options,
+            EnableValidation = validateData,
+            TrackErrors = trackErrors,
+            ErrorCallback = errorCallback,
+            StringPool = options.StringPool,
+            StringBuilderPool = new StringBuilderPool()
+        };
+        
+        _parsingSelector = new ParsingStrategySelector(_configuration.StringBuilderPool);
         _errorHandler = trackErrors ? new ErrorHandler(true) : new NullErrorHandler();
         if (errorCallback != null && _errorHandler is ErrorHandler handler)
         {
@@ -84,15 +108,44 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
     {
         if (stream == null) throw new ArgumentNullException(nameof(stream),
             "Stream cannot be null. Provide a valid stream containing CSV data.");
+        
         _dataSource = new StreamDataSource(stream, encoding, leaveOpen);
-        _options = options;
-
+        _options = options; // Keep for backward compatibility
+        _configuration = new CsvReaderConfiguration
+        {
+            Options = options,
+            EnableValidation = validateData,
+            TrackErrors = trackErrors,
+            ErrorCallback = errorCallback,
+            StringPool = options.StringPool,
+            StringBuilderPool = new StringBuilderPool()
+        };
+        
+        _parsingSelector = new ParsingStrategySelector(_configuration.StringBuilderPool);
         _errorHandler = trackErrors ? new ErrorHandler(true) : new NullErrorHandler();
         if (errorCallback != null && _errorHandler is ErrorHandler handler)
         {
             handler.ErrorOccurred += errorCallback;
         }
         _validationHandler = new ValidationHandler(options, _errorHandler, validateData);
+    }
+
+    /// <summary>
+    /// Creates a new HeroCsvReader with configuration object for maximum flexibility
+    /// </summary>
+    public HeroCsvReader(ICsvDataSource dataSource, CsvReaderConfiguration configuration)
+    {
+        _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _options = configuration.Options; // Keep for backward compatibility
+        
+        _parsingSelector = new ParsingStrategySelector(_configuration.StringBuilderPool);
+        _errorHandler = _configuration.ErrorHandler ?? (_configuration.TrackErrors ? new ErrorHandler(true) : new NullErrorHandler());
+        if (_configuration.ErrorCallback != null && _errorHandler is ErrorHandler handler)
+        {
+            handler.ErrorOccurred += _configuration.ErrorCallback;
+        }
+        _validationHandler = _configuration.ValidationHandler ?? new ValidationHandler(_configuration.Options, _errorHandler, _configuration.EnableValidation);
     }
 
     /// <summary>
@@ -219,7 +272,7 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
             return TryReadRecord(out record);
         }
 
-        var fields = CsvParser.ParseLine(lineSpan, _options);
+        var fields = _parsingSelector.ParseLine(lineSpan, _options);
 
         // Skip empty records (empty line parsed as empty array or single empty field)
         if (fields.Length == 0 || (fields.Length == 1 && string.IsNullOrEmpty(fields[0])))
@@ -418,7 +471,7 @@ public sealed partial class HeroCsvReader : ICsvReader, IDisposable
                     var lineSpan = buffer.Slice(lineStart, lineLength);
 
                     // Parse line with optimized parser (SIMD-enabled for common cases)
-                    var fields = CsvParser.ParseLine(lineSpan, _options);
+                    var fields = _parsingSelector.ParseLine(lineSpan, _options);
                     records.Add(fields);
                 }
 
