@@ -52,7 +52,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void ReadContent_ConcurrentAccess_ShouldBeThreadSafe()
+    public async Task ReadContent_ConcurrentAccess_ShouldBeThreadSafe()
     {
         const int threadCount = 10;
         const int iterationsPerThread = 100;
@@ -77,11 +77,11 @@ public class ConcurrencyTests
             }))
             .ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.Empty(exceptions);
         Assert.Equal(threadCount * iterationsPerThread, results.Count);
-        
+
         foreach (var result in results)
         {
             Assert.Equal(5, result.Length);
@@ -91,7 +91,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void CreateReader_ConcurrentAccess_ShouldCreateIndependentReaders()
+    public async Task CreateReader_ConcurrentAccess_ShouldCreateIndependentReaders()
     {
         const int readerCount = 50;
         var results = new ConcurrentBag<int>();
@@ -117,11 +117,11 @@ public class ConcurrencyTests
             }))
             .ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.Empty(exceptions);
         Assert.Equal(readerCount, results.Count);
-        
+
         foreach (var count in results)
         {
             Assert.Equal(6, count);
@@ -129,7 +129,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void Read_GenericConcurrentAccess_ShouldBeThreadSafe()
+    public async Task Read_GenericConcurrentAccess_ShouldBeThreadSafe()
     {
         const int threadCount = 20;
         var results = new ConcurrentBag<TestModel[]>();
@@ -150,11 +150,11 @@ public class ConcurrencyTests
             }))
             .ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.Empty(exceptions);
         Assert.Equal(threadCount, results.Count);
-        
+
         foreach (var models in results)
         {
             Assert.Equal(5, models.Length);
@@ -165,7 +165,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void CountRecords_ConcurrentAccess_ShouldBeConsistent()
+    public async Task CountRecords_ConcurrentAccess_ShouldBeConsistent()
     {
         const int threadCount = 30;
         var results = new ConcurrentBag<int>();
@@ -186,11 +186,11 @@ public class ConcurrencyTests
             }))
             .ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.Empty(exceptions);
         Assert.Equal(threadCount, results.Count);
-        
+
         foreach (var count in results)
         {
             Assert.Equal(10, count);
@@ -198,7 +198,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void ReadAllRecords_ConcurrentAccess_WithLargeDataset_ShouldBeStable()
+    public async Task ReadAllRecords_ConcurrentAccess_WithLargeDataset_ShouldBeStable()
     {
         const int threadCount = 15;
         const int iterations = 20;
@@ -223,11 +223,11 @@ public class ConcurrencyTests
             }))
             .ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.Empty(exceptions);
         Assert.Equal(threadCount * iterations, allResults.Count);
-        
+
         foreach (var records in allResults)
         {
             Assert.Equal(10, records.Length);
@@ -237,7 +237,7 @@ public class ConcurrencyTests
     }
 
     [Fact]
-    public void MixedOperations_ConcurrentAccess_ShouldNotInterfere()
+    public async Task MixedOperations_ConcurrentAccess_ShouldNotInterfere()
     {
         const int operationsCount = 25;
         var countResults = new ConcurrentBag<int>();
@@ -256,12 +256,12 @@ public class ConcurrencyTests
                             var count = Csv.CountRecords(LargeCsvData);
                             countResults.Add(count);
                             break;
-                            
+
                         case 1:
                             var models = Csv.Read<LargeTestModel>(LargeCsvData).ToArray();
                             readResults.Add(models);
                             break;
-                            
+
                         case 2:
                             var records = Csv.ReadAllRecords(LargeCsvData).ToArray();
                             recordResults.Add(records);
@@ -275,17 +275,17 @@ public class ConcurrencyTests
             }))
             .ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
 
         Assert.Empty(exceptions);
-        
+
         Assert.All(countResults, count => Assert.Equal(10, count));
         Assert.All(readResults, models => Assert.Equal(10, models.Length));
         Assert.All(recordResults, records => Assert.Equal(10, records.Length));
     }
 
     [Fact]
-    public void ReaderDisposal_ConcurrentAccess_ShouldNotCauseCrash()
+    public async Task ReaderDisposal_ConcurrentAccess_ShouldNotCauseCrash()
     {
         const int readerCount = 100;
         var exceptions = new ConcurrentBag<Exception>();
@@ -296,16 +296,16 @@ public class ConcurrencyTests
                 try
                 {
                     using var reader = Csv.CreateReader(CsvData);
-                    
+
                     reader.TryReadRecord(out var record1);
                     reader.TryReadRecord(out var record2);
-                    
+
                     var remainingCount = 0;
                     while (reader.TryReadRecord(out var record))
                     {
                         remainingCount++;
                     }
-                    
+
                     Assert.Equal(4, remainingCount);
                 }
                 catch (Exception ex)
@@ -315,8 +315,8 @@ public class ConcurrencyTests
             }))
             .ToArray();
 
-        Task.WaitAll(tasks);
-        
+        await Task.WhenAll(tasks);
+
         Assert.Empty(exceptions);
     }
 }

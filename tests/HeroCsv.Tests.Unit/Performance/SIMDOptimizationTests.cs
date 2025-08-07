@@ -323,7 +323,8 @@ namespace HeroCsv.Tests.Unit.Performance
         // Custom fact attribute that skips if SIMD is not available
         private sealed class SkippableFactIfSIMDNotAvailableAttribute : FactAttribute
         {
-            public SkippableFactIfSIMDNotAvailableAttribute() : base()
+            public SkippableFactIfSIMDNotAvailableAttribute([System.Runtime.CompilerServices.CallerFilePath] string? filePath = null,
+                [System.Runtime.CompilerServices.CallerLineNumber] int lineNumber = 0) : base()
             {
                 if (!Vector256.IsHardwareAccelerated && !Vector128.IsHardwareAccelerated)
                 {
