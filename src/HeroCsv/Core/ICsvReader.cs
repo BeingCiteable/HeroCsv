@@ -80,19 +80,14 @@ public partial interface ICsvReader : IDisposable
     /// <returns>CSV records</returns>
     IEnumerable<string[]> GetRecords();
 
-
     /// <summary>
     /// Counts records without parsing fields for optimal performance
     /// </summary>
     /// <returns>Record count</returns>
     int CountRecords();
 
-
-
     /// <summary>
     /// Validation results (empty if validation disabled)
     /// </summary>
     CsvValidationResult ValidationResult { get; }
-
-
 }

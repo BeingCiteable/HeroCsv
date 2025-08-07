@@ -41,7 +41,7 @@
 - `feature/` - New features
 - `fix/` - Bug fixes
 - `perf/` - Performance improvements
-- `docs/` - Documentation only
+- `doc/` - Documentation only
 - `refactor/` - Code refactoring
 
 ## Commit Messages

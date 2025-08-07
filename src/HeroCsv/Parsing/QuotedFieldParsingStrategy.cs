@@ -39,6 +39,7 @@ public sealed class QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderP
             int i = 0;
             bool inQuotes = false;
             bool fieldStarted = false;
+            bool fieldWasQuoted = false;
 
             while (i < line.Length)
             {
@@ -50,14 +51,16 @@ public sealed class QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderP
                     {
                         inQuotes = true;
                         fieldStarted = true;
+                        fieldWasQuoted = true;
                         i++;
                         continue;
                     }
 
                     if (currentChar == options.Delimiter)
                     {
-                        AddField(fields, fieldBuilder, options);
+                        AddField(fields, fieldBuilder, options, fieldWasQuoted);
                         fieldStarted = false;
+                        fieldWasQuoted = false;
                         i++;
                         continue;
                     }
@@ -100,8 +103,9 @@ public sealed class QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderP
 
                             if (i < line.Length && line[i] == options.Delimiter)
                             {
-                                AddField(fields, fieldBuilder, options);
+                                AddField(fields, fieldBuilder, options, fieldWasQuoted);
                                 fieldStarted = false;
+                                fieldWasQuoted = false;
                                 i++;
                             }
                         }
@@ -115,7 +119,7 @@ public sealed class QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderP
             }
 
             // Add the last field
-            AddField(fields, fieldBuilder, options);
+            AddField(fields, fieldBuilder, options, fieldWasQuoted);
 
             return fields.ToArray();
         }
@@ -126,11 +130,13 @@ public sealed class QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderP
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AddField(List<string> fields, StringBuilder fieldBuilder, CsvOptions options)
+    private static void AddField(List<string> fields, StringBuilder fieldBuilder, CsvOptions options, bool fieldWasQuoted)
     {
         string field = fieldBuilder.ToString();
 
-        if (options.TrimWhitespace)
+        // Only trim unquoted fields when TrimWhitespace is enabled
+        // Quoted fields should preserve their internal whitespace
+        if (options.TrimWhitespace && !fieldWasQuoted)
         {
             field = field.Trim();
         }

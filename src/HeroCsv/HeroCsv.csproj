@@ -19,13 +19,8 @@
 		<Authors>HeroCsv Contributors</Authors>
 		<Company>BeingCiteable</Company>
 		<Product>HeroCsv</Product>
-		<Description>Ultra-fast, low memory usage CSV reading library for .NET with full AOT support. Features
-			zero-allocation parsing using ReadOnlySpan&lt;char&gt;, SIMD optimizations, async
-			operations, and multi-framework support (.NET 6-9). Provides both reflection-based and 
-			AOT-safe factory-based APIs. Simple API for basic use cases with advanced configuration 
-			options for complex scenarios.</Description>
-		<PackageTags>
-			csv;parser;reader;performance;zero-allocation;simd;span;readonlyspan;high-performance;async;net6;net7;net8;net9;trimming;aot;nativeaot</PackageTags>
+		<Description>Ultra-fast, zero-allocation CSV parsing library for .NET with full Native AOT support. Features SIMD optimizations, async operations, object mapping, and comprehensive validation. Ideal for cloud-native, serverless, and high-performance applications.</Description>
+		<PackageTags>csv;parser;aot;simd;zero-allocation;high-performance;async;cloud-native</PackageTags>
 		<PackageProjectUrl>https://github.com/BeingCiteable/HeroCsv</PackageProjectUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
