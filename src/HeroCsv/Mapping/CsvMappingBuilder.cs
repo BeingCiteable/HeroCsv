@@ -182,8 +182,11 @@ public class PropertyMappingConfigurator<T, TProperty> where T : class, new()
     public CsvMapping<T> WithConverter<TConverter>() where TConverter : ICsvConverter, new()
     {
         var converter = new TConverter();
+#pragma warning disable IL3050 // Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.
+        // This is an expected use - converters are designed to be AOT-incompatible when using reflection
         _mapping.SetConverter(_propertyName, value => 
             converter.ConvertFromString(value, typeof(TProperty)));
+#pragma warning restore IL3050
         return _mapping;
     }
 

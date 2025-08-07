@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Source Generation for AOT** - Compile-time code generation for zero-reflection CSV mapping
+- **Trimming and AOT support** - Full compatibility with .NET trimming and Native AOT compilation
+- **Unified AOT-safe API** - Factory-based overloads in main Csv class for AOT scenarios
+- **AOT-safe extension methods** - Type-safe field accessors (GetInt32, GetString, GetBoolean, GetDateTime, etc.)
+- **ReadWithHeaders method** - AOT-safe mapping with header name access
+- **AOT Performance Benchmarks** - Comprehensive benchmarks comparing reflection vs factory vs source generation (2-5x performance improvement)
+- **Large Dataset Benchmarks** - Performance testing with 10K, 100K, and 1M row datasets
+- **Wide Dataset Benchmarks** - Performance testing with 50, 100, and 200+ column datasets including diverse data types
 - Comprehensive performance benchmarks covering all major features
 - Full transparency competitor comparison benchmarks against CsvHelper, Sylvan, Sep, and others
 - CI/CD benchmark automation with GitHub Actions

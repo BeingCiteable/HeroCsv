@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 namespace HeroCsv.Mapping.Converters;
@@ -11,6 +12,7 @@ public class DateTimeConverter : ICsvConverter
     private readonly string _defaultFormat = "yyyy-MM-dd HH:mm:ss";
 
     /// <inheritdoc />
+    [RequiresDynamicCode("Type conversion may create instances of types at runtime.")]
     public object? ConvertFromString(string value, Type targetType, string? format = null)
     {
         if (string.IsNullOrWhiteSpace(value))

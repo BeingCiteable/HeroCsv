@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 
@@ -10,18 +11,19 @@ namespace HeroCsv.Mapping.Converters;
 public class EnumConverter : ICsvConverter
 {
     /// <inheritdoc />
+    [RequiresDynamicCode("Enum parsing may create instances of types at runtime.")]
     public object? ConvertFromString(string value, Type targetType, string? format = null)
     {
         if (string.IsNullOrWhiteSpace(value))
             return null;
 
         var enumType = Nullable.GetUnderlyingType(targetType) ?? targetType;
-        
+
         if (!enumType.IsEnum)
             throw new ArgumentException($"Type {enumType} is not an enum type");
 
         value = value.Trim();
-        
+
         // Try to parse as enum name (case-insensitive)
         try
         {
@@ -31,18 +33,18 @@ public class EnumConverter : ICsvConverter
         {
             // Fall through to try numeric parsing
         }
-            
+
         // Try to parse as numeric value
         if (int.TryParse(value, out var numericValue))
         {
             if (Enum.IsDefined(enumType, numericValue))
                 return Enum.ToObject(enumType, numericValue);
         }
-        
+
         // Check if this is a flags enum or format is specified as "Flags"
-        bool isFlags = enumType.GetCustomAttributes(typeof(FlagsAttribute), false).Length > 0 
+        bool isFlags = enumType.GetCustomAttributes(typeof(FlagsAttribute), false).Length > 0
                       || format?.Equals("Flags", StringComparison.OrdinalIgnoreCase) == true;
-        
+
         if (isFlags && value.Contains('|'))
         {
             try
@@ -70,11 +72,11 @@ public class EnumConverter : ICsvConverter
                 // Fall through to error
             }
         }
-        
+
         var enumNames = Enum.GetNames(enumType);
         var validValues = string.Join(", ", enumNames.Select(n => $"'{n}'"));
         var numericValues = string.Join(", ", Enum.GetValues(enumType).Cast<object>().Select(v => Convert.ToInt32(v, CultureInfo.InvariantCulture)));
-        
+
         throw new FormatException(
             $"Unable to parse '{value}' as {enumType.Name}. " +
             $"Valid values are: {validValues} " +
@@ -93,7 +95,7 @@ public class EnumConverter : ICsvConverter
         {
             return Convert.ToInt32(value, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture);
         }
-        
+
         return value.ToString() ?? string.Empty;
     }
 }

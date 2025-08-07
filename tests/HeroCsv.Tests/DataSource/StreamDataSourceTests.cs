@@ -529,14 +529,9 @@ public class StreamDataSourceTests
 #endif
 
     // Helper class for testing non-seekable streams
-    private class NonSeekableMemoryStream : Stream
+    private class NonSeekableMemoryStream(string content) : Stream
     {
-        private readonly MemoryStream _inner;
-
-        public NonSeekableMemoryStream(string content)
-        {
-            _inner = new MemoryStream(Encoding.UTF8.GetBytes(content));
-        }
+        private readonly MemoryStream _inner = new MemoryStream(Encoding.UTF8.GetBytes(content));
 
         public override bool CanRead => _inner.CanRead;
         public override bool CanSeek => false; // Non-seekable

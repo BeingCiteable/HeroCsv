@@ -6,6 +6,12 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		
+		<!-- Trimming and AOT support -->
+		<IsTrimmable>true</IsTrimmable>
+		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+		<EnableAotAnalyzer Condition="'$(TargetFramework)' == 'net8.0' Or '$(TargetFramework)' == 'net9.0'">true</EnableAotAnalyzer>
+		<IsAotCompatible Condition="'$(TargetFramework)' == 'net8.0' Or '$(TargetFramework)' == 'net9.0'">true</IsAotCompatible>
 
 		<!-- Package properties -->
 		<PackageId>HeroCsv</PackageId>
@@ -13,12 +19,13 @@
 		<Authors>HeroCsv Contributors</Authors>
 		<Company>BeingCiteable</Company>
 		<Product>HeroCsv</Product>
-		<Description>Ultra-fast, low memory usage CSV reading library for .NET. Features
+		<Description>Ultra-fast, low memory usage CSV reading library for .NET with full AOT support. Features
 			zero-allocation parsing using ReadOnlySpan&lt;char&gt;, SIMD optimizations, async
-			operations, and multi-framework support (.NET 6-9). Simple API for basic use cases with
-			advanced configuration options for complex scenarios.</Description>
+			operations, and multi-framework support (.NET 6-9). Provides both reflection-based and 
+			AOT-safe factory-based APIs. Simple API for basic use cases with advanced configuration 
+			options for complex scenarios.</Description>
 		<PackageTags>
-			csv;parser;reader;performance;zero-allocation;simd;span;readonlyspan;high-performance;async;net6;net7;net8;net9</PackageTags>
+			csv;parser;reader;performance;zero-allocation;simd;span;readonlyspan;high-performance;async;net6;net7;net8;net9;trimming;aot;nativeaot</PackageTags>
 		<PackageProjectUrl>https://github.com/BeingCiteable/HeroCsv</PackageProjectUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -96,6 +103,13 @@
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
 		<None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<!-- Reference the source generator -->
+	<ItemGroup>
+		<ProjectReference Include="..\HeroCsv.SourceGenerators\HeroCsv.SourceGenerators.csproj" 
+		                  OutputItemType="Analyzer" 
+		                  ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 </Project>

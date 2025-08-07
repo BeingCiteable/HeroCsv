@@ -31,13 +31,45 @@ Tests multiple dataset sizes (100, 1000, 10000 rows) for:
 - Object mapping
 - Count-only operations
 
-### 4. Real Data Benchmarks (`realdata`)
+### 4. AOT Benchmarks (`aot`)
+Compares reflection-based vs AOT-safe mapping approaches:
+- **Reflection Mapping** - Traditional reflection-based object mapping (baseline)
+- **Factory Mapping** - AOT-safe factory functions (2-3x faster)
+- **Source Generation** - Compile-time code generation (3-5x faster)
+- **Mapping Overhead** - Micro-benchmarks for pure mapping performance
+
+Expected improvements:
+- 2-5x faster object mapping
+- 60-70% memory reduction
+- Full Native AOT compatibility
+
+### 5. Large Dataset Benchmarks (`large`)
+Performance testing with large datasets:
+- **10K rows** - Small-to-medium dataset performance
+- **100K rows** - Large dataset performance with competitor comparison
+- **1M rows** - Extreme performance testing for scalability
+- Memory efficiency analysis
+- Stream vs in-memory processing comparison
+
+### 6. Wide Dataset Benchmarks (`wide`)
+Performance testing with many columns and diverse data types:
+- **50 columns** - Moderate width dataset
+- **100 columns** - Wide dataset performance
+- **200 columns** - Extra-wide dataset handling
+- **Mixed data types** - Complex headers and diverse field types including:
+  - Integers, decimals, booleans, dates, GUIDs
+  - Emails, phone numbers, IP addresses
+  - Quoted values with embedded commas
+  - Empty fields and special characters
+- **Field access patterns** - Performance of accessing specific columns
+
+### 7. Real Data Benchmarks (`realdata`)
 Tests with actual CSV files of various sizes and complexities.
 
-### 5. Library Comparisons (`library`)
+### 8. Library Comparisons (`library`)
 Direct head-to-head comparisons with specific libraries.
 
-### 6. Performance Analysis (`perf`)
+### 9. Performance Analysis (`perf`)
 Deep performance profiling and analysis.
 
 ## Running Benchmarks
@@ -50,6 +82,9 @@ cd benchmarks/HeroCsv.Benchmarks
 dotnet run -c Release -- quick         # Fast CI/CD benchmarks
 dotnet run -c Release -- features      # All HeroCsv features
 dotnet run -c Release -- competitors   # Library comparisons
+dotnet run -c Release -- aot           # AOT mapping comparisons
+dotnet run -c Release -- large          # Large datasets (10k, 100k, 1M rows)
+dotnet run -c Release -- wide           # Wide datasets (50, 100, 200+ columns)
 dotnet run -c Release -- realdata      # Real CSV files
 
 # List all available benchmarks

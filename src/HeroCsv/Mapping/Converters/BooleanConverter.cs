@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HeroCsv.Mapping.Converters;
 
@@ -42,6 +43,7 @@ public class BooleanConverter : ICsvConverter
     }
 
     /// <inheritdoc />
+    [RequiresDynamicCode("Type conversion may create instances of types at runtime.")]
     public object? ConvertFromString(string value, Type targetType, string? format = null)
     {
         if (string.IsNullOrWhiteSpace(value))

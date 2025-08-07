@@ -10,26 +10,22 @@ namespace HeroCsv.Parsing;
 /// <summary>
 /// Strategy for parsing CSV lines with quoted fields and escape sequences
 /// </summary>
-public sealed class QuotedFieldParsingStrategy : IParsingStrategy
+public sealed class QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderPool = null) : IParsingStrategy
 {
-    private readonly StringBuilderPool _stringBuilderPool;
-    
-    public QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderPool = null)
-    {
-        _stringBuilderPool = stringBuilderPool ?? new StringBuilderPool();
-    }
-    
+    private readonly StringBuilderPool _stringBuilderPool = stringBuilderPool ?? new StringBuilderPool();
+
+
     public int Priority => 50; // Lower priority, more complex
-    
+
     public bool IsAvailable => true;
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool CanHandle(ReadOnlySpan<char> line, CsvOptions options)
     {
         // Handles any line with quotes or when trimming is needed
         return line.IndexOf(options.Quote) >= 0 || options.TrimWhitespace;
     }
-    
+
     public string[] Parse(ReadOnlySpan<char> line, CsvOptions options)
     {
         if (line.IsEmpty)
@@ -37,7 +33,7 @@ public sealed class QuotedFieldParsingStrategy : IParsingStrategy
 
         var fields = new List<string>();
         var fieldBuilder = _stringBuilderPool.Rent();
-        
+
         try
         {
             int i = 0;
@@ -90,7 +86,7 @@ public sealed class QuotedFieldParsingStrategy : IParsingStrategy
                         {
                             inQuotes = false;
                             i++;
-                            
+
                             // Skip to next delimiter or end of line
                             while (i < line.Length && line[i] != options.Delimiter)
                             {
@@ -101,7 +97,7 @@ public sealed class QuotedFieldParsingStrategy : IParsingStrategy
                                 }
                                 i++;
                             }
-                            
+
                             if (i < line.Length && line[i] == options.Delimiter)
                             {
                                 AddField(fields, fieldBuilder, options);
@@ -128,17 +124,17 @@ public sealed class QuotedFieldParsingStrategy : IParsingStrategy
             _stringBuilderPool.Return(fieldBuilder);
         }
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void AddField(List<string> fields, StringBuilder fieldBuilder, CsvOptions options)
     {
         string field = fieldBuilder.ToString();
-        
+
         if (options.TrimWhitespace)
         {
             field = field.Trim();
         }
-        
+
         fields.Add(options.StringPool?.GetString(field) ?? field);
         fieldBuilder.Clear();
     }

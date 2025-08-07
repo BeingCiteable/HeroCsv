@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HeroCsv.Mapping.Converters;
 
@@ -14,6 +15,7 @@ public interface ICsvConverter
     /// <param name="targetType">The target property type</param>
     /// <param name="format">Optional format string</param>
     /// <returns>Converted value</returns>
+    [RequiresDynamicCode("Type conversion may create instances of types at runtime.")]
     object? ConvertFromString(string value, Type targetType, string? format = null);
 
     /// <summary>

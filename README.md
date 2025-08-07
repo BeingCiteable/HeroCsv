@@ -4,6 +4,8 @@
 [![NuGet](https://img.shields.io/nuget/v/HeroCsv.svg)](https://www.nuget.org/packages/HeroCsv/)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/HeroCsv.svg)](https://www.nuget.org/packages/HeroCsv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Benchmarks](https://img.shields.io/badge/Benchmarks-Live-success)](https://beingciteable.github.io/HeroCsv/benchmarks/)
+[![AOT Ready](https://img.shields.io/badge/AOT-Ready-green)](https://beingciteable.github.io/HeroCsv/benchmarks/#aot)
 
 An **ultra-fast and low memory usage** CSV parsing library for .NET focused on **reading operations only**. Built with zero-allocation parsing using ReadOnlySpan<char> and progressive framework-specific optimizations.
 
@@ -16,6 +18,7 @@ An **ultra-fast and low memory usage** CSV parsing library for .NET focused on *
 - **Async operations** for file and stream processing (.NET 7+)
 - **Auto-detection** of CSV formats and delimiters (.NET 8+)
 - **Multi-framework support** (.NET Standard 2.0, .NET 6, .NET 7, .NET 8, .NET 9)
+- **Trimming and AOT support** - Compatible with .NET trimming and Native AOT compilation
 - **Rich extension methods** for type conversion and field access
 - **Stream processing** with encoding support and memory efficiency
 - **Reading-focused design** - no writing operations for maximum performance
@@ -399,14 +402,49 @@ HeroCsv is committed to **full transparency** in performance claims. We provide 
 
 #### Performance Comparison
 
+📊 **[View Live Benchmark Results](https://beingciteable.github.io/HeroCsv/benchmarks/)** - Updated automatically with every release
+
+Our benchmarks are fully transparent and reproducible. We compare against all major CSV libraries:
+
+- **Real-time results** - See actual benchmark runs, not marketing numbers
+- **Multiple scenarios** - Small files, large files, complex CSVs, object mapping
+- **Fair comparison** - All libraries tested with their recommended patterns
+- **AOT performance** - Reflection vs Factory vs Source Generation comparisons
+- **Open source** - All benchmark code available for review
+
+#### Latest Performance Highlights
+
+[![Benchmark Status](https://img.shields.io/badge/Benchmarks-Live-success)](https://beingciteable.github.io/HeroCsv/benchmarks/)
+[![Performance](https://img.shields.io/badge/dynamic/json?url=https://beingciteable.github.io/HeroCsv/api/latest.json&query=$.performance&label=Performance&color=blue)](https://beingciteable.github.io/HeroCsv/benchmarks/)
+[![100K Rows](https://img.shields.io/badge/100K%20Rows-Optimized-brightgreen)](https://beingciteable.github.io/HeroCsv/benchmarks/#large)
+[![200+ Columns](https://img.shields.io/badge/200%2B%20Columns-Supported-brightgreen)](https://beingciteable.github.io/HeroCsv/benchmarks/#wide)
+[![AOT Support](https://img.shields.io/badge/AOT-Full%20Support-green)](https://beingciteable.github.io/HeroCsv/benchmarks/#aot)
+
+**[📊 View Detailed Benchmark Results](https://beingciteable.github.io/HeroCsv/benchmarks/)** including:
+- Comparison with 9+ CSV libraries
+- AOT vs Reflection performance (2-5x improvement)
+- Memory usage analysis
+- **100K+ row performance** - Large dataset handling
+- **200+ column performance** - Wide dataset processing
+- Real-world scenarios with complex data types
+
 View our [live benchmark results](https://beingciteable.github.io/HeroCsv/benchmarks/) or run them yourself:
 
 ```bash
 # Run full competitor comparison
 dotnet run -c Release --project benchmarks/HeroCsv.Benchmarks -- competitors
 
+# Run AOT mapping performance comparison
+dotnet run -c Release --project benchmarks/HeroCsv.Benchmarks -- aot
+
+# Test with 100K+ rows
+dotnet run -c Release --project benchmarks/HeroCsv.Benchmarks -- large
+
+# Test with 200+ columns
+dotnet run -c Release --project benchmarks/HeroCsv.Benchmarks -- wide
+
 # Run comprehensive feature benchmarks
-dotnet run -c Release --project benchmarks/HeroCsv.Benchmarks -- comprehensive
+dotnet run -c Release --project benchmarks/HeroCsv.Benchmarks -- features
 ```
 
 Performance varies by .NET version due to progressive optimizations:
@@ -456,6 +494,134 @@ Framework-specific optimizations through partial classes:
 - **.NET 7.0** - Enhanced span operations and UTF-8 improvements
 - **.NET 8.0** - SearchValues, FrozenCollections, and maximum optimization
 - **.NET 9.0** - Next-generation SIMD with Vector512 and enhanced performance
+
+## Trimming and AOT Support
+
+HeroCsv is designed to work with .NET trimming and Native AOT compilation for reduced application size and faster startup times.
+
+### AOT-Safe Operations
+
+The following operations are fully compatible with trimming and AOT:
+
+```csharp
+// Basic string array parsing (no reflection)
+var records = Csv.ReadContent(csvData);
+
+// Counting records (no reflection)
+var count = Csv.CountRecords(csvData);
+
+// Field iteration (no reflection)
+foreach (var field in record)
+{
+    Console.WriteLine(field);
+}
+
+// Factory-based mapping (AOT-safe, no reflection)
+var employees = Csv.Read(csvData, record => new Employee
+{
+    Name = record.GetString(0),
+    Age = record.GetInt32(1),
+    Salary = record.GetDecimal(2)
+});
+
+// With headers for named field access (AOT-safe)
+var employees = Csv.ReadWithHeaders(csvData, (headers, record) => new Employee
+{
+    Name = record.GetFieldByName(headers, "Name"),
+    Age = record.GetInt32(headers.GetFieldIndex("Age")),
+    Salary = record.GetDecimal(headers.GetFieldIndex("Salary"))
+});
+```
+
+### Generic Mapping with AOT
+
+Generic mapping methods use reflection and require special handling for AOT:
+
+```csharp
+// These methods will generate AOT warnings
+[RequiresUnreferencedCode("Uses reflection")]
+[RequiresDynamicCode("Creates instances at runtime")]
+var records = Csv.Read<MyClass>(csvData);
+```
+
+For AOT scenarios, use the factory-based overloads instead:
+
+```csharp
+// AOT-safe alternative using factory functions
+var records = Csv.Read(csvData, record => new MyClass
+{
+    Id = record.GetInt32(0),
+    Name = record.GetString(1)
+});
+
+// With Try methods for safer parsing
+var records = Csv.Read(csvData, record => 
+{
+    var obj = new MyClass();
+    if (record.TryGetInt32(0, out var id))
+        obj.Id = id;
+    obj.Name = record.GetStringOrDefault(1, "Unknown");
+    return obj;
+});
+```
+
+### Source Generation for Full AOT Support (New!)
+
+HeroCsv now includes a source generator that creates AOT-safe CSV mapping code at compile time, completely eliminating reflection:
+
+```csharp
+using HeroCsv.Attributes;
+
+// Mark your class with [GenerateCsvMapping]
+[GenerateCsvMapping(HasHeaders = true)]
+public class Product
+{
+    public string Name { get; set; }
+    public int Quantity { get; set; }
+    public decimal Price { get; set; }
+    
+    [CsvIgnore]
+    public string InternalId { get; set; } // Won't be mapped
+}
+
+// The source generator creates extension methods for you
+var csvData = """
+Name,Quantity,Price
+Widget,100,49.99
+Gadget,50,29.99
+""";
+
+// Use the generated extension methods (100% AOT-safe, zero reflection!)
+var products = csvData.ReadCsvProduct().ToList();
+```
+
+The source generator supports:
+- Automatic property mapping with type-safe conversions
+- Custom column names via `[CsvColumnName("custom_name")]`
+- Column index mapping via `[CsvColumnIndex(0)]`
+- Ignoring properties via `[CsvIgnore]`
+- Custom delimiters and options
+- Nullable types
+- All common .NET types (string, int, decimal, bool, DateTime, Guid, etc.)
+
+### Publishing with AOT
+
+To publish your application with Native AOT:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+</Project>
+```
+
+```bash
+dotnet publish -c Release -r win-x64
+```
+
+With source generation, your entire CSV parsing pipeline is AOT-safe and will work perfectly with trimming and Native AOT compilation, resulting in smaller binaries and faster startup times.
 
 ## License
 

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -13,7 +14,9 @@ namespace HeroCsv.Mapping;
 /// High-performance CSV to object mapper with auto, manual, and mixed mapping support
 /// </summary>
 /// <typeparam name="T">Type to map CSV records to</typeparam>
-internal sealed partial class CsvMapper<T> where T : class, new()
+[RequiresUnreferencedCode("CsvMapper uses reflection to map CSV data to objects. The type T and its properties must be preserved.")]
+[RequiresDynamicCode("CsvMapper may create instances of types at runtime for object mapping.")]
+internal sealed partial class CsvMapper<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.PublicConstructors)] T> where T : class, new()
 {
     private readonly CsvMapping<T>? _mapping;
     private readonly CsvOptions _options;

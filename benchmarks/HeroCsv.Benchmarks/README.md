@@ -20,6 +20,20 @@ dotnet run -c Release -- list
 
 ## Benchmark Categories
 
+### AOT Benchmarks (`aot`)
+Compares reflection-based mapping with AOT-safe approaches (factory functions and source generation).
+
+**Key measurements:**
+- Reflection vs Factory mapping performance (2-5x improvement expected)
+- Memory allocation differences (60-70% reduction)
+- Source generation performance (optimal compile-time code)
+- Micro-benchmarks for mapping overhead
+
+**Run with:**
+```bash
+dotnet run -c Release -- aot
+```
+
 ### CI Benchmarks (`ci`)
 Fast-running benchmarks designed for continuous integration pipelines. These tests verify core parsing performance hasn't regressed while keeping execution time minimal.
 

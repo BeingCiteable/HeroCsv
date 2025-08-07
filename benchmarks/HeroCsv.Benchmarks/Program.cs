@@ -180,10 +180,43 @@ public class Program
             return 0;
         });
         
+        // AOT mapping benchmarks
+        var aotCommand = new Command("aot", "Compare reflection vs AOT-safe mapping approaches");
+        aotCommand.SetAction(parseResult =>
+        {
+            var output = parseResult.GetValue(outputOption);
+            var verbose = parseResult.GetValue(verboseOption);
+            RunAotBenchmarks(output, verbose);
+            return 0;
+        });
+        
+        // Large dataset benchmarks (100k, 1M rows)
+        var largeCommand = new Command("large", "Benchmark performance with large datasets (10k, 100k, 1M rows)");
+        largeCommand.SetAction(parseResult =>
+        {
+            var output = parseResult.GetValue(outputOption);
+            var verbose = parseResult.GetValue(verboseOption);
+            RunLargeDatasetBenchmarks(output, verbose);
+            return 0;
+        });
+        
+        // Wide dataset benchmarks (many columns)
+        var wideCommand = new Command("wide", "Benchmark performance with wide datasets (50, 100, 200+ columns)");
+        wideCommand.SetAction(parseResult =>
+        {
+            var output = parseResult.GetValue(outputOption);
+            var verbose = parseResult.GetValue(verboseOption);
+            RunWideDatasetBenchmarks(output, verbose);
+            return 0;
+        });
+        
         // Add all commands to root (simplified structure)
         rootCommand.Add(quickCommand);
         rootCommand.Add(featuresCommand);
         rootCommand.Add(competitorsCommand);
+        rootCommand.Add(aotCommand);
+        rootCommand.Add(largeCommand);
+        rootCommand.Add(wideCommand);
         rootCommand.Add(realDataCommand);
         rootCommand.Add(libraryCommand);
         rootCommand.Add(perfCommand);
@@ -259,6 +292,57 @@ public class Program
         
         BenchmarkRunner.Run<CompetitorBenchmarks>(CreateUnifiedConfig("CompetitorBenchmarks", output));
     }
+    
+    private static void RunAotBenchmarks(DirectoryInfo? output, bool verbose)
+    {
+        if (verbose) AnsiConsole.MarkupLine("[yellow]⚡ Running AOT Mapping Benchmarks (Reflection vs Factory vs SourceGen)[/]");
+        
+        BenchmarkRunner.Run<AotMappingBenchmarks>(CreateUnifiedConfig("AotMappingBenchmarks", output));
+        
+        if (verbose) 
+        {
+            AnsiConsole.MarkupLine("[cyan]🔬 Running Mapping Overhead Micro-benchmarks[/]");
+        }
+        
+        BenchmarkRunner.Run<MappingOverheadBenchmarks>(CreateUnifiedConfig("MappingOverheadBenchmarks", output));
+    }
+    
+    private static void RunLargeDatasetBenchmarks(DirectoryInfo? output, bool verbose)
+    {
+        if (verbose) 
+        {
+            AnsiConsole.MarkupLine("[yellow]📊 Running Large Dataset Benchmarks[/]");
+            AnsiConsole.MarkupLine("[cyan]Testing with 10k, 100k, and 1M rows[/]");
+        }
+        
+        BenchmarkRunner.Run<LargeDatasetBenchmark>(CreateUnifiedConfig("LargeDatasetBenchmark", output));
+        
+        if (verbose) 
+        {
+            AnsiConsole.MarkupLine("[cyan]🏆 Running Competitor Comparison for 100k rows[/]");
+        }
+        
+        BenchmarkRunner.Run<LargeDatasetCompetitorBenchmark>(CreateUnifiedConfig("LargeDatasetCompetitors", output));
+    }
+    
+    private static void RunWideDatasetBenchmarks(DirectoryInfo? output, bool verbose)
+    {
+        if (verbose) 
+        {
+            AnsiConsole.MarkupLine("[yellow]📊 Running Wide Dataset Benchmarks[/]");
+            AnsiConsole.MarkupLine("[cyan]Testing with 50, 100, and 200 columns[/]");
+            AnsiConsole.MarkupLine("[cyan]Including mixed data types and complex field patterns[/]");
+        }
+        
+        BenchmarkRunner.Run<WideDatasetBenchmark>(CreateUnifiedConfig("WideDatasetBenchmark", output));
+        
+        if (verbose) 
+        {
+            AnsiConsole.MarkupLine("[cyan]🎯 Running Field Access Performance Benchmarks[/]");
+        }
+        
+        BenchmarkRunner.Run<FieldAccessBenchmark>(CreateUnifiedConfig("FieldAccessBenchmark", output));
+    }
 
     private static void ListAvailableResources(bool verbose)
     {
@@ -284,6 +368,7 @@ public class Program
         typesTable.AddRow("[green]quick[/]", "Quick benchmarks for CI/CD and rapid testing");
         typesTable.AddRow("[green]features[/]", "Benchmark all HeroCsv features (core, mapping, I/O, advanced)");
         typesTable.AddRow("[green]competitors[/]", "Transparent comparison with CsvHelper, Sylvan, Sep");
+        typesTable.AddRow("[green]aot[/]", "Reflection vs AOT-safe mapping (factory, source-gen)");
         typesTable.AddRow("[green]realdata[/]", "Real CSV files performance testing");
         typesTable.AddRow("[green]library[/]", "Library-specific comparisons");
         typesTable.AddRow("[green]perf[/]", "Internal performance analysis");
