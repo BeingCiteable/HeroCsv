@@ -38,10 +38,12 @@ public class FeatureBenchmarks
             AddColumn(StatisticColumn.Median);
             AddColumn(RankColumn.Arabic);
             
-            AddExporter(JsonExporter.Default);
+            // Export formats - ensure we have JSON for CI/CD
+            AddExporter(JsonExporter.Brief);
+            AddExporter(JsonExporter.Full);
             AddExporter(CsvExporter.Default);
             AddExporter(HtmlExporter.Default);
-            AddExporter(MarkdownExporter.Default);
+            AddExporter(MarkdownExporter.GitHub);
         }
     }
     

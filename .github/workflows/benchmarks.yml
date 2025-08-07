@@ -47,6 +47,7 @@ jobs:
       run: dotnet build benchmarks/HeroCsv.Benchmarks/HeroCsv.Benchmarks.csproj -c Release --no-restore
     
     - name: Run benchmarks
+      id: run-benchmarks
       run: |
         cd benchmarks/HeroCsv.Benchmarks
         # Determine which benchmark to run
@@ -59,27 +60,63 @@ jobs:
         echo "Running $BENCHMARK_TYPE benchmarks..."
         dotnet run -c Release --no-build -- $BENCHMARK_TYPE
         
-        # Find and copy JSON results to standard location for github-action-benchmark
+        # Wait a moment for files to be written
+        sleep 2
+        
+        # Find and process benchmark results
         echo "Looking for benchmark results..."
-        if [ -d "BenchmarkResults/BenchmarkDotNet/${BENCHMARK_TYPE}/results" ]; then
-          echo "Found results directory"
-          cp BenchmarkResults/BenchmarkDotNet/${BENCHMARK_TYPE}/results/*-report-brief.json benchmark-results.json || true
-          if [ -f benchmark-results.json ]; then
-            echo "Benchmark results saved to benchmark-results.json"
-          fi
+        
+        # Find the most recent JSON report
+        JSON_FILE=$(find . -name "*-report-brief.json" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+        
+        if [ -z "$JSON_FILE" ]; then
+          # Try alternative search
+          JSON_FILE=$(find . -name "*Benchmarks-report*.json" -type f | head -1)
+        fi
+        
+        if [ -n "$JSON_FILE" ] && [ -f "$JSON_FILE" ]; then
+          echo "Found JSON file: $JSON_FILE"
+          cp "$JSON_FILE" benchmark-results.json
+          echo "File size: $(stat -c%s benchmark-results.json 2>/dev/null || stat -f%z benchmark-results.json 2>/dev/null || echo 'unknown') bytes"
+          echo "json_found=true" >> $GITHUB_OUTPUT
+        else
+          echo "WARNING: No JSON benchmark results found"
+          echo "Creating placeholder results file"
+          # Create a minimal valid BenchmarkDotNet JSON structure
+          cat > benchmark-results.json << 'EOF'
+{
+  "Title": "Placeholder",
+  "HostEnvironmentInfo": {},
+  "Benchmarks": []
+}
+EOF
+          echo "json_found=false" >> $GITHUB_OUTPUT
+        fi
+        
+        # Always ensure the file exists
+        if [ ! -f benchmark-results.json ]; then
+          echo '{}' > benchmark-results.json
         fi
     
-    - name: Find benchmark results
+    - name: Verify benchmark results
       if: always()
       run: |
         echo "Looking for benchmark results..."
-        find . -name "*.json" -o -name "*.csv" -o -name "*.html" -o -name "*.md" | grep -i benchmark || true
+        echo "Current directory: $(pwd)"
         
-        # Check if benchmark-results.json was created
         if [ -f benchmarks/HeroCsv.Benchmarks/benchmark-results.json ]; then
-          echo "Found benchmark-results.json for comparison"
+          echo "✅ Found benchmark-results.json for comparison"
           ls -la benchmarks/HeroCsv.Benchmarks/benchmark-results.json
+          echo "First 500 chars of JSON:"
+          head -c 500 benchmarks/HeroCsv.Benchmarks/benchmark-results.json
+        else
+          echo "❌ benchmark-results.json not found"
+          echo "Files in benchmarks/HeroCsv.Benchmarks:"
+          ls -la benchmarks/HeroCsv.Benchmarks/ | head -20
         fi
+        
+        echo "All JSON files found:"
+        find . -name "*.json" | grep -i benchmark | head -20 || true
         
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4
@@ -92,9 +129,10 @@ jobs:
           benchmarks/HeroCsv.Benchmarks/bin/Release/**/*.html
         retention-days: 90
     
-    # Store benchmark results for comparison
+    # Store benchmark results for comparison (only if JSON was found)
     - name: Store benchmark result
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.run-benchmarks.outputs.json_found == 'true'
+      continue-on-error: true
       uses: benchmark-action/github-action-benchmark@v1
       with:
         tool: 'benchmarkdotnet'
@@ -107,10 +145,13 @@ jobs:
         alert-threshold: '110%' # Alert if performance degrades by more than 10%
         fail-on-alert: false # Don't fail the build on performance regression
         summary-always: true
+        skip-fetch-gh-pages: false
+        max-items-in-chart: 30
     
-    # Compare PR benchmarks against master
+    # Compare PR benchmarks against master (only if JSON was found)
     - name: Compare benchmark results
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && steps.run-benchmarks.outputs.json_found == 'true'
+      continue-on-error: true
       uses: benchmark-action/github-action-benchmark@v1
       with:
         tool: 'benchmarkdotnet'
@@ -123,3 +164,5 @@ jobs:
         fail-on-alert: false # Don't fail PRs, just warn
         summary-always: true
         comment-always: true # Always comment on PRs with benchmark results
+        skip-fetch-gh-pages: false
+        external-data-json-path: ./benchmark-data.json

@@ -34,8 +34,11 @@ public class QuickBenchmarks
             AddColumn(StatisticColumn.StdDev);
             AddColumn(RankColumn.Arabic);
             
-            AddExporter(JsonExporter.Default);
-            AddExporter(MarkdownExporter.Default);
+            // Export formats - ensure we have JSON for CI/CD
+            AddExporter(JsonExporter.Brief);
+            AddExporter(JsonExporter.Full);
+            AddExporter(MarkdownExporter.GitHub);
+            AddExporter(HtmlExporter.Default);
         }
     }
     
