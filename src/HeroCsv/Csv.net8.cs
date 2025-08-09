@@ -56,6 +56,7 @@ public static partial class Csv
         var commaCount = 0;
         var semicolonCount = 0;
         var tabCount = 0;
+        var pipeCount = 0;
         var hasQuotes = false;
 
         var position = 0;
@@ -70,7 +71,7 @@ public static partial class Csv
                 case ',': commaCount++; break;
                 case ';': semicolonCount++; break;
                 case '\t': tabCount++; break;
-                case '|': break; // Could add pipe support
+                case '|': pipeCount++; break;
             }
             position = actualPos + 1;
         }
@@ -78,11 +79,24 @@ public static partial class Csv
         // Check for quotes
         hasQuotes = sample.IndexOfAny(QuoteChars) != -1;
 
+        // Determine the most likely delimiter
         var delimiter = ',';
-        if (semicolonCount > commaCount && semicolonCount > tabCount)
+        var maxCount = commaCount;
+        
+        if (semicolonCount > maxCount)
+        {
             delimiter = ';';
-        else if (tabCount > commaCount && tabCount > semicolonCount)
+            maxCount = semicolonCount;
+        }
+        if (tabCount > maxCount)
+        {
             delimiter = '\t';
+            maxCount = tabCount;
+        }
+        if (pipeCount > maxCount)
+        {
+            delimiter = '|';
+        }
 
         return new CsvOptions(delimiter, hasQuotes ? '"' : '"', true);
     }

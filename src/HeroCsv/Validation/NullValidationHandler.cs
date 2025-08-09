@@ -23,7 +23,7 @@ internal class NullValidationHandler : IValidationHandler
 
     public IReadOnlyList<CsvValidationError> GetErrors()
     {
-        return Array.Empty<CsvValidationError>();
+        return [];
     }
 
     public void Reset()
