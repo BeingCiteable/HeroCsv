@@ -36,7 +36,7 @@ public sealed class ParsingStrategySelector
 #endif
 
         // Add standard strategies
-        _strategies.Add(new SimpleCommaParsingStrategy());
+        _strategies.Add(new SimpleDelimiterParsingStrategy());
 
         // Fallback strategy for complex cases
         _fallbackStrategy = new QuotedFieldParsingStrategy(stringBuilderPool);

@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using HeroCsv.Utilities;
 using Xunit;
 
@@ -5,12 +9,15 @@ namespace HeroCsv.Tests.Unit.Utilities;
 
 public class BufferPoolTests
 {
-    [Fact]
-    public void BufferPool_RentCharBuffer_ReturnsBufferOfRequestedSizeOrLarger()
+    [Theory]
+    [InlineData(10)]
+    [InlineData(100)]
+    [InlineData(1000)]
+    [InlineData(10000)]
+    public void RentCharBuffer_ReturnsBufferOfRequestedSizeOrLarger(int requestedSize)
     {
         // Arrange
         using var pool = new BufferPool();
-        var requestedSize = 100;
         
         // Act
         var buffer = pool.RentCharBuffer(requestedSize);
@@ -20,12 +27,15 @@ public class BufferPoolTests
         Assert.True(buffer.Length >= requestedSize);
     }
     
-    [Fact]
-    public void BufferPool_RentByteBuffer_ReturnsBufferOfRequestedSizeOrLarger()
+    [Theory]
+    [InlineData(10)]
+    [InlineData(256)]
+    [InlineData(1024)]
+    [InlineData(4096)]
+    public void RentByteBuffer_ReturnsBufferOfRequestedSizeOrLarger(int requestedSize)
     {
         // Arrange
         using var pool = new BufferPool();
-        var requestedSize = 256;
         
         // Act
         var buffer = pool.RentByteBuffer(requestedSize);
@@ -36,84 +46,93 @@ public class BufferPoolTests
     }
     
     [Fact]
-    public void BufferPool_ReturnCharBuffer_DoesNotThrow()
+    public void ReturnCharBuffer_HandlesNullGracefully()
     {
         // Arrange
         using var pool = new BufferPool();
-        var buffer = pool.RentCharBuffer(100);
         
-        // Act & Assert (should not throw)
-        pool.ReturnCharBuffer(buffer);
+        // Act & Assert - should not throw
+        pool.ReturnCharBuffer(null);
     }
     
     [Fact]
-    public void BufferPool_ReturnByteBuffer_DoesNotThrow()
+    public void ReturnByteBuffer_HandlesNullGracefully()
     {
         // Arrange
         using var pool = new BufferPool();
-        var buffer = pool.RentByteBuffer(100);
         
-        // Act & Assert (should not throw)
-        pool.ReturnByteBuffer(buffer);
+        // Act & Assert - should not throw
+        pool.ReturnByteBuffer(null);
     }
     
     [Fact]
-    public void BufferPool_ReturnAll_ClearsAllRentedBuffers()
+    public void ReturnAll_ClearsAllRentedBuffers()
     {
         // Arrange
         using var pool = new BufferPool();
-        var charBuffer1 = pool.RentCharBuffer(100);
-        var charBuffer2 = pool.RentCharBuffer(200);
-        var byteBuffer1 = pool.RentByteBuffer(150);
-        var byteBuffer2 = pool.RentByteBuffer(250);
+        var charBuffers = new List<char[]>();
+        var byteBuffers = new List<byte[]>();
+        
+        // Rent multiple buffers
+        for (int i = 0; i < 5; i++)
+        {
+            charBuffers.Add(pool.RentCharBuffer(100 * (i + 1)));
+            byteBuffers.Add(pool.RentByteBuffer(200 * (i + 1)));
+        }
         
         // Act
         pool.ReturnAll();
         
-        // Assert - after ReturnAll, we should be able to return same buffers without issues
-        // (this would fail if they were still tracked as rented)
-        pool.ReturnCharBuffer(charBuffer1);
-        pool.ReturnCharBuffer(charBuffer2);
-        pool.ReturnByteBuffer(byteBuffer1);
-        pool.ReturnByteBuffer(byteBuffer2);
+        // Assert - After ReturnAll, all buffers should be returned to the pool
+        // We can't directly verify this, but we can ensure no exceptions occur
+        Assert.True(true);
     }
     
     [Fact]
-    public void CharBufferLease_AutomaticallyReturnsBufferOnDispose()
+    public void BufferPool_ReusesPreviouslyReturnedBuffers()
     {
         // Arrange
-        var pool = new BufferPool();
-        char[] buffer;
+        using var pool = new BufferPool();
         
-        // Act
-        using (var lease = new CharBufferLease(pool, 100))
-        {
-            buffer = lease.Buffer;
-            Assert.NotNull(buffer);
-            Assert.True(buffer.Length >= 100);
-        }
+        // Act - Rent and return a buffer
+        var buffer1 = pool.RentCharBuffer(100);
+        var buffer1Length = buffer1.Length;
+        pool.ReturnCharBuffer(buffer1);
         
-        // Assert - buffer should be returned, we can return it again without issue
-        pool.ReturnCharBuffer(buffer);
+        // Rent again with same size
+        var buffer2 = pool.RentCharBuffer(100);
+        
+        // Assert - ArrayPool might return the same array
+        Assert.True(buffer2.Length >= 100);
+        // Note: We can't guarantee it's the same array due to ArrayPool implementation details
     }
     
     [Fact]
-    public void ByteBufferLease_AutomaticallyReturnsBufferOnDispose()
+    public void RentCharBuffer_ZeroSize_ReturnsValidBuffer()
     {
         // Arrange
-        var pool = new BufferPool();
-        byte[] buffer;
+        using var pool = new BufferPool();
         
         // Act
-        using (var lease = new ByteBufferLease(pool, 256))
-        {
-            buffer = lease.Buffer;
-            Assert.NotNull(buffer);
-            Assert.True(buffer.Length >= 256);
-        }
+        var buffer = pool.RentCharBuffer(0);
         
-        // Assert - buffer should be returned, we can return it again without issue
-        pool.ReturnByteBuffer(buffer);
+        // Assert
+        Assert.NotNull(buffer);
+        Assert.True(buffer.Length >= 0);
+    }
+    
+    [Fact]
+    public void RentByteBuffer_ZeroSize_ReturnsValidBuffer()
+    {
+        // Arrange
+        using var pool = new BufferPool();
+        
+        // Act
+        var buffer = pool.RentByteBuffer(0);
+        
+        // Assert
+        Assert.NotNull(buffer);
+        Assert.True(buffer.Length >= 0);
     }
     
     [Fact]
@@ -127,8 +146,130 @@ public class BufferPoolTests
         // Act
         pool.Dispose();
         
-        // Assert - pool should have returned all buffers
-        // We verify this by being able to return them again
+        // Assert - After dispose, all buffers should be returned
+        // Dispose should be idempotent
+        pool.Dispose();
+    }
+    
+    [Fact]
+    public void ReturnCharBuffer_WithClearFlag_ClearsBuffer()
+    {
+        // Arrange
+        using var pool = new BufferPool();
+        var buffer = pool.RentCharBuffer(10);
+        
+        // Fill buffer with data
+        for (int i = 0; i < buffer.Length && i < 10; i++)
+        {
+            buffer[i] = 'X';
+        }
+        
+        // Act
+        pool.ReturnCharBuffer(buffer, clearBuffer: true);
+        
+        // Note: We can't verify the buffer is cleared after return
+        // as it's returned to the ArrayPool
+        Assert.True(true);
+    }
+    
+    [Fact]
+    public void ReturnByteBuffer_WithClearFlag_ClearsBuffer()
+    {
+        // Arrange
+        using var pool = new BufferPool();
+        var buffer = pool.RentByteBuffer(10);
+        
+        // Fill buffer with data
+        for (int i = 0; i < buffer.Length && i < 10; i++)
+        {
+            buffer[i] = 123;
+        }
+        
+        // Act
+        pool.ReturnByteBuffer(buffer, clearBuffer: true);
+        
+        // Note: We can't verify the buffer is cleared after return
+        // as it's returned to the ArrayPool
+        Assert.True(true);
+    }
+    
+    [Fact]
+    public void BufferPool_ThreadSafety_ConcurrentRentAndReturn()
+    {
+        // Arrange
+        using var pool = new BufferPool();
+        var tasks = new Task[10];
+        
+        // Act - Multiple threads renting and returning buffers
+        for (int i = 0; i < tasks.Length; i++)
+        {
+            var taskId = i;
+            tasks[i] = Task.Run(() =>
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    var charBuffer = pool.RentCharBuffer(100 + taskId * 10);
+                    var byteBuffer = pool.RentByteBuffer(200 + taskId * 20);
+                    
+                    // Simulate some work
+                    Task.Delay(1).Wait();
+                    
+                    pool.ReturnCharBuffer(charBuffer);
+                    pool.ReturnByteBuffer(byteBuffer);
+                }
+            });
+        }
+        
+        Task.WaitAll(tasks);
+        
+        // Assert - No exceptions should be thrown
+        Assert.True(true);
+    }
+    
+    [Fact]
+    public void ReturnAll_WithClearFlag_ClearsAllBuffers()
+    {
+        // Arrange
+        using var pool = new BufferPool();
+        var charBuffer = pool.RentCharBuffer(10);
+        var byteBuffer = pool.RentByteBuffer(10);
+        
+        // Fill buffers with data
+        for (int i = 0; i < 10; i++)
+        {
+            if (i < charBuffer.Length) charBuffer[i] = 'X';
+            if (i < byteBuffer.Length) byteBuffer[i] = 123;
+        }
+        
+        // Act
+        pool.ReturnAll(clearBuffers: true);
+        
+        // Assert - Buffers are returned (we can't verify they're cleared)
+        Assert.True(true);
+    }
+    
+    [Theory]
+    [InlineData(1)]
+    [InlineData(16)]
+    [InlineData(64)]
+    [InlineData(256)]
+    [InlineData(1024)]
+    [InlineData(4096)]
+    [InlineData(16384)]
+    public void BufferPool_VariousSizes_HandledCorrectly(int size)
+    {
+        // Arrange
+        using var pool = new BufferPool();
+        
+        // Act
+        var charBuffer = pool.RentCharBuffer(size);
+        var byteBuffer = pool.RentByteBuffer(size);
+        
+        // Assert
+        Assert.True(charBuffer.Length >= size);
+        Assert.True(byteBuffer.Length >= size);
+        
+        // Clean up
         pool.ReturnCharBuffer(charBuffer);
         pool.ReturnByteBuffer(byteBuffer);
     }

@@ -6,9 +6,9 @@ using HeroCsv.Models;
 namespace HeroCsv.Parsing;
 
 /// <summary>
-/// High-performance strategy for simple comma-separated values without quotes
+/// High-performance strategy for simple delimiter-separated values without quotes
 /// </summary>
-public sealed class SimpleCommaParsingStrategy : IParsingStrategy
+public sealed class SimpleDelimiterParsingStrategy : IParsingStrategy
 {
     public int Priority => 100; // High priority for common case
 
@@ -17,38 +17,36 @@ public sealed class SimpleCommaParsingStrategy : IParsingStrategy
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool CanHandle(ReadOnlySpan<char> line, CsvOptions options)
     {
-        // Fast path: comma delimiter, no quotes, no trimming
-        return options.Delimiter == ',' &&
-               !options.TrimWhitespace &&
-               line.IndexOf('"') < 0;
+        // Fast path: any delimiter, no quotes, no trimming
+        return !options.TrimWhitespace && line.IndexOf('"') < 0;
     }
 
     public string[] Parse(ReadOnlySpan<char> line, CsvOptions options)
     {
-        return ParseSimpleCommaLine(line, options.StringPool);
+        return ParseSimpleDelimiterLine(line, options.Delimiter, options.StringPool);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string[] ParseSimpleCommaLine(ReadOnlySpan<char> line, Utilities.StringPool? stringPool)
+    private static string[] ParseSimpleDelimiterLine(ReadOnlySpan<char> line, char delimiter, Utilities.StringPool? stringPool)
     {
         if (line.IsEmpty)
             return [];
 
-        // Count commas to determine array size
-        int commaCount = 0;
+        // Count delimiters to determine array size
+        int delimiterCount = 0;
         for (int i = 0; i < line.Length; i++)
         {
-            if (line[i] == ',')
-                commaCount++;
+            if (line[i] == delimiter)
+                delimiterCount++;
         }
 
-        var fields = new string[commaCount + 1];
+        var fields = new string[delimiterCount + 1];
         int fieldIndex = 0;
         int startIndex = 0;
 
         for (int i = 0; i < line.Length; i++)
         {
-            if (line[i] == ',')
+            if (line[i] == delimiter)
             {
                 var fieldSpan = line.Slice(startIndex, i - startIndex);
                 fields[fieldIndex++] = stringPool?.GetString(fieldSpan) ?? fieldSpan.ToString();

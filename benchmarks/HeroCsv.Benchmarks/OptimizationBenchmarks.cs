@@ -24,8 +24,8 @@ public class OptimizationBenchmarks
     private string _csvWithMixedValues = null!;
     private string _longCsvLine = null!;
     private string _csvWithQuotes = null!;
-    private CsvOptions _optionsWithPool = null!;
-    private CsvOptions _optionsWithoutPool = null!;
+    private CsvOptions _optionsWithPool;
+    private CsvOptions _optionsWithoutPool;
     private StringPool _stringPool = null!;
 
     [GlobalSetup]

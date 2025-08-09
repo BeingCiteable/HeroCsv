@@ -233,7 +233,7 @@ namespace HeroCsv.Tests.Unit.Performance
         {
             // Arrange
             var simdStrategy = new SIMDOptimizedParsingStrategy();
-            var simpleStrategy = new SimpleCommaParsingStrategy();
+            var simpleStrategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: false);
             
             // Create a line with many small fields (SIMD should excel here)
@@ -284,7 +284,7 @@ namespace HeroCsv.Tests.Unit.Performance
         {
             // Arrange
             var simdStrategy = new SIMDOptimizedParsingStrategy();
-            var simpleStrategy = new SimpleCommaParsingStrategy();
+            var simpleStrategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: false);
 
             var testCases = new[]

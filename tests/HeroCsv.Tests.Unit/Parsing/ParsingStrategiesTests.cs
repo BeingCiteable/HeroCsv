@@ -10,10 +10,10 @@ namespace HeroCsv.Tests.Unit.Parsing
     public class ParsingStrategiesTests
     {
         [Fact]
-        public void SimpleCommaParsingStrategy_CanHandle_SimpleCommaLine()
+        public void SimpleDelimiterParsingStrategy_CanHandle_SimpleCommaLine()
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
+            var strategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: false);
             var line = "field1,field2,field3".AsSpan();
 
@@ -25,10 +25,10 @@ namespace HeroCsv.Tests.Unit.Parsing
         }
 
         [Fact]
-        public void SimpleCommaParsingStrategy_CannotHandle_LineWithQuotes()
+        public void SimpleDelimiterParsingStrategy_CannotHandle_LineWithQuotes()
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
+            var strategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: false);
             var line = "field1,\"field2\",field3".AsSpan();
 
@@ -40,10 +40,10 @@ namespace HeroCsv.Tests.Unit.Parsing
         }
 
         [Fact]
-        public void SimpleCommaParsingStrategy_CannotHandle_TrimWhitespace()
+        public void SimpleDelimiterParsingStrategy_CannotHandle_TrimWhitespace()
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
+            var strategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: true);
             var line = "field1, field2, field3".AsSpan();
 
@@ -54,26 +54,49 @@ namespace HeroCsv.Tests.Unit.Parsing
             Assert.False(canHandle);
         }
 
-        [Fact]
-        public void SimpleCommaParsingStrategy_CannotHandle_NonCommaDelimiter()
+        [Theory]
+        [InlineData(',', "field1,field2,field3")]
+        [InlineData(';', "field1;field2;field3")]
+        [InlineData('\t', "field1\tfield2\tfield3")]
+        [InlineData('|', "field1|field2|field3")]
+        public void SimpleDelimiterParsingStrategy_CanHandle_AnyDelimiter(char delimiter, string lineContent)
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
-            var options = new CsvOptions(delimiter: ';', trimWhitespace: false);
-            var line = "field1;field2;field3".AsSpan();
+            var strategy = new SimpleDelimiterParsingStrategy();
+            var options = new CsvOptions(delimiter: delimiter, trimWhitespace: false);
+            var line = lineContent.AsSpan();
 
             // Act
             bool canHandle = strategy.CanHandle(line, options);
 
+            // Assert - Now it handles any delimiter
+            Assert.True(canHandle);
+        }
+
+        [Theory]
+        [InlineData(',', "a,b,c", new[] { "a", "b", "c" })]
+        [InlineData(';', "a;b;c", new[] { "a", "b", "c" })]
+        [InlineData('\t', "a\tb\tc", new[] { "a", "b", "c" })]
+        [InlineData('|', "a|b|c", new[] { "a", "b", "c" })]
+        public void SimpleDelimiterParsingStrategy_Parse_DifferentDelimiters(char delimiter, string lineContent, string[] expected)
+        {
+            // Arrange
+            var strategy = new SimpleDelimiterParsingStrategy();
+            var options = new CsvOptions(delimiter: delimiter, trimWhitespace: false);
+            var line = lineContent.AsSpan();
+
+            // Act
+            var fields = strategy.Parse(line, options);
+
             // Assert
-            Assert.False(canHandle);
+            Assert.Equal(expected, fields);
         }
 
         [Fact]
-        public void SimpleCommaParsingStrategy_Parse_SimpleFields()
+        public void SimpleDelimiterParsingStrategy_Parse_SimpleFields()
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
+            var strategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: false);
             var line = "John,25,New York".AsSpan();
 
@@ -88,10 +111,10 @@ namespace HeroCsv.Tests.Unit.Parsing
         }
 
         [Fact]
-        public void SimpleCommaParsingStrategy_Parse_EmptyFields()
+        public void SimpleDelimiterParsingStrategy_Parse_EmptyFields()
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
+            var strategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: false);
             var line = "John,,New York".AsSpan();
 
@@ -106,10 +129,10 @@ namespace HeroCsv.Tests.Unit.Parsing
         }
 
         [Fact]
-        public void SimpleCommaParsingStrategy_Parse_TrailingComma()
+        public void SimpleDelimiterParsingStrategy_Parse_TrailingComma()
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
+            var strategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: false);
             var line = "John,25,".AsSpan();
 
@@ -124,10 +147,10 @@ namespace HeroCsv.Tests.Unit.Parsing
         }
 
         [Fact]
-        public void SimpleCommaParsingStrategy_Parse_SingleField()
+        public void SimpleDelimiterParsingStrategy_Parse_SingleField()
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
+            var strategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: false);
             var line = "OnlyField".AsSpan();
 
@@ -140,10 +163,10 @@ namespace HeroCsv.Tests.Unit.Parsing
         }
 
         [Fact]
-        public void SimpleCommaParsingStrategy_Parse_EmptyLine()
+        public void SimpleDelimiterParsingStrategy_Parse_EmptyLine()
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
+            var strategy = new SimpleDelimiterParsingStrategy();
             var options = new CsvOptions(delimiter: ',', trimWhitespace: false);
             var line = "".AsSpan();
 
@@ -402,10 +425,10 @@ namespace HeroCsv.Tests.Unit.Parsing
         }
 
         [Fact]
-        public void SimpleCommaParsingStrategy_Properties()
+        public void SimpleDelimiterParsingStrategy_Properties()
         {
             // Arrange
-            var strategy = new SimpleCommaParsingStrategy();
+            var strategy = new SimpleDelimiterParsingStrategy();
 
             // Assert
             Assert.Equal(100, strategy.Priority);
