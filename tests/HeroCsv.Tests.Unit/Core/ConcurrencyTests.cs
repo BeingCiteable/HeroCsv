@@ -213,7 +213,7 @@ public class ConcurrencyTests
                     for (int i = 0; i < iterations; i++)
                     {
                         var records = Csv.ReadAllRecords(LargeCsvData);
-                        allResults.Add(records.ToArray());
+                        allResults.Add([.. records]);
                     }
                 }
                 catch (Exception ex)

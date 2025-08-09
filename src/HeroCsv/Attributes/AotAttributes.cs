@@ -3,24 +3,16 @@
 namespace System.Diagnostics.CodeAnalysis
 {
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Class, Inherited = false)]
-    internal sealed class RequiresUnreferencedCodeAttribute : Attribute
+    internal sealed class RequiresUnreferencedCodeAttribute(string message) : Attribute
     {
-        public RequiresUnreferencedCodeAttribute(string message) 
-        { 
-            Message = message;
-        }
-        public string Message { get; set; } = "";
+        public string Message { get; set; } = message;
         public string? Url { get; set; }
     }
 
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Class, Inherited = false)]
-    internal sealed class RequiresDynamicCodeAttribute : Attribute
+    internal sealed class RequiresDynamicCodeAttribute(string message) : Attribute
     {
-        public RequiresDynamicCodeAttribute(string message) 
-        { 
-            Message = message;
-        }
-        public string Message { get; set; } = "";
+        public string Message { get; set; } = message;
         public string? Url { get; set; }
     }
 }
@@ -31,13 +23,9 @@ namespace System.Diagnostics.CodeAnalysis
 namespace System.Diagnostics.CodeAnalysis
 {
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Class, Inherited = false)]
-    internal sealed class RequiresDynamicCodeAttribute : Attribute
+    internal sealed class RequiresDynamicCodeAttribute(string message) : Attribute
     {
-        public RequiresDynamicCodeAttribute(string message) 
-        { 
-            Message = message;
-        }
-        public string Message { get; set; } = "";
+        public string Message { get; set; } = message;
         public string? Url { get; set; }
     }
 }
@@ -47,13 +35,9 @@ namespace System.Diagnostics.CodeAnalysis
 namespace System.Diagnostics.CodeAnalysis
 {
     [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.ReturnValue | AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Struct | AttributeTargets.Method | AttributeTargets.GenericParameter, Inherited = false)]
-    internal sealed class DynamicallyAccessedMembersAttribute : Attribute
+    internal sealed class DynamicallyAccessedMembersAttribute(DynamicallyAccessedMemberTypes memberTypes) : Attribute
     {
-        public DynamicallyAccessedMembersAttribute(DynamicallyAccessedMemberTypes memberTypes) 
-        { 
-            MemberTypes = memberTypes;
-        }
-        public DynamicallyAccessedMemberTypes MemberTypes { get; set; }
+        public DynamicallyAccessedMemberTypes MemberTypes { get; set; } = memberTypes;
     }
 
     [Flags]

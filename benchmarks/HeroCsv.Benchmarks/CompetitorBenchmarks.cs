@@ -26,19 +26,19 @@ public class CompetitorBenchmarks
     private string _csvData100Rows = null!;
     private string _csvData1000Rows = null!;
     private string _csvData10000Rows = null!;
-    
+
     public class CompetitorConfig : ManualConfig
     {
         public CompetitorConfig()
         {
             AddJob(Job.Default
                 .WithId("Competition"));
-                
+
             AddColumn(StatisticColumn.Mean);
             AddColumn(StatisticColumn.StdDev);
             AddColumn(StatisticColumn.Median);
             AddColumn(RankColumn.Arabic);
-            
+
             // Export formats - ensure we have JSON for CI/CD
             AddExporter(JsonExporter.Brief);
             AddExporter(JsonExporter.Full);
@@ -47,7 +47,7 @@ public class CompetitorBenchmarks
             AddExporter(MarkdownExporter.GitHub);
         }
     }
-    
+
     public class TestRecord
     {
         public int Id { get; set; }
@@ -56,12 +56,12 @@ public class CompetitorBenchmarks
         public string City { get; set; } = "";
         public decimal Salary { get; set; }
     }
-    
+
     [Params(100, 1000, 10000)]
     public int RowCount { get; set; }
-    
+
     private string _testData = null!;
-    
+
     [GlobalSetup]
     public void GlobalSetup()
     {
@@ -69,7 +69,7 @@ public class CompetitorBenchmarks
         _csvData1000Rows = GenerateCsvData(1000);
         _csvData10000Rows = GenerateCsvData(10000);
     }
-    
+
     [IterationSetup]
     public void IterationSetup()
     {
@@ -81,31 +81,31 @@ public class CompetitorBenchmarks
             _ => _csvData1000Rows
         };
     }
-    
+
     private string GenerateCsvData(int rows)
     {
         var sb = new StringBuilder();
         sb.AppendLine("Id,Name,Age,City,Salary");
-        
+
         var names = new[] { "John", "Jane", "Mike", "Sarah" };
         var cities = new[] { "New York", "London", "Tokyo", "Paris" };
         var random = new Random(42);
-        
+
         for (int i = 1; i <= rows; i++)
         {
             var name = names[random.Next(names.Length)];
             var age = 20 + random.Next(50);
             var city = cities[random.Next(cities.Length)];
             var salary = 30000 + random.Next(70000);
-            
+
             sb.AppendLine($"{i},{name},{age},{city},{salary}");
         }
-        
+
         return sb.ToString();
     }
-    
+
     // ===== String Array Parsing =====
-    
+
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("StringArray")]
     public int HeroCsv_StringArray()
@@ -117,14 +117,14 @@ public class CompetitorBenchmarks
         }
         return count;
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("StringArray")]
     public int CsvHelper_StringArray()
     {
         using var reader = new StringReader(_testData);
         using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-        
+
         var count = 0;
         while (csv.Read())
         {
@@ -133,7 +133,7 @@ public class CompetitorBenchmarks
         }
         return count;
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("StringArray")]
     public int Sep_StringArray()
@@ -146,7 +146,7 @@ public class CompetitorBenchmarks
         }
         return count;
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("StringArray")]
     public int Sylvan_StringArray()
@@ -159,25 +159,25 @@ public class CompetitorBenchmarks
         }
         return count;
     }
-    
+
     // ===== Object Mapping =====
-    
+
     [Benchmark]
     [BenchmarkCategory("ObjectMapping")]
     public List<TestRecord> HeroCsv_ObjectMapping()
     {
-        return Csv.Read<TestRecord>(_testData).ToList();
+        return [.. Csv.Read<TestRecord>(_testData)];
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("ObjectMapping")]
     public List<TestRecord> CsvHelper_ObjectMapping()
     {
         using var reader = new StringReader(_testData);
         using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-        return csv.GetRecords<TestRecord>().ToList();
+        return [.. csv.GetRecords<TestRecord>()];
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("ObjectMapping")]
     public List<TestRecord> Sylvan_ObjectMapping()
@@ -197,16 +197,16 @@ public class CompetitorBenchmarks
         }
         return results;
     }
-    
+
     // ===== Count Only (Minimal Processing) =====
-    
+
     [Benchmark]
     [BenchmarkCategory("CountOnly")]
     public int HeroCsv_CountOnly()
     {
         return Csv.CountRecords(_testData);
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("CountOnly")]
     public int Sep_CountOnly()

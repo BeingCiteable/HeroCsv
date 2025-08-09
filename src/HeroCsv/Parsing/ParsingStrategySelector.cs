@@ -14,30 +14,38 @@ public sealed class ParsingStrategySelector
 {
     private readonly List<IParsingStrategy> _strategies;
     private readonly IParsingStrategy _fallbackStrategy;
-    
+
     public ParsingStrategySelector(StringBuilderPool? stringBuilderPool = null)
     {
         _strategies = new List<IParsingStrategy>();
-        
-        // Add strategies in priority order
-#if NET8_0_OR_GREATER
-        var simdStrategy = new SIMDOptimizedParsingStrategy();
-        if (simdStrategy.IsAvailable)
+
+#if NET9_0_OR_GREATER
+        // Add Vector512 strategy if hardware supports it
+        if (System.Runtime.Intrinsics.Vector512.IsHardwareAccelerated)
         {
-            _strategies.Add(simdStrategy);
+            _strategies.Add(new Vector512ParsingStrategy());
         }
 #endif
-        
+
+#if NET8_0_OR_GREATER
+        // Add optimized SIMD strategy for .NET 8+
+        if (System.Runtime.Intrinsics.X86.Avx2.IsSupported)
+        {
+            _strategies.Add(new SIMDOptimizedParsingStrategy());
+        }
+#endif
+
+        // Add standard strategies
         _strategies.Add(new SimpleCommaParsingStrategy());
-        
+
         // Fallback strategy for complex cases
         _fallbackStrategy = new QuotedFieldParsingStrategy(stringBuilderPool);
         _strategies.Add(_fallbackStrategy);
-        
+
         // Sort by priority (highest first)
-        _strategies = _strategies.OrderByDescending(s => s.Priority).ToList();
+        _strategies = [.. _strategies.OrderByDescending(s => s.Priority)];
     }
-    
+
     /// <summary>
     /// Selects and executes the best parsing strategy for the given line
     /// </summary>
@@ -46,8 +54,8 @@ public sealed class ParsingStrategySelector
     {
         // Quick check for empty line
         if (line.IsEmpty)
-            return Array.Empty<string>();
-        
+            return [];
+
         // Find the first strategy that can handle this line
         foreach (var strategy in _strategies)
         {
@@ -56,11 +64,11 @@ public sealed class ParsingStrategySelector
                 return strategy.Parse(line, options);
             }
         }
-        
+
         // Fallback to quoted field parser if no strategy matches
         return _fallbackStrategy.Parse(line, options);
     }
-    
+
     /// <summary>
     /// Gets the available strategies for diagnostics
     /// </summary>

@@ -10,7 +10,7 @@ namespace HeroCsv.Utilities;
 /// Creates a new string pool for deduplicating repeated string values
 /// </remarks>
 /// <param name="maxStringLength">Maximum length of strings to pool (longer strings won't be pooled)</param>
-public sealed class StringPool(int maxStringLength = 100)
+public sealed partial class StringPool(int maxStringLength = 100)
 {
     private readonly ConcurrentDictionary<string, string> _pool = new(StringComparer.Ordinal);
     private readonly int _maxStringLength = maxStringLength;

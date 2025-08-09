@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- AOT Compilation Support for HeroCsv -->
+  <PropertyGroup>
+    <!-- Enable AOT warnings to catch compatibility issues -->
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    
+    <!-- Mark assembly as AOT compatible -->
+    <IsAotCompatible>true</IsAotCompatible>
+    
+    <!-- Enable trimming support -->
+    <IsTrimmable>true</IsTrimmable>
+    
+    <!-- Suppress specific AOT warnings for known safe code -->
+    <NoWarn>$(NoWarn);IL2026;IL2057;IL2075;IL2104</NoWarn>
+    
+    <!-- Optimization settings for AOT -->
+    <Optimize>true</Optimize>
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <!-- ItemGroup for preserving types in AOT -->
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
+    <!-- Preserve CSV model types -->
+    <TrimmerRootAssembly Include="HeroCsv" />
+    
+    <!-- Preserve specific types that might be used via reflection -->
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+  </ItemGroup>
+
+  <!-- Runtime directives for AOT -->
+  <ItemGroup>
+    <RdXmlFile Include="rd.xml" />
+  </ItemGroup>
+</Project>

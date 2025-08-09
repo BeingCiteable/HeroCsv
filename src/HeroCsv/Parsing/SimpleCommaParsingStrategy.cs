@@ -11,28 +11,28 @@ namespace HeroCsv.Parsing;
 public sealed class SimpleCommaParsingStrategy : IParsingStrategy
 {
     public int Priority => 100; // High priority for common case
-    
+
     public bool IsAvailable => true;
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool CanHandle(ReadOnlySpan<char> line, CsvOptions options)
     {
         // Fast path: comma delimiter, no quotes, no trimming
-        return options.Delimiter == ',' && 
-               !options.TrimWhitespace && 
+        return options.Delimiter == ',' &&
+               !options.TrimWhitespace &&
                line.IndexOf('"') < 0;
     }
-    
+
     public string[] Parse(ReadOnlySpan<char> line, CsvOptions options)
     {
         return ParseSimpleCommaLine(line, options.StringPool);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string[] ParseSimpleCommaLine(ReadOnlySpan<char> line, Utilities.StringPool? stringPool)
     {
         if (line.IsEmpty)
-            return Array.Empty<string>();
+            return [];
 
         // Count commas to determine array size
         int commaCount = 0;

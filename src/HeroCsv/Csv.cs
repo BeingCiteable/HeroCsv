@@ -93,6 +93,18 @@ public static partial class Csv
     }
 
     /// <summary>
+    /// Reads CSV content and returns as string arrays (AOT-safe)
+    /// </summary>
+    /// <param name="content">CSV text as string</param>
+    /// <param name="options">CSV parsing options</param>
+    /// <returns>Enumerable of string arrays representing records</returns>
+    public static IEnumerable<string[]> ReadAsArrays(string content, CsvOptions options = default)
+    {
+        options = GetValidOptions(options);
+        return ReadContent(content, options);
+    }
+    
+    /// <summary>
     /// Counts CSV records from string content
     /// </summary>
     /// <param name="content">CSV text as string</param>

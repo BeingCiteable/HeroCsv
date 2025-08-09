@@ -30,37 +30,37 @@ public class WideDatasetBenchmark
     private string _csvData100Cols = "";
     private string _csvData200Cols = "";
     private string _csvMixedTypes = "";
-    private byte[] _csvBytes50Cols = Array.Empty<byte>();
-    private byte[] _csvBytes100Cols = Array.Empty<byte>();
-    private byte[] _csvBytes200Cols = Array.Empty<byte>();
-    
+    private byte[] _csvBytes50Cols = [];
+    private byte[] _csvBytes100Cols = [];
+    private byte[] _csvBytes200Cols = [];
+
     [Params(1000)] // Fixed row count to focus on column performance
     public int RowCount { get; set; }
-    
+
     [GlobalSetup]
     public void Setup()
     {
         // Generate CSV with 50 columns
         _csvData50Cols = GenerateWideCSV(RowCount, 50);
         _csvBytes50Cols = Encoding.UTF8.GetBytes(_csvData50Cols);
-        
+
         // Generate CSV with 100 columns
         _csvData100Cols = GenerateWideCSV(RowCount, 100);
         _csvBytes100Cols = Encoding.UTF8.GetBytes(_csvData100Cols);
-        
+
         // Generate CSV with 200 columns
         _csvData200Cols = GenerateWideCSV(RowCount, 200);
         _csvBytes200Cols = Encoding.UTF8.GetBytes(_csvData200Cols);
-        
+
         // Generate CSV with mixed complex types
         _csvMixedTypes = GenerateMixedTypesCSV(RowCount);
     }
-    
+
     private static string GenerateWideCSV(int rowCount, int columnCount)
     {
         var sb = new StringBuilder();
         var random = new Random(42); // Fixed seed
-        
+
         // Generate headers
         for (int i = 0; i < columnCount; i++)
         {
@@ -68,14 +68,14 @@ public class WideDatasetBenchmark
             sb.Append($"Column_{i:D3}");
         }
         sb.AppendLine();
-        
+
         // Generate data rows
         for (int row = 0; row < rowCount; row++)
         {
             for (int col = 0; col < columnCount; col++)
             {
                 if (col > 0) sb.Append(',');
-                
+
                 // Mix different data types based on column index
                 var value = (col % 10) switch
                 {
@@ -95,25 +95,25 @@ public class WideDatasetBenchmark
             }
             sb.AppendLine();
         }
-        
+
         return sb.ToString();
     }
-    
+
     private static string GenerateMixedTypesCSV(int rowCount)
     {
         var sb = new StringBuilder();
         var random = new Random(42);
-        
+
         // Complex headers with different naming conventions
         sb.AppendLine("ID,First Name,Last_Name,EmailAddress,Phone-Number,Date.Of.Birth,Salary$Amount,Is Active?,Department Code,Manager ID,Project|Name,Task#ID,Priority!Level,Completion%,Notes,Address Line 1,Address Line 2,City,State/Province,ZIP+4,Country,TimeZone,LastLogin,AccountCreated,Tags,Skills,Languages,CertificationDate,ExpirationDate,Score");
-        
+
         // Generate complex data
         for (int i = 1; i <= rowCount; i++)
         {
             var hasSpecialChars = i % 10 == 0;
             var hasEmptyFields = i % 7 == 0;
             var hasQuotes = i % 5 == 0;
-            
+
             sb.Append($"{i},");
             sb.Append(hasQuotes ? $"\"John{i}\"," : $"John{i},");
             sb.Append($"Doe{i},");
@@ -146,10 +146,10 @@ public class WideDatasetBenchmark
             sb.Append($"{85 + (i % 15)}.{i % 100:D2}");
             sb.AppendLine();
         }
-        
+
         return sb.ToString();
     }
-    
+
     // 50 Columns Benchmarks
     [BenchmarkCategory("50-Columns"), Benchmark(Baseline = true)]
     public int HeroCsv_50Cols()
@@ -157,7 +157,7 @@ public class WideDatasetBenchmark
         var records = HeroCsv.Csv.ReadAllRecords(_csvData50Cols);
         return records.Count;
     }
-    
+
     [BenchmarkCategory("50-Columns"), Benchmark]
     public int HeroCsv_Stream_50Cols()
     {
@@ -167,7 +167,7 @@ public class WideDatasetBenchmark
         while (reader.TryReadRecord(out _)) count++;
         return count;
     }
-    
+
     [BenchmarkCategory("50-Columns"), Benchmark]
     public int CsvHelper_50Cols()
     {
@@ -176,7 +176,7 @@ public class WideDatasetBenchmark
         var records = csv.GetRecords<dynamic>().ToList();
         return records.Count;
     }
-    
+
     [BenchmarkCategory("50-Columns"), Benchmark]
     public int Sep_50Cols()
     {
@@ -185,7 +185,7 @@ public class WideDatasetBenchmark
         foreach (var row in reader) count++;
         return count;
     }
-    
+
     // 100 Columns Benchmarks
     [BenchmarkCategory("100-Columns"), Benchmark(Baseline = true)]
     public int HeroCsv_100Cols()
@@ -193,7 +193,7 @@ public class WideDatasetBenchmark
         var records = HeroCsv.Csv.ReadAllRecords(_csvData100Cols);
         return records.Count;
     }
-    
+
     [BenchmarkCategory("100-Columns"), Benchmark]
     public int HeroCsv_Stream_100Cols()
     {
@@ -203,7 +203,7 @@ public class WideDatasetBenchmark
         while (reader.TryReadRecord(out _)) count++;
         return count;
     }
-    
+
     [BenchmarkCategory("100-Columns"), Benchmark]
     public int CsvHelper_100Cols()
     {
@@ -212,7 +212,7 @@ public class WideDatasetBenchmark
         var records = csv.GetRecords<dynamic>().ToList();
         return records.Count;
     }
-    
+
     [BenchmarkCategory("100-Columns"), Benchmark]
     public int Sep_100Cols()
     {
@@ -221,7 +221,7 @@ public class WideDatasetBenchmark
         foreach (var row in reader) count++;
         return count;
     }
-    
+
     [BenchmarkCategory("100-Columns"), Benchmark]
     public int Sylvan_100Cols()
     {
@@ -231,7 +231,7 @@ public class WideDatasetBenchmark
         while (csv.Read()) count++;
         return count;
     }
-    
+
     // 200 Columns Benchmarks
     [BenchmarkCategory("200-Columns"), Benchmark(Baseline = true)]
     public int HeroCsv_200Cols()
@@ -239,13 +239,13 @@ public class WideDatasetBenchmark
         var records = HeroCsv.Csv.ReadAllRecords(_csvData200Cols);
         return records.Count;
     }
-    
+
     [BenchmarkCategory("200-Columns"), Benchmark]
     public int HeroCsv_Count_200Cols()
     {
         return HeroCsv.Csv.CountRecords(_csvData200Cols);
     }
-    
+
     [BenchmarkCategory("200-Columns"), Benchmark]
     public int Sep_200Cols()
     {
@@ -254,7 +254,7 @@ public class WideDatasetBenchmark
         foreach (var row in reader) count++;
         return count;
     }
-    
+
     // Mixed Complex Types Benchmarks
     [BenchmarkCategory("Mixed-Types"), Benchmark(Baseline = true)]
     public int HeroCsv_MixedTypes()
@@ -262,7 +262,7 @@ public class WideDatasetBenchmark
         var records = HeroCsv.Csv.ReadAllRecords(_csvMixedTypes);
         return records.Count;
     }
-    
+
     [BenchmarkCategory("Mixed-Types"), Benchmark]
     public int HeroCsv_FieldAccess_MixedTypes()
     {
@@ -279,7 +279,7 @@ public class WideDatasetBenchmark
         }
         return sum;
     }
-    
+
     [BenchmarkCategory("Mixed-Types"), Benchmark]
     public int CsvHelper_MixedTypes()
     {
@@ -288,7 +288,7 @@ public class WideDatasetBenchmark
         var records = csv.GetRecords<dynamic>().ToList();
         return records.Count;
     }
-    
+
     [BenchmarkCategory("Mixed-Types"), Benchmark]
     public int Sep_MixedTypes()
     {
@@ -297,7 +297,7 @@ public class WideDatasetBenchmark
         foreach (var row in reader) count++;
         return count;
     }
-    
+
     [BenchmarkCategory("Mixed-Types"), Benchmark]
     public int Sylvan_MixedTypes()
     {
@@ -319,15 +319,15 @@ public class FieldAccessBenchmark
 {
     private string _csvData = "";
     private IReadOnlyList<string[]> _records = new List<string[]>();
-    
+
     [Params(50, 100, 200)]
     public int ColumnCount { get; set; }
-    
+
     [GlobalSetup]
     public void Setup()
     {
         var sb = new StringBuilder();
-        
+
         // Generate headers
         for (int i = 0; i < ColumnCount; i++)
         {
@@ -335,7 +335,7 @@ public class FieldAccessBenchmark
             sb.Append($"Col{i}");
         }
         sb.AppendLine();
-        
+
         // Generate 1000 rows
         var random = new Random(42);
         for (int row = 0; row < 1000; row++)
@@ -347,11 +347,11 @@ public class FieldAccessBenchmark
             }
             sb.AppendLine();
         }
-        
+
         _csvData = sb.ToString();
         _records = HeroCsv.Csv.ReadAllRecords(_csvData);
     }
-    
+
     [Benchmark(Baseline = true)]
     public int DirectArrayAccess()
     {
@@ -365,7 +365,7 @@ public class FieldAccessBenchmark
         }
         return sum;
     }
-    
+
     [Benchmark]
     public int AllFieldsAccess()
     {
@@ -380,13 +380,13 @@ public class FieldAccessBenchmark
         }
         return sum;
     }
-    
+
     [Benchmark]
     public int ExtensionMethodAccess()
     {
         var sum = 0;
         using var reader = HeroCsv.Csv.CreateReader(_csvData);
-        
+
         while (reader.TryReadRecord(out var record))
         {
             if (record.TryGetInt32(0, out var val1)) sum += val1;
@@ -395,17 +395,17 @@ public class FieldAccessBenchmark
         }
         return sum;
     }
-    
+
     [Benchmark]
     public int FieldIteratorAccess()
     {
         var sum = 0;
         var options = new HeroCsv.Models.CsvOptions();
-        
+
         foreach (var field in HeroCsv.Parsing.CsvFieldIterator.IterateFields(_csvData, options))
         {
-            if (field.FieldIndex == 0 || 
-                field.FieldIndex == ColumnCount / 2 || 
+            if (field.FieldIndex == 0 ||
+                field.FieldIndex == ColumnCount / 2 ||
                 field.FieldIndex == ColumnCount - 1)
             {
                 if (int.TryParse(field.Value, out var value))

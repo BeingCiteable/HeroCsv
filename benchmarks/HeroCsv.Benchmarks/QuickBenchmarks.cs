@@ -19,7 +19,7 @@ public class QuickBenchmarks
 {
     private string _csvData100Rows = null!;
     private string _csvData1000Rows = null!;
-    
+
     public class QuickConfig : ManualConfig
     {
         public QuickConfig()
@@ -29,11 +29,11 @@ public class QuickBenchmarks
                 .WithWarmupCount(3)
                 .WithIterationCount(5)
                 .WithId("Quick"));
-                
+
             AddColumn(StatisticColumn.Mean);
             AddColumn(StatisticColumn.StdDev);
             AddColumn(RankColumn.Arabic);
-            
+
             // Export formats - ensure we have JSON for CI/CD
             AddExporter(JsonExporter.Brief);
             AddExporter(JsonExporter.Full);
@@ -41,36 +41,36 @@ public class QuickBenchmarks
             AddExporter(HtmlExporter.Default);
         }
     }
-    
+
     public class SimpleRecord
     {
         public int Id { get; set; }
         public string Name { get; set; } = "";
         public int Value { get; set; }
     }
-    
+
     [GlobalSetup]
     public void Setup()
     {
         _csvData100Rows = GenerateSimpleCsvData(100);
         _csvData1000Rows = GenerateSimpleCsvData(1000);
     }
-    
+
     private string GenerateSimpleCsvData(int rows)
     {
         var sb = new StringBuilder();
         sb.AppendLine("Id,Name,Value");
-        
+
         for (int i = 1; i <= rows; i++)
         {
             sb.AppendLine($"{i},Item{i},{i * 10}");
         }
-        
+
         return sb.ToString();
     }
-    
+
     // ===== Core Operations (100 rows) =====
-    
+
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("Small")]
     public int ReadStringArray_100()
@@ -82,23 +82,23 @@ public class QuickBenchmarks
         }
         return count;
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("Small")]
     public int CountRecords_100()
     {
         return Csv.CountRecords(_csvData100Rows);
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("Small")]
     public List<SimpleRecord> ReadTyped_100()
     {
-        return Csv.Read<SimpleRecord>(_csvData100Rows).ToList();
+        return [.. Csv.Read<SimpleRecord>(_csvData100Rows)];
     }
-    
+
     // ===== Core Operations (1000 rows) =====
-    
+
     [Benchmark]
     [BenchmarkCategory("Medium")]
     public int ReadStringArray_1000()
@@ -110,23 +110,23 @@ public class QuickBenchmarks
         }
         return count;
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("Medium")]
     public int CountRecords_1000()
     {
         return Csv.CountRecords(_csvData1000Rows);
     }
-    
+
     [Benchmark]
     [BenchmarkCategory("Medium")]
     public List<SimpleRecord> ReadTyped_1000()
     {
-        return Csv.Read<SimpleRecord>(_csvData1000Rows).ToList();
+        return [.. Csv.Read<SimpleRecord>(_csvData1000Rows)];
     }
-    
+
     // ===== Advanced Features =====
-    
+
     [Benchmark]
     [BenchmarkCategory("Advanced")]
     public CsvReadResult ReadWithValidation()
@@ -136,7 +136,7 @@ public class QuickBenchmarks
             .WithValidation(true)
             .Read();
     }
-    
+
 #if NET8_0_OR_GREATER
     [Benchmark]
     [BenchmarkCategory("Advanced")]

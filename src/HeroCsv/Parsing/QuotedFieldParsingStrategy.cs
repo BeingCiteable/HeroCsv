@@ -14,7 +14,6 @@ public sealed class QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderP
 {
     private readonly StringBuilderPool _stringBuilderPool = stringBuilderPool ?? new StringBuilderPool();
 
-
     public int Priority => 50; // Lower priority, more complex
 
     public bool IsAvailable => true;
@@ -29,7 +28,7 @@ public sealed class QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderP
     public string[] Parse(ReadOnlySpan<char> line, CsvOptions options)
     {
         if (line.IsEmpty)
-            return Array.Empty<string>();
+            return [];
 
         var fields = new List<string>();
         var fieldBuilder = _stringBuilderPool.Rent();
@@ -121,7 +120,7 @@ public sealed class QuotedFieldParsingStrategy(StringBuilderPool? stringBuilderP
             // Add the last field
             AddField(fields, fieldBuilder, options, fieldWasQuoted);
 
-            return fields.ToArray();
+            return [.. fields];
         }
         finally
         {

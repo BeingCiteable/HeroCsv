@@ -52,7 +52,7 @@ public ref struct CsvRow
         while (position < line.Length)
         {
             // Use SearchValues for fast delimiter search
-            var remaining = line.Slice(position);
+            var remaining = line[position..];
             var nextDelim = remaining.IndexOfAny(delimiter, quote);
 
             if (nextDelim < 0)
@@ -68,7 +68,7 @@ public ref struct CsvRow
                 position += nextDelim + 1;
                 while (position < line.Length)
                 {
-                    var quotePos = line.Slice(position).IndexOf(quote);
+                    var quotePos = line[position..].IndexOf(quote);
                     if (quotePos < 0) break;
 
                     position += quotePos + 1;
@@ -164,7 +164,7 @@ public ref struct CsvRow
             }
         }
 
-        _fieldPositions = positions.ToArray();
+        _fieldPositions = [.. positions];
         _fieldCount = positions.Count + 1;
         _positionsComputed = true;
     }
@@ -231,7 +231,7 @@ public ref struct CsvRow
             }
         }
 
-        return fields.ToArray();
+        return [.. fields];
     }
 
     /// <summary>

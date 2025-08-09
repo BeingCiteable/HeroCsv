@@ -61,7 +61,7 @@ internal sealed class StringDataSource(string content) : ICsvDataSource
             // Empty line
             _position = CsvParser.SkipLineEnding(_content.AsSpan(), _position);
             _lineNumber++;
-            line = ReadOnlySpan<char>.Empty;
+            line = [];
             return true;
         }
 

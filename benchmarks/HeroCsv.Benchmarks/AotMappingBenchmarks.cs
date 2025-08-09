@@ -17,7 +17,7 @@ namespace HeroCsv.Benchmarks;
 public class AotMappingBenchmarks
 {
     private string csvData = "";
-    private byte[] csvBytes = Array.Empty<byte>();
+    private byte[] csvBytes = [];
     private const int RowCount = 1000;
 
     public class Employee
@@ -36,12 +36,12 @@ public class AotMappingBenchmarks
     {
         var sb = new StringBuilder();
         sb.AppendLine("Id,FirstName,LastName,Department,Salary,HireDate,IsActive");
-        
+
         for (int i = 1; i <= RowCount; i++)
         {
             sb.AppendLine($"{i},John{i},Doe{i},Engineering,{75000 + i * 100},2020-01-{(i % 28) + 1:D2},true");
         }
-        
+
         csvData = sb.ToString();
         csvBytes = Encoding.UTF8.GetBytes(csvData);
     }
@@ -51,13 +51,13 @@ public class AotMappingBenchmarks
     [Benchmark(Description = "HeroCsv - Reflection Mapping")]
     public List<Employee> HeroCsv_ReflectionMapping()
     {
-        return Csv.Read<Employee>(csvData).ToList();
+        return [.. Csv.Read<Employee>(csvData)];
     }
 
     [Benchmark(Description = "HeroCsv - Factory Mapping (AOT)")]
     public List<Employee> HeroCsv_FactoryMapping()
     {
-        return Csv.ReadWithHeaders(csvData, (headers, record) =>
+        return [.. Csv.ReadWithHeaders(csvData, (headers, record) =>
         {
             var idIdx = Array.IndexOf(headers, "Id");
             var fnIdx = Array.IndexOf(headers, "FirstName");
@@ -77,14 +77,14 @@ public class AotMappingBenchmarks
                 HireDate = record.GetDateTime(hireIdx),
                 IsActive = record.GetBoolean(activeIdx)
             };
-        }).ToList();
+        })];
     }
 
     [Benchmark(Description = "HeroCsv - Optimized Factory (AOT)")]
     public List<Employee> HeroCsv_OptimizedFactory()
     {
         // Pre-calculate indices outside the loop
-        return Csv.Read(csvData, record => new Employee
+        return [.. Csv.Read(csvData, record => new Employee
         {
             Id = record.GetInt32(0),
             FirstName = record.GetString(1),
@@ -93,7 +93,7 @@ public class AotMappingBenchmarks
             Salary = record.GetDecimal(4),
             HireDate = record.GetDateTime(5),
             IsActive = record.GetBoolean(6)
-        }).ToList();
+        })];
     }
 
     [Benchmark(Description = "HeroCsv - Manual Mapping")]
@@ -109,7 +109,7 @@ public class AotMappingBenchmarks
         builder.Map(e => e.IsActive, 6);
         var mapping = builder.Build();
 
-        return Csv.Read(csvData, mapping).ToList();
+        return [.. Csv.Read(csvData, mapping)];
     }
 
     // Source-generated would be similar to OptimizedFactory but with compile-time generation
@@ -118,7 +118,7 @@ public class AotMappingBenchmarks
     public List<Employee> HeroCsv_SimulatedSourceGen()
     {
         // This simulates what source generator would produce
-        return Csv.Read(csvData, CreateEmployeeFromRecord).ToList();
+        return [.. Csv.Read(csvData, CreateEmployeeFromRecord)];
     }
 
     // This method simulates what the source generator would create
@@ -143,7 +143,7 @@ public class AotMappingBenchmarks
     {
         using var reader = new StringReader(csvData);
         using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-        return csv.GetRecords<Employee>().ToList();
+        return [.. csv.GetRecords<Employee>()];
     }
 
     // Sep benchmark removed - add Sep package if needed
@@ -201,11 +201,11 @@ public class MappingOverheadBenchmarks
         var parts = simpleCsv.Split(',');
         var obj = new SimpleRecord();
         var type = typeof(SimpleRecord);
-        
+
         type.GetProperty("Id")!.SetValue(obj, int.Parse(parts[0]));
         type.GetProperty("Name")!.SetValue(obj, parts[1]);
         type.GetProperty("Value")!.SetValue(obj, decimal.Parse(parts[2]));
-        
+
         return obj;
     }
 
@@ -218,7 +218,7 @@ public class MappingOverheadBenchmarks
             Name = rec.GetString(1),
             Value = rec.GetDecimal(2)
         }).First();
-        
+
         return record;
     }
 
