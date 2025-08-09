@@ -1,0 +1,119 @@
+name: Create GitHub Release
+
+# Description: Creates GitHub releases with custom release notes for PRODUCTION versions only
+# Purpose: Automatically generate GitHub releases that read from release-notes-v*.md files
+# Triggers:
+#   - Manual dispatch with version input (production versions only)
+#   - Tag push (v*) - only for stable versions (no rc/preview/alpha/beta)
+# Output: GitHub release with custom notes, auto-generated changelog, and NuGet packages
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Production version to release (e.g., 1.0.0, 2.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Get full history for changelog
+
+      - name: Determine version and validate
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"  # Remove 'v' prefix from tag
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+
+          # Only allow production versions (no rc, preview, alpha, beta)
+          if [[ "$VERSION" =~ (rc|preview|alpha|beta|pre) ]]; then
+            echo "❌ This workflow only handles production releases."
+            echo "Version '$VERSION' contains prerelease identifiers."
+            echo "Use the regular release workflow for prerelease versions."
+            exit 1
+          fi
+
+          echo "✅ Production version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if release notes exist
+        id: check-notes
+        run: |
+          NOTES_FILE="release-notes-v${{ steps.version.outputs.version }}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "file=$NOTES_FILE" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "Release notes file not found: $NOTES_FILE (put it in repo root)"
+          fi
+
+      - name: Create release with custom notes
+        if: steps.check-notes.outputs.found == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "HeroCsv ${{ steps.version.outputs.tag }}"
+          body_path: ${{ steps.check-notes.outputs.file }}
+          draft: false
+          prerelease: false # Production releases are never prereleases
+          generate_release_notes: true # This adds auto-generated notes AFTER custom content
+          make_latest: true # Production releases are always latest
+
+      - name: Create release with auto-generated notes only
+        if: steps.check-notes.outputs.found == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "HeroCsv ${{ steps.version.outputs.tag }}"
+          body: |
+            # HeroCsv ${{ steps.version.outputs.tag }}
+
+            **Release Date:** $(date +'%B %d, %Y')
+
+            > ⚠️ **Note**: Custom release notes not found at `docs/releases/release-notes-v${{ steps.version.outputs.version }}.md`
+
+            See the auto-generated changelog below for changes in this release.
+          draft: false
+          prerelease: false # Production releases are never prereleases
+          generate_release_notes: true
+          make_latest: true # Production releases are always latest
+
+      - name: Setup .NET SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            7.0.x
+            8.0.x
+            9.0.x
+
+      - name: Build packages
+        run: |
+          dotnet restore
+          dotnet build -c Release --no-restore
+          dotnet pack src/HeroCsv/HeroCsv.csproj -c Release --no-build --output ./artifacts
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            ./artifacts/*.nupkg
+            ./artifacts/*.snupkg
+          append_body: false # Don't modify the body we already set

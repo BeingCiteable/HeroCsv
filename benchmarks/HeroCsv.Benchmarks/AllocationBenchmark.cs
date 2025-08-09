@@ -20,12 +20,10 @@ public class AllocationBenchmark
         {
             AddJob(Job.Default.WithGcMode(new GcMode { Force = false }));
             AddDiagnoser(MemoryDiagnoser.Default);
-            // AddColumn(BenchmarkDotNet.Columns.AllocatedColumn.Default); // Not available in older versions
         }
     }
 
     private string _simpleCsvLine = null!;
-    private string _complexCsvLine = null!;
     private string _largeCsvContent = null!;
     private CsvOptions _options;
     private StringPool _stringPool = null!;
@@ -35,7 +33,6 @@ public class AllocationBenchmark
     public void Setup()
     {
         _simpleCsvLine = "field1,field2,field3,field4,field5,field6,field7,field8,field9,field10";
-        _complexCsvLine = "\"quoted,field\",normal,\"escaped\"\"quote\",123,45.67,true,2024-01-01,\"multi\nline\",last";
 
         // Generate large CSV content
         var lines = new List<string>();
