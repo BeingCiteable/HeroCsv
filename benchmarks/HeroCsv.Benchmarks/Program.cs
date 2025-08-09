@@ -3,6 +3,7 @@ using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Exporters;
+using BenchmarkDotNet.Exporters.Csv;
 using BenchmarkDotNet.Exporters.Json;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Reports;
@@ -27,9 +28,22 @@ public class Program
         {
             Description = "Enable verbose output"
         };
+        
+        var exportOption = new Option<bool>("--export")
+        {
+            Description = "Export results to HTML, JSON, CSV, and Markdown formats"
+        };
+        
+        var artifactsOption = new Option<string>("--artifacts")
+        {
+            Description = "BenchmarkDotNet artifacts directory path",
+            DefaultValueFactory = _ => "./BenchmarkDotNet.Artifacts"
+        };
 
         rootCommand.Add(outputOption);
         rootCommand.Add(verboseOption);
+        rootCommand.Add(exportOption);
+        rootCommand.Add(artifactsOption);
 
         // Real data benchmark command
         var realDataCommand = new Command("realdata", "Run real CSV file performance benchmarks");
@@ -461,6 +475,8 @@ public class Program
             .AddExporter(JsonExporter.Brief)
             .AddExporter(MarkdownExporter.GitHub)
             .AddExporter(HtmlExporter.Default)
+            .AddExporter(CsvExporter.Default)
+            .AddExporter(PlainExporter.Default)
             .AddColumn(StatisticColumn.Mean)
             .AddColumn(StatisticColumn.StdDev)
             .AddColumn(StatisticColumn.Error)
